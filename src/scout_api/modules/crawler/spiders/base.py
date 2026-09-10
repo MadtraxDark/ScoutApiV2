@@ -3,7 +3,7 @@ import logging
 from abc import ABC
 from datetime import UTC, datetime
 from decimal import Decimal
-from typing import Any, ClassVar
+from typing import Any, ClassVar, cast
 from urllib.parse import urlparse
 
 import scrapy
@@ -134,11 +134,11 @@ class BaseStoreSpider(scrapy.Spider, ABC):
         )
 
     @staticmethod
-    def first(response: Response, selectors: list[str]) -> str | None:
+    def first(response: Any, selectors: list[str]) -> str | None:
         for selector in selectors:
             value = response.css(selector).get()
             if value and value.strip():
-                return value.strip()
+                return cast(str, value.strip())
         return None
 
     @staticmethod

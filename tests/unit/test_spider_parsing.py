@@ -1,3 +1,5 @@
+# ruff: noqa: E501
+
 from decimal import Decimal
 from pathlib import Path
 
@@ -70,6 +72,41 @@ def test_magalu_pix_and_original_prices_are_distinct() -> None:
     assert item.price == Decimal("4599.00")
     assert item.pix_price == Decimal("4599.00")
     assert item.original_price == Decimal("4999.00")
+
+
+def test_magalu_uses_offer_state_for_semantic_prices_and_identity() -> None:
+    item = MagazineLuizaSpider().parse_product(
+        response_from_fixture("product_structured_offer.html")
+    )
+    assert item.product_id == "aebh5a7a94"
+    assert item.sku == "989702"
+    assert item.brand == "Sony"
+    assert item.model == "PS5 CFI 2114B Edição Digital"
+    assert item.variant == "Branco"
+    assert item.seller == "kabum"
+    assert item.price == Decimal("5058.85")
+    assert item.pix_price == Decimal("4805.91")
+    assert item.original_price == Decimal("5288.85")
+    assert item.discount_percentage == Decimal("5.00")
+    assert item.installment_count == 10
+    assert item.installment_price == Decimal("505.89")
+    assert item.metadata["source"]["price"] == "product-offer-state"
+    assert item.metadata["source"]["pix_price"] == "payment-method-pix"
+
+
+def test_magalu_does_not_infer_original_price_from_unrelated_numbers() -> None:
+    url = "https://www.magazineluiza.com.br/p/no-old-price? seller_id=kabum"
+    response = HtmlResponse(
+        url,
+        body=(
+            b"<h1>Produto</h1><span>5% OFF em 10 parcelas</span>"
+            b"<span>Preco R$ 480,00 no Pix</span><button>Comprar agora</button>"
+        ),
+        encoding="utf-8",
+        request=Request(url),
+    )
+    item = MagazineLuizaSpider().parse_product(response)
+    assert item.original_price is None
 
 
 def test_magalu_out_of_stock_is_not_parse_failure() -> None:

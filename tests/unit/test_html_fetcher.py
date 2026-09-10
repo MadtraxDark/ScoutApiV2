@@ -307,8 +307,10 @@ def test_camoufox_profile_dir_falls_back_when_unwritable(
     )
     fetcher.fetch("https://www.magazineluiza.com.br/p/1")
 
-    assert Path(captured["user_data_dir"]).as_posix().endswith(
-        "scout-api-camoufox-profiles/default"
+    assert (
+        Path(captured["user_data_dir"])
+        .as_posix()
+        .endswith("scout-api-camoufox-profiles/default")
     )
     html = (
         b"<html><body><h1>PlayStation 5</h1>"

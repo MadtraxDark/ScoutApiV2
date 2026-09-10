@@ -1,6 +1,8 @@
+import json
 import re
-from decimal import Decimal
-from typing import Any, Literal
+import unicodedata
+from decimal import Decimal, InvalidOperation
+from typing import Any, Literal, cast
 from urllib.parse import parse_qs, urlparse
 
 from scrapy.http import Response
@@ -11,9 +13,11 @@ from ...models.product import ProductPriceItem
 from ...utils.parsing import parse_money
 from ..base import BaseStoreSpider
 
+Availability = Literal["available", "out_of_stock", "unavailable"]
+
 
 class MagazineLuizaSpider(BaseStoreSpider):
-    """Parse a single Magazine Luiza product offer."""
+    """Parse the selected Magalu offer from structured page data and HTML."""
 
     name = "magazineluiza"
     store, country, currency = "magazineluiza", "BR", "BRL"
@@ -21,114 +25,350 @@ class MagazineLuizaSpider(BaseStoreSpider):
     start_urls: list[str] = []
 
     def parse_product(self, response: Response) -> ProductPriceItem:
-        data = self.json_ld(response)
-        offers = data.get("offers") if isinstance(data, dict) else None
-        offer = offers if isinstance(offers, dict) else {}
+        json_ld = self.json_ld(response)
+        state = self._next_data(response)
+        item = self._state_item(state)
+        offer = self._selected_offer(item, response.url)
+        fallback_offer = self._selected_fallback_offer(item, response.url)
         page_text = " ".join(response.css("body ::text").getall())
 
-        title = data.get("name") or self.first(response, ["h1::text", "title::text"])
+        title = (
+            item.get("title")
+            or json_ld.get("name")
+            or self.first(response, ["h1::text", "title::text"])
+        )
         if not title:
             raise ParseError("Título do produto não encontrado")
+        price, price_source = self._regular_price(
+            offer, fallback_offer, json_ld, page_text
+        )
+        pix_price, pix_source = self._pix_price(offer, json_ld, page_text)
+        original_price, original_source = self._original_price(
+            offer, fallback_offer, page_text, price
+        )
+        installment_price, installment_count, installment_source = self._installment(
+            offer, page_text
+        )
+        availability, availability_source = self._availability(
+            response, offer, json_ld, page_text
+        )
 
-        price = self._price(response, offer, page_text)
-        pix_price = self._pix_price(response, page_text)
-        original_price = self._original_price(response, page_text)
-        availability = self._availability(response, offer, page_text)
         product_id = (
-            data.get("sku")
-            or self.first(response, ["[itemprop='sku']::attr(content)"])
+            item.get("id")
+            or item.get("offerId")
+            or json_ld.get("sku")
             or self._product_id(response.url)
         )
         if not product_id:
             raise ParseError("Identificador do produto não encontrado")
+        seller_value = offer.get("seller")
+        seller_data: dict[str, Any] = (
+            seller_value if isinstance(seller_value, dict) else {}
+        )
+        seller = (
+            seller_data.get("id")
+            or seller_data.get("deliveryId")
+            or self._seller_from_url(response.url)
+            or self._seller_from_text(page_text)
+        )
+        sku = seller_data.get("sku") or offer.get("sku") or json_ld.get("sku")
+        brand = self._brand(item, json_ld, response)
+        model = self._specification(response, "Modelo")
+        variant = item.get("color") or self._specification(response, "Cor")
+        original_price = (
+            original_price if original_price and original_price > price else None
+        )
 
-        seller = self._seller(response.url, page_text)
         return ProductPriceItem(
             store=self.store,
             country=self.country,
-            product_id=str(product_id),
-            sku=str(product_id),
+            product_id=str(product_id).strip(),
+            sku=self._string(sku),
+            gtin=self._gtin(item, response),
             title=str(title).strip(),
-            seller=seller,
+            brand=self._string(brand),
+            model=self._string(model),
+            variant=self._string(variant),
+            seller=self._string(seller),
             url=response.url,
             canonical_url=canonicalize_url(response.url),
             currency=self.currency,
             price=price,
             original_price=original_price,
+            discount_percentage=self._discount_percentage(offer, price, original_price),
             pix_price=pix_price,
+            installment_price=installment_price,
+            installment_count=installment_count,
             available=availability == "available",
             availability=availability,
             metadata={
                 "source": {
-                    "title": "json-ld-or-h1",
-                    "price": "json-ld-or-price-label",
-                    "pix_price": "pix-label",
-                    "availability": "json-ld-or-purchase-signals",
+                    "title": "product-state" if item.get("title") else "json-ld-or-h1",
+                    "price": price_source,
+                    "pix_price": pix_source,
+                    "original_price": original_source,
+                    "installment": installment_source,
+                    "availability": availability_source,
+                    "seller": "offer-state" if seller_data else "url-or-rendered-text",
+                    "product_id": "product-state"
+                    if item.get("id")
+                    else "json-ld-or-url",
+                    "sku": "offer-seller-state"
+                    if seller_data.get("sku")
+                    else "json-ld",
                 }
             },
         )
 
-    def _price(
-        self, response: Response, offer: dict[str, Any], page_text: str
-    ) -> Decimal:
-        raw = offer.get("price")
-        if raw is not None and (
-            isinstance(raw, int | float) or re.fullmatch(r"\d+(?:\.\d+)?", str(raw))
-        ):
-            return Decimal(str(raw))
-        if raw is None:
-            match = re.search(r"Preço\s+R\$\s*([\d.]+(?:,\d{2})?)", page_text, re.I)
-            raw = match.group(1) if match else None
-        return parse_money(str(raw) if raw is not None else None, self.currency)
+    @staticmethod
+    def _next_data(response: Response) -> dict[str, Any]:
+        selectors = "script#__NEXT_DATA__::text, script[type='application/json']::text"
+        for raw in response.css(selectors).getall():
+            try:
+                value = json.loads(raw)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(value, dict) and isinstance(value.get("props"), dict):
+                return value
+        return {}
 
-    def _pix_price(self, response: Response, page_text: str) -> Decimal | None:
-        del response
-        raw = None
-        match = re.search(r"R\$\s*([\d.]+(?:,\d{2})?)\s*no\s+Pix", page_text, re.I)
-        if match:
-            raw = match.group(1)
-        return parse_money(raw, self.currency) if raw else None
+    @staticmethod
+    def _state_item(state: dict[str, Any]) -> dict[str, Any]:
+        props = state.get("props")
+        page_props = props.get("pageProps") if isinstance(props, dict) else None
+        data = page_props.get("data") if isinstance(page_props, dict) else None
+        item = data.get("item") if isinstance(data, dict) else None
+        return item if isinstance(item, dict) else {}
 
-    def _original_price(self, response: Response, page_text: str) -> Decimal | None:
-        match = re.search(
-            r"(?:De|Preço\s+original)\s*:?[\sR$]*([\d.]+(?:,\d{2})?)",
-            page_text,
-            re.I,
+    @classmethod
+    def _selected_offer(cls, item: dict[str, Any], url: str) -> dict[str, Any]:
+        offers = item.get("offers")
+        if not isinstance(offers, list):
+            return {}
+        requested = cls._seller_from_url(url)
+        for offer in offers:
+            seller = offer.get("seller") if isinstance(offer, dict) else None
+            if requested and isinstance(seller, dict) and seller.get("id") == requested:
+                return cast(dict[str, Any], offer)
+        return next(
+            (
+                cast(dict[str, Any], offer)
+                for offer in offers
+                if isinstance(offer, dict)
+            ),
+            {},
         )
-        return parse_money(match.group(1), self.currency) if match else None
+
+    @classmethod
+    def _selected_fallback_offer(cls, item: dict[str, Any], url: str) -> dict[str, Any]:
+        fallback = item.get("itemFallback")
+        offers = fallback.get("offers") if isinstance(fallback, dict) else None
+        if not isinstance(offers, list):
+            return {}
+        requested = cls._seller_from_url(url)
+        for offer in offers:
+            seller = offer.get("seller") if isinstance(offer, dict) else None
+            if requested and isinstance(seller, dict) and seller.get("id") == requested:
+                return cast(dict[str, Any], offer)
+        return next(
+            (
+                cast(dict[str, Any], offer)
+                for offer in offers
+                if isinstance(offer, dict)
+            ),
+            {},
+        )
+
+    def _regular_price(
+        self,
+        offer: dict[str, Any],
+        fallback: dict[str, Any],
+        json_ld: dict[str, Any],
+        text: str,
+    ) -> tuple[Decimal, str]:
+        raw = offer.get("price") or fallback.get("price")
+        if raw is not None:
+            return self._state_money(raw), "product-offer-state"
+        match = re.search(
+            r"\bou\s+r\$\s*([\d.]+(?:,\d{2})?)\s+em\s+\d+\s*x", self._fold(text), re.I
+        )
+        if match:
+            return parse_money(match.group(1), self.currency), "rendered-regular-price"
+        match = re.search(r"preco\s+r\$\s*([\d.]+(?:,\d{2})?)", self._fold(text), re.I)
+        if match:
+            return parse_money(match.group(1), self.currency), "rendered-price-label"
+        structured_value = json_ld.get("offers")
+        structured: dict[str, Any] = (
+            structured_value if isinstance(structured_value, dict) else {}
+        )
+        if structured.get("price") is not None:
+            return self._state_money(structured["price"]), "json-ld-offer"
+        return parse_money(None, self.currency), "missing"
+
+    def _pix_price(
+        self, offer: dict[str, Any], json_ld: dict[str, Any], text: str
+    ) -> tuple[Decimal | None, str]:
+        best = offer.get("bestPrice")
+        if (
+            isinstance(best, dict)
+            and str(best.get("paymentMethodId", "")).lower() == "pix"
+        ):
+            return self._state_money(best.get("totalAmount")), "payment-method-pix"
+        match = re.search(
+            r"r\$\s*([\d.]+(?:,\d{2})?)\s+no\s+pix", self._fold(text), re.I
+        )
+        if match:
+            return parse_money(match.group(1), self.currency), "rendered-pix-price"
+        structured_value = json_ld.get("offers")
+        structured: dict[str, Any] = (
+            structured_value if isinstance(structured_value, dict) else {}
+        )
+        return (
+            (self._state_money(structured["price"]), "json-ld-offer")
+            if structured.get("price") is not None
+            else (None, "not-found")
+        )
+
+    def _original_price(
+        self, offer: dict[str, Any], fallback: dict[str, Any], text: str, price: Decimal
+    ) -> tuple[Decimal | None, str]:
+        raw = offer.get("listPrice") or fallback.get("listPrice")
+        if raw is not None:
+            candidate = self._state_money(raw)
+            if candidate > price:
+                return candidate, "offer-list-price"
+        match = re.search(
+            r"(?:^|\s)de\s+r\$\s*([\d.]+(?:,\d{2})?)", self._fold(text), re.I
+        )
+        if match:
+            candidate = parse_money(match.group(1), self.currency)
+            if candidate > price:
+                return candidate, "rendered-previous-price"
+        return None, "not-found"
+
+    def _installment(
+        self, offer: dict[str, Any], text: str
+    ) -> tuple[Decimal | None, int | None, str]:
+        plan = offer.get("bestInstallmentPlan")
+        if (
+            isinstance(plan, dict)
+            and plan.get("installment")
+            and plan.get("installmentAmount")
+        ):
+            return (
+                self._state_money(plan["installmentAmount"]),
+                int(plan["installment"]),
+                "best-installment-plan",
+            )
+        match = re.search(
+            r"\bem\s+(\d+)\s*x\s+de\s+r\$\s*([\d.]+(?:,\d{2})?)", self._fold(text), re.I
+        )
+        if match:
+            return (
+                parse_money(match.group(2), self.currency),
+                int(match.group(1)),
+                "rendered-installment",
+            )
+        return None, None, "not-found"
 
     @staticmethod
     def _availability(
-        response: Response,
-        offer: dict[str, Any],
-        page_text: str,
-    ) -> Literal["available", "out_of_stock", "unavailable"]:
-        structured = str(offer.get("availability", "")).lower()
-        if any(marker in structured for marker in ("outofstock", "soldout")):
-            return "out_of_stock"
-        if any(marker in structured for marker in ("discontinued", "unavailable")):
-            return "unavailable"
-        lower_text = page_text.lower()
-        if re.search(
-            r"produto\s+(?:esgotado|indisponível)|fora\s+de\s+estoque",
-            lower_text,
-        ):
-            return "out_of_stock"
-        if "indisponível" in lower_text or "indisponivel" in lower_text:
-            return "unavailable"
-        purchase_buttons = response.xpath(
-            "//button[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZÁÀÃÂ', "
-            "'abcdefghijklmnopqrstuvwxyzáàãâ'), 'adicionar à sacola') or "
-            "contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZÁÀÃÂ', "
-            "'abcdefghijklmnopqrstuvwxyzáàãâ'), 'comprar agora')]"
+        response: Response, offer: dict[str, Any], json_ld: dict[str, Any], text: str
+    ) -> tuple[Availability, str]:
+        seller_value = offer.get("seller")
+        seller: dict[str, Any] = seller_value if isinstance(seller_value, dict) else {}
+        if seller.get("available") is False or offer.get("available") is False:
+            return "out_of_stock", "offer-state"
+        structured_value = json_ld.get("offers")
+        structured: dict[str, Any] = (
+            structured_value if isinstance(structured_value, dict) else {}
         )
-        if purchase_buttons:
-            return "available"
-        if any(
-            signal in lower_text for signal in ("adicionar à sacola", "comprar agora")
+        structured_text = str(structured.get("availability", "")).lower()
+        if any(marker in structured_text for marker in ("outofstock", "soldout")):
+            return "out_of_stock", "json-ld-offer"
+        folded = MagazineLuizaSpider._fold(text)
+        if re.search(
+            r"produto\s+(?:esgotado|indisponivel)|fora\s+de\s+estoque", folded
         ):
-            return "available"
+            return "out_of_stock", "rendered-stock-message"
+        if "indisponivel" in folded:
+            return "unavailable", "rendered-stock-message"
+        buttons = response.css("button")
+        button_text = " ".join(buttons.css("::text").getall())
+        if re.search(
+            r"adicionar\s+a\s+sacola|comprar\s+agora",
+            f"{folded} {MagazineLuizaSpider._fold(button_text)}",
+        ):
+            return "available", "purchase-controls"
         raise ParseError("Sinal de disponibilidade não encontrado")
+
+    @staticmethod
+    def _brand(
+        item: dict[str, Any], json_ld: dict[str, Any], response: Response
+    ) -> str | None:
+        raw = item.get("brand")
+        if isinstance(raw, dict):
+            raw = raw.get("label")
+        raw = (
+            raw
+            or json_ld.get("brand")
+            or MagazineLuizaSpider._specification(response, "Marca")
+        )
+        return MagazineLuizaSpider._string(raw)
+
+    @staticmethod
+    def _gtin(item: dict[str, Any], response: Response) -> str | None:
+        for key in ("gtin", "gtin13", "gtin12", "ean"):
+            if item.get(key):
+                return str(item[key]).strip()
+        return MagazineLuizaSpider._specification(
+            response, "EAN"
+        ) or MagazineLuizaSpider._specification(response, "GTIN")
+
+    @staticmethod
+    def _specification(response: Response, label: str) -> str | None:
+        for row in response.css("tr"):
+            cells = row.css("th, td")
+            values = [" ".join(cell.css("::text").getall()).strip() for cell in cells]
+            if values and MagazineLuizaSpider._fold(
+                values[0]
+            ) == MagazineLuizaSpider._fold(label):
+                return values[-1] or None
+        return None
+
+    @staticmethod
+    def _state_money(raw: Any) -> Decimal:
+        try:
+            value = Decimal(str(raw))
+        except (InvalidOperation, ValueError, TypeError) as exc:
+            raise ParseError(f"Valor monetário estruturado inválido: {raw!r}") from exc
+        if value <= 0:
+            raise ParseError(f"Valor monetário estruturado não positivo: {raw!r}")
+        return value.quantize(Decimal("0.01"))
+
+    @staticmethod
+    def _discount_percentage(
+        offer: dict[str, Any], price: Decimal, original: Decimal | None
+    ) -> Decimal | None:
+        best = offer.get("bestPrice")
+        if isinstance(best, dict) and best.get("discount") is not None:
+            return Decimal(str(best["discount"])).quantize(Decimal("0.01"))
+        if original is None or original <= price:
+            return None
+        return ((original - price) * 100 / original).quantize(Decimal("0.01"))
+
+    @staticmethod
+    def _seller_from_url(url: str) -> str | None:
+        return parse_qs(urlparse(url).query).get("seller_id", [None])[0]
+
+    @staticmethod
+    def _seller_from_text(text: str) -> str | None:
+        match = re.search(
+            r"vendido\s+e\s+entregue\s+por\s+([\w!.-]+)",
+            MagazineLuizaSpider._fold(text),
+            re.I,
+        )
+        return match.group(1).lower() if match else None
 
     @staticmethod
     def _product_id(url: str) -> str | None:
@@ -136,10 +376,19 @@ class MagazineLuizaSpider(BaseStoreSpider):
         return match.group(1) if match else None
 
     @staticmethod
-    def _seller(url: str, page_text: str) -> str | None:
-        query_seller = parse_qs(urlparse(url).query).get("seller_id", [None])[0]
-        if query_seller:
-            return query_seller
-        if re.search(r"Vendido\s+e\s+entregue\s+por\s+Magalu", page_text, re.I):
-            return "magazineluiza"
-        return None
+    def _string(value: Any) -> str | None:
+        return str(value).strip() if value is not None and str(value).strip() else None
+
+    @staticmethod
+    def _fold(value: str) -> str:
+        value = (
+            value.replace("Ã§", "ç")
+            .replace("Ã£", "ã")
+            .replace("Ã¡", "á")
+            .replace("Ã©", "é")
+        )
+        return "".join(
+            c
+            for c in unicodedata.normalize("NFKD", value.lower())
+            if not unicodedata.combining(c)
+        )
