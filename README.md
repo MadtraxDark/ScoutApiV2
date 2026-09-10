@@ -32,17 +32,23 @@ As decisões ficam em [`docs/adr`](docs/adr/). Para uma nova decisão, copie [`d
 
 ## Crawler de preços
 
-O crawler fica em `src/scout_api/modules/crawler`. Ele usa um modelo normalizado de
-oferta (`ProductPriceItem`), `Decimal` para dinheiro, TTL adaptativo, fila de
-prioridade, fingerprint determinística, cache, backoff/jitter e circuit breaker.
-O armazenamento local é uma implementação substituível; para múltiplos workers,
-conecte os seams de deduplicação, lock, estado e histórico a Redis/PostgreSQL.
+O crawler fica em `src/scout_api/modules/crawler`. Ele separa **oferta comercial**
+(`ProductOffer`) de **detalhes do produto** (`ProductDetails`) e compõe o contrato
+completo (`ProductPriceItem`) no fluxo full. Usa `Decimal` para dinheiro, TTL
+adaptativo, fila de prioridade, fingerprint determinística, cache, backoff/jitter
+e circuit breaker. O armazenamento local é uma implementação substituível; para
+múltiplos workers, conecte os seams de deduplicação, lock, estado e histórico a
+Redis/PostgreSQL.
 
-O `POST /crawl` busca HTML com **Camoufox** (Firefox anti-detect) e delega o
+- `POST /crawl` — scraping completo (oferta + detalhes) via `ProductScrapeService`.
+- `POST /crawl/offer` — consulta leve (preço/seller/disponibilidade) via
+  `OfferScrapeService`, sem executar a extração de detalhes.
+
+Ambos buscam HTML com **Camoufox** (Firefox anti-detect) por padrão e delegam o
 parsing aos spiders (`magazineluiza`, `nissei`, …). Spiders não fazem I/O de rede.
 No Linux/Docker o browser usa display virtual (`Xvfb`) + `geoip` para passar
 Cloudflare (Nissei). Desative com `CAMOUFOX_ENABLED=false` para fallback `urllib`.
-Na primeira instalação local, rode `python -m camoufox fetch`.
+Na primeira instalação local, rode `python -m camoufox fetch`. Ver ADR 0011.
 
 Spiders de referência: `kabum`, `bestbuy`, `magazineluiza` e `nissei`. Eles são
 `Spider` customizados (não `CrawlSpider`) porque o parsing de produto e JSON-LD é

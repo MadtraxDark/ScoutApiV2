@@ -94,6 +94,23 @@ def test_magalu_uses_offer_state_for_semantic_prices_and_identity() -> None:
     assert item.metadata["source"]["pix_price"] == "payment-method-pix"
 
 
+def test_magalu_extract_offer_is_independent_of_catalog_details() -> None:
+    spider = MagazineLuizaSpider()
+    response = response_from_fixture("product_structured_offer.html")
+    offer = spider.extract_offer(response)
+    details = spider.extract_details(response)
+
+    assert offer.price == Decimal("5058.85")
+    assert offer.pix_price == Decimal("4805.91")
+    assert offer.seller == "kabum"
+    assert offer.available is True
+    assert details.title
+    assert details.brand == "Sony"
+    assert details.model == "PS5 CFI 2114B Edição Digital"
+    assert "brand" not in offer.model_dump()
+    assert "price" not in details.model_dump()
+
+
 def test_magalu_does_not_infer_original_price_from_unrelated_numbers() -> None:
     url = "https://www.magazineluiza.com.br/p/no-old-price? seller_id=kabum"
     response = HtmlResponse(

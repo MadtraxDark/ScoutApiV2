@@ -1,16 +1,13 @@
 from functools import lru_cache
-from urllib.parse import urlparse
 
 from scrapy.http import HtmlResponse
 
 from ....core.config import get_settings
-from ..core.exceptions import RequestError
 from ..core.scrape_guard import ScrapeGuard
-from ..models.product import ProductPriceItem
+from ..models.product import ProductPriceItem, compose_product_price_item
 from ..spiders.base import BaseStoreSpider
-from ..spiders.brazil.magazineluiza import MagazineLuizaSpider
-from ..spiders.paraguay.nissei import NisseiSpider
 from .html_fetcher import HtmlFetcher, build_html_fetcher
+from .store_resolver import resolve_store_spider
 
 
 @lru_cache
@@ -43,7 +40,7 @@ def get_shared_scrape_guard() -> ScrapeGuard:
 
 
 class ProductScrapeService:
-    """Fetch one product URL and normalize it through the matching spider."""
+    """Orchestrate a full product scrape from offer + details extractors."""
 
     def __init__(
         self,
@@ -61,7 +58,10 @@ class ProductScrapeService:
         spider = self._spider_for(url)
         self._guard.acquire_for_live_fetch(url)
         response = self._fetch(url)
-        item = spider.parse_product(response)
+        item = compose_product_price_item(
+            spider.extract_offer(response),
+            spider.extract_details(response),
+        )
         self._guard.store_success(url, item)
         return item
 
@@ -70,15 +70,4 @@ class ProductScrapeService:
 
     @staticmethod
     def _spider_for(url: str) -> BaseStoreSpider:
-        hostname = (urlparse(url).hostname or "").lower()
-        if hostname == "magazineluiza.com.br" or hostname.endswith(
-            ".magazineluiza.com.br"
-        ):
-            return MagazineLuizaSpider()
-        if hostname == "nissei.com" or hostname.endswith(".nissei.com"):
-            return NisseiSpider()
-        raise RequestError(
-            "Nenhum spider disponível para este domínio",
-            code="UNSUPPORTED_STORE",
-            url=url,
-        )
+        return resolve_store_spider(url)

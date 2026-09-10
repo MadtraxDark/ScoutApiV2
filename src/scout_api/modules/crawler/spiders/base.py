@@ -13,14 +13,19 @@ from ..core.circuit_breaker import CircuitBreaker
 from ..core.exceptions import MissingPriceError, ParseError, RequestError
 from ..core.fingerprints import canonicalize_url
 from ..core.retry import retry_after
-from ..models.product import ProductPriceItem
+from ..models.product import (
+    ProductDetails,
+    ProductOffer,
+    ProductPriceItem,
+    compose_product_price_item,
+)
 from ..utils.parsing import parse_money
 
 logger = logging.getLogger(__name__)
 
 
 class BaseStoreSpider(scrapy.Spider, ABC):
-    """Shared policy layer. Store adapters only define selectors and identity."""
+    """Shared policy layer. Store adapters define offer/details extraction."""
 
     store: ClassVar[str]
     country: ClassVar[str]
@@ -87,14 +92,16 @@ class BaseStoreSpider(scrapy.Spider, ABC):
             raise
 
     def parse_product(self, response: Response) -> ProductPriceItem:
-        data = self.json_ld(response)
-        title = data.get("name") or self.first(response, ["h1::text", "title::text"])
-        raw_price = (
-            data.get("offers", {}).get("price")
-            if isinstance(data.get("offers"), dict)
-            else None
+        return compose_product_price_item(
+            self.extract_offer(response),
+            self.extract_details(response),
         )
-        raw_price = raw_price or self.first(
+
+    def extract_offer(self, response: Response) -> ProductOffer:
+        data = self.json_ld(response)
+        offers = data.get("offers") if isinstance(data, dict) else None
+        structured: dict[str, Any] = offers if isinstance(offers, dict) else {}
+        raw_price = structured.get("price") or self.first(
             response,
             [
                 "[itemprop='price']::attr(content)",
@@ -102,9 +109,9 @@ class BaseStoreSpider(scrapy.Spider, ABC):
                 ".product-price::text",
             ],
         )
-        if not title:
-            raise ParseError("Título do produto não encontrado")
-        price = parse_money(str(raw_price), self.currency)
+        price = parse_money(
+            str(raw_price) if raw_price is not None else None, self.currency
+        )
         product_id = data.get("sku") or self.first(
             response,
             [
@@ -114,22 +121,42 @@ class BaseStoreSpider(scrapy.Spider, ABC):
         )
         if not product_id:
             product_id = canonicalize_url(response.url)
-        available = str(data.get("offers", {}).get("availability", "")).lower() not in {
+        available = str(structured.get("availability", "")).lower() not in {
             "outofstock",
             "false",
         }
-        return ProductPriceItem(
+        return ProductOffer(
             store=self.store,
             country=self.country,
             product_id=str(product_id),
             sku=str(product_id),
-            title=str(title).strip(),
             url=response.url,
             canonical_url=canonicalize_url(response.url),
             currency=self.currency,
             price=Decimal(price),
             available=available,
             availability="available" if available else "out_of_stock",
+            metadata={"source": "json-ld-or-selector"},
+        )
+
+    def extract_details(self, response: Response) -> ProductDetails:
+        data = self.json_ld(response)
+        title = data.get("name") or self.first(response, ["h1::text", "title::text"])
+        if not title:
+            raise ParseError("Título do produto não encontrado")
+        product_id = data.get("sku") or self.first(
+            response,
+            [
+                "[itemprop='sku']::attr(content)",
+                "[data-product-id]::attr(data-product-id)",
+            ],
+        )
+        if not product_id:
+            product_id = canonicalize_url(response.url)
+        return ProductDetails(
+            product_id=str(product_id),
+            sku=str(product_id),
+            title=str(title).strip(),
             metadata={"source": "json-ld-or-selector"},
         )
 

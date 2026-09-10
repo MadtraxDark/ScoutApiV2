@@ -3,8 +3,9 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from .core.exceptions import ParseError, RequestError
-from .models.product import ProductPriceItem
+from .models.product import ProductOffer, ProductPriceItem
 from .schemas import CrawlErrorResponse, CrawlRequest
+from .services.offer_scrape_service import OfferScrapeService
 from .services.product_scrape_service import ProductScrapeService
 
 router = APIRouter(prefix="/crawl", tags=["crawler"])
@@ -12,6 +13,10 @@ router = APIRouter(prefix="/crawl", tags=["crawler"])
 
 def get_product_scrape_service() -> ProductScrapeService:
     return ProductScrapeService()
+
+
+def get_offer_scrape_service() -> OfferScrapeService:
+    return OfferScrapeService()
 
 
 @router.post(
@@ -30,6 +35,46 @@ def crawl_product(
 ) -> ProductPriceItem:
     try:
         return service.scrape(str(payload.url))
+    except RequestError as exc:
+        raise HTTPException(
+            status_code=_status_for_request_error(exc),
+            detail={
+                "code": exc.code,
+                "message": str(exc),
+                "url": exc.url,
+                "upstream_status": exc.upstream_status,
+                "retryable": exc.retryable,
+                "retry_after": exc.retry_after,
+            },
+        ) from exc
+    except ParseError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "code": "PARSE_ERROR",
+                "message": str(exc),
+                "url": str(payload.url),
+                "retryable": False,
+            },
+        ) from exc
+
+
+@router.post(
+    "/offer",
+    response_model=ProductOffer,
+    responses={
+        422: {"model": CrawlErrorResponse},
+        429: {"model": CrawlErrorResponse},
+        502: {"model": CrawlErrorResponse},
+    },
+    status_code=status.HTTP_200_OK,
+)
+def crawl_offer(
+    payload: CrawlRequest,
+    service: Annotated[OfferScrapeService, Depends(get_offer_scrape_service)],
+) -> ProductOffer:
+    try:
+        return service.scrape_offer(str(payload.url))
     except RequestError as exc:
         raise HTTPException(
             status_code=_status_for_request_error(exc),

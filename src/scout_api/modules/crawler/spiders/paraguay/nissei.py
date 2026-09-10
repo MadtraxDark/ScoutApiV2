@@ -6,7 +6,7 @@ from scrapy.http import Response
 
 from ...core.exceptions import ParseError
 from ...core.fingerprints import canonicalize_url
-from ...models.product import ProductPriceItem
+from ...models.product import ProductDetails, ProductOffer
 from ...utils.parsing import parse_money
 from ..base import BaseStoreSpider
 
@@ -14,24 +14,19 @@ Availability = Literal["available", "out_of_stock", "unavailable"]
 
 
 class NisseiSpider(BaseStoreSpider):
-    """Parse a single Nissei (Paraguay) product offer."""
+    """Parse a single Nissei (Paraguay) product offer and catalog details."""
 
     name = "nissei"
     store, country, currency = "nissei", "PY", "PYG"
     allowed_domains = ["nissei.com"]
     start_urls: list[str] = []
 
-    def parse_product(self, response: Response) -> ProductPriceItem:
+    def extract_offer(self, response: Response) -> ProductOffer:
         data = self.json_ld(response)
         offers = data.get("offers") if isinstance(data, dict) else None
         offer = offers if isinstance(offers, dict) else {}
         page_text = " ".join(response.css("body ::text").getall())
-
-        title = data.get("name") or self.first(
-            response, ["h1 .base::text", "h1::text", "title::text"]
-        )
-        if not title:
-            raise ParseError("Título do produto não encontrado")
+        product_root = response.css(".product-info-main")
 
         raw_price = offer.get("price") or self.first(
             response,
@@ -43,10 +38,6 @@ class NisseiSpider(BaseStoreSpider):
             ],
         )
         price = self._price(raw_price)
-
-        product_root = response.css(".product-info-main")
-        brand = self.first(product_root, [".amshopby-brand-title-link::text"])
-        gtin = self._attribute_value(response, "UPC")
         original_price = self._original_price(product_root)
         discount_percentage = self._discount_percentage(price, original_price)
         installment_price, installment_count = self._installment(product_root)
@@ -67,27 +58,59 @@ class NisseiSpider(BaseStoreSpider):
             product_id = canonicalize_url(response.url)
 
         availability = self._availability(offer, page_text)
-        return ProductPriceItem(
+        return ProductOffer(
             store=self.store,
             country=self.country,
             product_id=str(product_id).strip(),
             sku=str(product_id).strip(),
-            title=str(title).strip(),
             url=response.url,
             canonical_url=canonicalize_url(response.url),
             currency=self.currency,
             price=Decimal(price),
-            gtin=gtin,
-            brand=brand,
             original_price=original_price,
             discount_percentage=discount_percentage,
             installment_price=installment_price,
             installment_count=installment_count,
             available=availability == "available",
             availability=availability,
-            metadata={
-                "source": {"title": "json-ld-or-h1", "price": "json-ld-or-magento"}
-            },
+            metadata={"source": {"price": "json-ld-or-magento"}},
+        )
+
+    def extract_details(self, response: Response) -> ProductDetails:
+        data = self.json_ld(response)
+        page_text = " ".join(response.css("body ::text").getall())
+        product_root = response.css(".product-info-main")
+
+        title = data.get("name") or self.first(
+            response, ["h1 .base::text", "h1::text", "title::text"]
+        )
+        if not title:
+            raise ParseError("Título do produto não encontrado")
+
+        brand = self.first(product_root, [".amshopby-brand-title-link::text"])
+        gtin = self._attribute_value(response, "UPC")
+        product_id = (
+            data.get("sku")
+            or self.first(
+                response,
+                [
+                    "[itemprop='sku']::attr(content)",
+                    "[itemprop='sku']::text",
+                    "[data-product-id]::attr(data-product-id)",
+                ],
+            )
+            or self._sku_from_text(page_text)
+        )
+        if not product_id:
+            product_id = canonicalize_url(response.url)
+
+        return ProductDetails(
+            product_id=str(product_id).strip(),
+            sku=str(product_id).strip(),
+            gtin=gtin,
+            title=str(title).strip(),
+            brand=brand,
+            metadata={"source": {"title": "json-ld-or-h1"}},
         )
 
     def _price(self, raw: object) -> Decimal:

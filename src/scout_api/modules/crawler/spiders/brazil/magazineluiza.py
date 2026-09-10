@@ -9,7 +9,12 @@ from scrapy.http import Response
 
 from ...core.exceptions import ParseError
 from ...core.fingerprints import canonicalize_url
-from ...models.product import ProductPriceItem
+from ...models.product import (
+    ProductDetails,
+    ProductOffer,
+    ProductPriceItem,
+    compose_product_price_item,
+)
 from ...utils.parsing import parse_money
 from ..base import BaseStoreSpider
 
@@ -17,7 +22,7 @@ Availability = Literal["available", "out_of_stock", "unavailable"]
 
 
 class MagazineLuizaSpider(BaseStoreSpider):
-    """Parse the selected Magalu offer from structured page data and HTML."""
+    """Parse Magalu offers and catalog details from structured page data and HTML."""
 
     name = "magazineluiza"
     store, country, currency = "magazineluiza", "BR", "BRL"
@@ -25,6 +30,12 @@ class MagazineLuizaSpider(BaseStoreSpider):
     start_urls: list[str] = []
 
     def parse_product(self, response: Response) -> ProductPriceItem:
+        return compose_product_price_item(
+            self.extract_offer(response),
+            self.extract_details(response),
+        )
+
+    def extract_offer(self, response: Response) -> ProductOffer:
         json_ld = self.json_ld(response)
         state = self._next_data(response)
         item = self._state_item(state)
@@ -32,13 +43,6 @@ class MagazineLuizaSpider(BaseStoreSpider):
         fallback_offer = self._selected_fallback_offer(item, response.url)
         page_text = " ".join(response.css("body ::text").getall())
 
-        title = (
-            item.get("title")
-            or json_ld.get("name")
-            or self.first(response, ["h1::text", "title::text"])
-        )
-        if not title:
-            raise ParseError("Título do produto não encontrado")
         price, price_source = self._regular_price(
             offer, fallback_offer, json_ld, page_text
         )
@@ -72,23 +76,15 @@ class MagazineLuizaSpider(BaseStoreSpider):
             or self._seller_from_text(page_text)
         )
         sku = seller_data.get("sku") or offer.get("sku") or json_ld.get("sku")
-        brand = self._brand(item, json_ld, response)
-        model = self._specification(response, "Modelo")
-        variant = item.get("color") or self._specification(response, "Cor")
         original_price = (
             original_price if original_price and original_price > price else None
         )
 
-        return ProductPriceItem(
+        return ProductOffer(
             store=self.store,
             country=self.country,
             product_id=str(product_id).strip(),
             sku=self._string(sku),
-            gtin=self._gtin(item, response),
-            title=str(title).strip(),
-            brand=self._string(brand),
-            model=self._string(model),
-            variant=self._string(variant),
             seller=self._string(seller),
             url=response.url,
             canonical_url=canonicalize_url(response.url),
@@ -103,13 +99,68 @@ class MagazineLuizaSpider(BaseStoreSpider):
             availability=availability,
             metadata={
                 "source": {
-                    "title": "product-state" if item.get("title") else "json-ld-or-h1",
                     "price": price_source,
                     "pix_price": pix_source,
                     "original_price": original_source,
                     "installment": installment_source,
                     "availability": availability_source,
                     "seller": "offer-state" if seller_data else "url-or-rendered-text",
+                    "product_id": "product-state"
+                    if item.get("id")
+                    else "json-ld-or-url",
+                    "sku": "offer-seller-state"
+                    if seller_data.get("sku")
+                    else "json-ld",
+                }
+            },
+        )
+
+    def extract_details(self, response: Response) -> ProductDetails:
+        json_ld = self.json_ld(response)
+        state = self._next_data(response)
+        item = self._state_item(state)
+        offer = self._selected_offer(item, response.url)
+        seller_value = offer.get("seller")
+        seller_data: dict[str, Any] = (
+            seller_value if isinstance(seller_value, dict) else {}
+        )
+
+        title = (
+            item.get("title")
+            or json_ld.get("name")
+            or self.first(response, ["h1::text", "title::text"])
+        )
+        if not title:
+            raise ParseError("Título do produto não encontrado")
+
+        product_id = (
+            item.get("id")
+            or item.get("offerId")
+            or json_ld.get("sku")
+            or self._product_id(response.url)
+        )
+        if not product_id:
+            raise ParseError("Identificador do produto não encontrado")
+
+        sku = seller_data.get("sku") or offer.get("sku") or json_ld.get("sku")
+        brand = self._brand(item, json_ld, response)
+        model = self._specification(response, "Modelo")
+        variant = item.get("color") or self._specification(response, "Cor")
+
+        return ProductDetails(
+            product_id=str(product_id).strip(),
+            sku=self._string(sku),
+            gtin=self._gtin(item, response),
+            title=str(title).strip(),
+            brand=self._string(brand),
+            model=self._string(model),
+            variant=self._string(variant),
+            description=None,
+            specifications={},
+            images=[],
+            metadata={
+                "source": {
+                    "title": "product-state" if item.get("title") else "json-ld-or-h1",
                     "product_id": "product-state"
                     if item.get("id")
                     else "json-ld-or-url",
