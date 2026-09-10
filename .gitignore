@@ -1,10 +1,14 @@
 __pycache__/
 *.py[cod]
 *.egg-info/
+.eggs/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.tox/
+.nox/
 .coverage
+.coverage.*
 htmlcov/
 .venv/
 venv/
@@ -13,4 +17,12 @@ venv/
 !.env.example
 dist/
 build/
+.scrapy/
+*.log
+*.sqlite3
+*.db
+.cache/
+.idea/
+.vscode/*.code-snippets
 .DS_Store
+Thumbs.db

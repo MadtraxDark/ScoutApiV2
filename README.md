@@ -29,3 +29,27 @@ Execute `python -m pytest`, `ruff check .`, `ruff format --check .` e `mypy src`
 ## ADRs
 
 As decisões ficam em [`docs/adr`](docs/adr/). Para uma nova decisão, copie [`docs/adr/template.md`](docs/adr/template.md), use o próximo número e registre contexto, alternativas, decisão, justificativa e consequências.
+
+## Crawler de preços
+
+O crawler fica em `src/scout_api/modules/crawler`. Ele usa um modelo normalizado de
+oferta (`ProductPriceItem`), `Decimal` para dinheiro, TTL adaptativo, fila de
+prioridade, fingerprint determinística, cache, backoff/jitter e circuit breaker.
+O armazenamento local é uma implementação substituível; para múltiplos workers,
+conecte os seams de deduplicação, lock, estado e histórico a Redis/PostgreSQL.
+
+Spiders de referência implementados: `kabum`, `bestbuy` e `nissei`. Eles são
+`Spider` customizados (não `CrawlSpider`) porque o parsing de produto e JSON-LD é
+específico e conservador. Shopee, AliExpress e eBay devem preferir APIs oficiais ou
+integrações autorizadas para ofertas/sellers; os demais adapters podem ser adicionados
+sem duplicar a infraestrutura base.
+
+```bash
+scrapy crawl kabum -a start_urls=https://www.kabum.com.br/produto
+docker compose up --build -d
+python -m pytest
+```
+
+O crawler obedece `robots.txt`, usa concorrência conservadora e não contorna CAPTCHA,
+login, bloqueios ou controles de acesso. Mitmproxy e proxies são opcionais e destinados
+somente a ambientes autorizados de diagnóstico.

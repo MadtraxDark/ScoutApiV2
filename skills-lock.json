@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "docker": {
+      "source": "mindrally/skills",
+      "sourceType": "github",
+      "skillPath": "docker/SKILL.md",
+      "computedHash": "d7cde6ea1ffb9730f2864351ab3de766830f8734d631c9326b865969d5a86460"
+    },
+    "dockerfile-optimise": {
+      "source": "pproenca/dot-skills",
+      "sourceType": "github",
+      "skillPath": "skills/.experimental/dockerfile-optimise/SKILL.md",
+      "computedHash": "ec75e9b183f05dc5436f746c681e6f0809c7228a1e1bd1603b11deae07d685a0"
+    }
+  }
+}

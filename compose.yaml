@@ -8,6 +8,7 @@ services:
       DEBUG: ${DEBUG:-false}
       HOST: 0.0.0.0
       PORT: 8000
+      REDIS_URL: redis://redis:6379/0
     ports:
       - "${PORT:-8000}:8000"
     restart: unless-stopped
@@ -17,3 +18,17 @@ services:
       timeout: 5s
       retries: 3
       start_period: 5s
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  redis-data:
