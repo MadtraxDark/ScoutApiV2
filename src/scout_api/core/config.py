@@ -29,6 +29,13 @@ class Settings(BaseSettings):
     mitmproxy_url: str | None = None
     rotating_proxies_enabled: bool = False
     rotating_proxy_list_path: str | None = None
+    scraper_http_timeout: int = 30
+    camoufox_enabled: bool = True
+    camoufox_headless: bool = True
+    camoufox_humanize: bool = True
+    camoufox_timeout_ms: int = 90_000
+    camoufox_settle_ms: int = 5_000
+    camoufox_max_settle_attempts: int = 12
 
     @field_validator("debug", mode="before")
     @classmethod

@@ -1,19 +1,51 @@
-FROM python:3.12-slim
+# syntax=docker/dockerfile:1
+
+FROM python:3.12-slim-bookworm
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1
+    PIP_NO_CACHE_DIR=1 \
+    HOME=/home/app
 
 WORKDIR /app
 
-RUN addgroup --system app && adduser --system --ingroup app app
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        fonts-liberation \
+        libasound2 \
+        libatk-bridge2.0-0 \
+        libatk1.0-0 \
+        libatomic1 \
+        libcups2 \
+        libdbus-1-3 \
+        libdbus-glib-1-2 \
+        libdrm2 \
+        libgbm1 \
+        libgtk-3-0 \
+        libnspr4 \
+        libnss3 \
+        libx11-xcb1 \
+        libxcb-shm0 \
+        libxcomposite1 \
+        libxdamage1 \
+        libxfixes3 \
+        libxrandr2 \
+        libxshmfence1 \
+        libxt6 \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd --create-home --home-dir /home/app --shell /usr/sbin/nologin app
 
 COPY pyproject.toml README.md ./
 COPY src ./src
 
-RUN pip install --no-cache-dir . && chown -R app:app /app
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --no-cache-dir . \
+    && chown -R app:app /app /home/app
 
 USER app
+
+RUN python -m camoufox fetch
 
 EXPOSE 8000
 

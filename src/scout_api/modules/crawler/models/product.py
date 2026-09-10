@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 from decimal import Decimal
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -26,6 +26,7 @@ class ProductPriceItem(BaseModel):
     original_price: Decimal | None = None
     discount_percentage: Decimal | None = None
     pix_price: Decimal | None = None
+    availability: Literal["available", "out_of_stock", "unavailable"] = "available"
     installment_price: Decimal | None = None
     installment_count: int | None = None
     shipping_price: Decimal | None = None

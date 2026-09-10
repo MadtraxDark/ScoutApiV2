@@ -10,7 +10,7 @@ import scrapy
 from scrapy.http import Response
 
 from ..core.circuit_breaker import CircuitBreaker
-from ..core.exceptions import MissingPriceError, ParseError
+from ..core.exceptions import MissingPriceError, ParseError, RequestError
 from ..core.fingerprints import canonicalize_url
 from ..core.retry import retry_after
 from ..models.product import ProductPriceItem
@@ -63,6 +63,9 @@ class BaseStoreSpider(scrapy.Spider, ABC):
     def parse(self, response: Response):  # type: ignore[no-untyped-def]
         domain = urlparse(response.url).netloc
         breaker = self.circuit_breakers.setdefault(domain, CircuitBreaker())
+        if response.status >= 400 and response.status != 429:
+            breaker.record_failure()
+            raise RequestError(f"HTTP {response.status} recebido de {response.url}")
         if response.status == 429:
             header = response.headers.get("Retry-After") or b""
             delay = retry_after(header.decode())
@@ -126,6 +129,7 @@ class BaseStoreSpider(scrapy.Spider, ABC):
             currency=self.currency,
             price=Decimal(price),
             available=available,
+            availability="available" if available else "out_of_stock",
             metadata={"source": "json-ld-or-selector"},
         )
 

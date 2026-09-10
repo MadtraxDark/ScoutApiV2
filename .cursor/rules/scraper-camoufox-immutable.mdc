@@ -1,0 +1,29 @@
+---
+description: Preserve scraper/Camoufox runtime behavior; only extraction may change by default
+alwaysApply: true
+---
+
+# Scraper e Camoufox são imutáveis por padrão
+
+Sem pedido **explícito** do usuário para alterar o comportamento operacional, **não** modifique como o scraper ou o Camoufox navegam, buscam HTML ou executam a coleta.
+
+## Proibido sem autorização explícita
+
+- Fluxo de navegação, lifecycle do browser, páginas/contextos/sessões
+- Inicialização e config do Camoufox (headless, humanize, fingerprint, UA, headers)
+- Carregamento, waits, cliques, autenticação, cookies
+- Proxies, rede, timeouts, retries, concorrência, ordem de execução
+- Arquitetura interna do fetch (`html_fetcher`, wiring Camoufox) e fluxo de coleta
+- Seletores usados para navegação/controle (não só extração)
+
+## Permitido sem autorização extra
+
+Alterações só de **extração e tratamento de dados**:
+
+- Campos coletados / removidos
+- Origem na página e seletores **somente** de parsing
+- Parsing, normalização, validação e shape do resultado (`ProductPriceItem`, spiders)
+
+## Em dúvida
+
+Se a tarefa parecer exigir mudar fetch/Camoufox/navegação e o usuário não pediu isso de forma explícita: **preserve a implementação atual** e mude só parsing/dados.

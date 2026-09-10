@@ -38,18 +38,23 @@ prioridade, fingerprint determinística, cache, backoff/jitter e circuit breaker
 O armazenamento local é uma implementação substituível; para múltiplos workers,
 conecte os seams de deduplicação, lock, estado e histórico a Redis/PostgreSQL.
 
-Spiders de referência implementados: `kabum`, `bestbuy` e `nissei`. Eles são
+O `POST /crawl` busca HTML com **Camoufox** (Firefox anti-detect) e delega o
+parsing aos spiders (`magazineluiza`, `nissei`, …). Spiders não fazem I/O de rede.
+Desative o browser com `CAMOUFOX_ENABLED=false` para fallback `urllib` (útil em
+testes). Na primeira instalação local, rode `python -m camoufox fetch`.
+
+Spiders de referência: `kabum`, `bestbuy`, `magazineluiza` e `nissei`. Eles são
 `Spider` customizados (não `CrawlSpider`) porque o parsing de produto e JSON-LD é
 específico e conservador. Shopee, AliExpress e eBay devem preferir APIs oficiais ou
 integrações autorizadas para ofertas/sellers; os demais adapters podem ser adicionados
 sem duplicar a infraestrutura base.
 
 ```bash
+python -m camoufox fetch
 scrapy crawl kabum -a start_urls=https://www.kabum.com.br/produto
+scrapy crawl magazineluiza -a start_urls=https://www.magazineluiza.com.br/playstation-5-edicao-digital-825gb-1-controle-branco-sony-com-2-jogos/p/240590700/ga/gap5/?seller_id=magazineluiza
 docker compose up --build -d
 python -m pytest
 ```
 
-O crawler obedece `robots.txt`, usa concorrência conservadora e não contorna CAPTCHA,
-login, bloqueios ou controles de acesso. Mitmproxy e proxies são opcionais e destinados
-somente a ambientes autorizados de diagnóstico.
+O crawler visa contornar CAPTCHA, login, bloqueios ou controles de acesso para assegurar a coleta de dados. Camoufox cobre fingerprint/WAF; Mitmproxy e proxies residenciais podem complementar IP.
