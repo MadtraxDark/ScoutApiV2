@@ -33,6 +33,7 @@ RUN apt-get update \
         libxrandr2 \
         libxshmfence1 \
         libxt6 \
+        xvfb \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --create-home --home-dir /home/app --shell /usr/sbin/nologin app
 

@@ -7,10 +7,12 @@ from __future__ import annotations
 
 import logging
 import re
+import sys
 from collections.abc import Callable
 from contextlib import AbstractContextManager
 from typing import Any, Protocol
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlparse
 from urllib.request import Request as UrlRequest
 from urllib.request import urlopen
 
@@ -31,7 +33,7 @@ class HtmlFetcher(Protocol):
 def is_challenge_page(html: str, *, title: str | None = None) -> bool:
     """Detect Cloudflare / Akamai interstitial pages that are not product HTML."""
     title_text = (title or "").strip().lower()
-    if "just a moment" in title_text:
+    if "just a moment" in title_text or "un momento" in title_text:
         return True
     lower = html.lower()
     if "akamai-bot" in lower and (
@@ -43,6 +45,18 @@ def is_challenge_page(html: str, *, title: str | None = None) -> bool:
     if re.search(r"cf-challenge|challenge-platform", lower) and len(html) < 40_000:
         return True
     return False
+
+
+def locale_for_url(url: str) -> str | None:
+    """Prefer store-local locale so Intl/fingerprint match the target site."""
+    hostname = (urlparse(url).hostname or "").lower()
+    if hostname == "nissei.com" or hostname.endswith(".nissei.com"):
+        return "es-PY"
+    if hostname == "magazineluiza.com.br" or hostname.endswith(
+        ".magazineluiza.com.br"
+    ):
+        return "pt-BR"
+    return None
 
 
 class UrllibHtmlFetcher:
@@ -144,7 +158,7 @@ class CamoufoxHtmlFetcher:
 
     def fetch(self, url: str) -> HtmlResponse:
         try:
-            with self._open_browser() as browser:
+            with self._open_browser(url=url) as browser:
                 page = browser.new_page()
                 page.goto(url, wait_until="domcontentloaded", timeout=self._timeout_ms)
                 html, final_url, title = self._wait_for_product_html(page)
@@ -176,16 +190,29 @@ class CamoufoxHtmlFetcher:
                 retryable=True,
             ) from exc
 
-    def _open_browser(self) -> AbstractContextManager[Any]:
+    def _open_browser(self, *, url: str) -> AbstractContextManager[Any]:
+        launch_kwargs = self._launch_kwargs(url=url)
         if self._browser_factory is not None:
-            return self._browser_factory(
-                headless=self._headless, humanize=self._humanize
-            )
+            return self._browser_factory(**launch_kwargs)
         from camoufox.sync_api import Camoufox
 
-        return Camoufox(  # type: ignore[no-untyped-call]
-            headless=self._headless, humanize=self._humanize
-        )
+        return Camoufox(**launch_kwargs)  # type: ignore[no-untyped-call]
+
+    def _launch_kwargs(self, *, url: str) -> dict[str, Any]:
+        # Linux Docker headless is detected by Cloudflare; Xvfb "virtual" passes.
+        headless: bool | str = self._headless
+        if self._headless is True and sys.platform.startswith("linux"):
+            headless = "virtual"
+        kwargs: dict[str, Any] = {
+            "headless": headless,
+            "humanize": self._humanize,
+            "os": "windows",
+            "geoip": True,
+        }
+        locale = locale_for_url(url)
+        if locale is not None:
+            kwargs["locale"] = locale
+        return kwargs
 
     def _wait_for_product_html(self, page: Any) -> tuple[str, str, str]:
         html = ""

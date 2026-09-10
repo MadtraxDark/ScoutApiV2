@@ -20,6 +20,7 @@ from scout_api.modules.crawler.services.product_scrape_service import (
 
 def test_is_challenge_page_detects_cloudflare_and_akamai() -> None:
     assert is_challenge_page("<html></html>", title="Just a moment...")
+    assert is_challenge_page("<html></html>", title="Un momento…")
     assert is_challenge_page(
         '<link rel="stylesheet" href="https://wx.mlcdn.com.br/akamai-bot/css/x.css">'
         "<h1>Não é possível acessar a página</h1>"
@@ -28,6 +29,16 @@ def test_is_challenge_page_detects_cloudflare_and_akamai() -> None:
         "<html><body><h1>Produto</h1><p>R$ 10,00</p></body></html>",
         title="Produto",
     )
+
+
+def test_locale_for_url_matches_store() -> None:
+    from scout_api.modules.crawler.services.html_fetcher import locale_for_url
+
+    assert locale_for_url("https://nissei.com/py/x") == "es-PY"
+    assert (
+        locale_for_url("https://www.magazineluiza.com.br/p/1") == "pt-BR"
+    )
+    assert locale_for_url("https://example.com/") is None
 
 
 def test_urllib_fetcher_maps_http_403() -> None:

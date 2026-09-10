@@ -9,7 +9,7 @@ description = "Base arquitetural da API ScoutApiV2"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "camoufox>=0.4.11,<1.0",
+    "camoufox[geoip]>=0.4.11,<1.0",
     "fastapi>=0.115,<1.0",
     "pydantic-settings>=2.6,<3.0",
     "scrapy>=2.11,<3.0",

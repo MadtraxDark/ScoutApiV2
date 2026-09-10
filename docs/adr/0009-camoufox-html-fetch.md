@@ -44,3 +44,5 @@ router → service → spider.
 - Imagem Docker maior (binário Camoufox + libs GUI)
 - Fetch mais lento e mais RAM que HTTP puro
 - Em datacenter ainda pode falhar; proxy residencial continua opção complementar
+- No Linux/Docker, `headless` vira display virtual (`Xvfb`) + `geoip` para Cloudflare
+  (validado na Nissei); Magalu continua no mesmo fetcher

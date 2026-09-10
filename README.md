@@ -40,8 +40,9 @@ conecte os seams de deduplicação, lock, estado e histórico a Redis/PostgreSQL
 
 O `POST /crawl` busca HTML com **Camoufox** (Firefox anti-detect) e delega o
 parsing aos spiders (`magazineluiza`, `nissei`, …). Spiders não fazem I/O de rede.
-Desative o browser com `CAMOUFOX_ENABLED=false` para fallback `urllib` (útil em
-testes). Na primeira instalação local, rode `python -m camoufox fetch`.
+No Linux/Docker o browser usa display virtual (`Xvfb`) + `geoip` para passar
+Cloudflare (Nissei). Desative com `CAMOUFOX_ENABLED=false` para fallback `urllib`.
+Na primeira instalação local, rode `python -m camoufox fetch`.
 
 Spiders de referência: `kabum`, `bestbuy`, `magazineluiza` e `nissei`. Eles são
 `Spider` customizados (não `CrawlSpider`) porque o parsing de produto e JSON-LD é
