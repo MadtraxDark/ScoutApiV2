@@ -27,7 +27,9 @@ class NisseiSpider(BaseStoreSpider):
         offer = offers if isinstance(offers, dict) else {}
         page_text = " ".join(response.css("body ::text").getall())
 
-        title = data.get("name") or self.first(response, ["h1::text", "title::text"])
+        title = data.get("name") or self.first(
+            response, ["h1 .base::text", "h1::text", "title::text"]
+        )
         if not title:
             raise ParseError("Título do produto não encontrado")
 
@@ -41,6 +43,13 @@ class NisseiSpider(BaseStoreSpider):
             ],
         )
         price = self._price(raw_price)
+
+        product_root = response.css(".product-info-main")
+        brand = self.first(product_root, [".amshopby-brand-title-link::text"])
+        gtin = self._attribute_value(response, "UPC")
+        original_price = self._original_price(product_root)
+        discount_percentage = self._discount_percentage(price, original_price)
+        installment_price, installment_count = self._installment(product_root)
 
         product_id = (
             data.get("sku")
@@ -68,6 +77,12 @@ class NisseiSpider(BaseStoreSpider):
             canonical_url=canonicalize_url(response.url),
             currency=self.currency,
             price=Decimal(price),
+            gtin=gtin,
+            brand=brand,
+            original_price=original_price,
+            discount_percentage=discount_percentage,
+            installment_price=installment_price,
+            installment_count=installment_count,
             available=availability == "available",
             availability=availability,
             metadata={
@@ -83,6 +98,52 @@ class NisseiSpider(BaseStoreSpider):
         if re.fullmatch(r"\d+(?:\.\d+)?", text):
             return Decimal(text).quantize(Decimal("1"))
         return parse_money(text, self.currency)
+
+    @staticmethod
+    def _attribute_value(response: Response, label: str) -> str | None:
+        """Read a product specification by its explicit table label."""
+        for row in response.css(".product-attribute-specs-table tr"):
+            key = " ".join(row.css("th::text").getall()).strip()
+            if key.casefold() == label.casefold():
+                value = " ".join(row.css("td::text").getall()).strip()
+                return value or None
+        return None
+
+    @staticmethod
+    def _original_price(product_root: Any) -> Decimal | None:
+        raw = product_root.css(
+            ".price-box[data-role='priceBox'] "
+            ".price-wrapper[data-price-type='oldPrice']::attr(data-price-amount)"
+        ).get()
+        if not raw:
+            return None
+        return Decimal(raw).quantize(Decimal("1"))
+
+    @staticmethod
+    def _discount_percentage(
+        price: Decimal, original_price: Decimal | None
+    ) -> Decimal | None:
+        if original_price is None or original_price <= price:
+            return None
+        return ((original_price - price) * 100 / original_price).quantize(
+            Decimal("0.01")
+        )
+
+    @staticmethod
+    def _installment(product_root: Any) -> tuple[Decimal | None, int | None]:
+        """Use the installment amount/count explicitly rendered by Nissei's page JS."""
+        text = " ".join(
+            product_root.css(
+                ".principal-cuotas h3::text, .principal-cuotas h3 *::text"
+            ).getall()
+        )
+        match = re.search(
+            r"Hasta\s+(\d+)\s+cuotas.*?Gs\.\s*([\d.]+)", text, re.I | re.S
+        )
+        if not match:
+            return None, None
+        amount = parse_money(match.group(2), "PYG")
+        return Decimal(amount), int(match.group(1))
 
     @staticmethod
     def _sku_from_text(page_text: str) -> str | None:

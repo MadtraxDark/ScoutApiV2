@@ -46,3 +46,4 @@ router → service → spider.
 - Em datacenter ainda pode falhar; proxy residencial continua opção complementar
 - No Linux/Docker, `headless` vira display virtual (`Xvfb`) + `geoip` para Cloudflare
   (validado na Nissei); Magalu continua no mesmo fetcher
+- Mitigações Cloudflare adicionais (perfil persistente, warm-up, proxy) em ADR 0010

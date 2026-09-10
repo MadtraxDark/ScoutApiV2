@@ -19,6 +19,7 @@ def get_product_scrape_service() -> ProductScrapeService:
     response_model=ProductPriceItem,
     responses={
         422: {"model": CrawlErrorResponse},
+        429: {"model": CrawlErrorResponse},
         502: {"model": CrawlErrorResponse},
     },
     status_code=status.HTTP_200_OK,
@@ -31,13 +32,14 @@ def crawl_product(
         return service.scrape(str(payload.url))
     except RequestError as exc:
         raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
+            status_code=_status_for_request_error(exc),
             detail={
                 "code": exc.code,
                 "message": str(exc),
                 "url": exc.url,
                 "upstream_status": exc.upstream_status,
                 "retryable": exc.retryable,
+                "retry_after": exc.retry_after,
             },
         ) from exc
     except ParseError as exc:
@@ -50,3 +52,9 @@ def crawl_product(
                 "retryable": False,
             },
         ) from exc
+
+
+def _status_for_request_error(exc: RequestError) -> int:
+    if exc.code in {"DUPLICATE_REQUEST", "RATE_LIMITED"}:
+        return status.HTTP_429_TOO_MANY_REQUESTS
+    return status.HTTP_502_BAD_GATEWAY

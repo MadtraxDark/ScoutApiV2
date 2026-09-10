@@ -9,14 +9,23 @@ services:
       HOST: 0.0.0.0
       PORT: 8000
       REDIS_URL: redis://redis:6379/0
+      SCRAPE_URL_COOLDOWN_SECONDS: ${SCRAPE_URL_COOLDOWN_SECONDS:-300}
+      SCRAPE_DOMAIN_MIN_INTERVAL_SECONDS: ${SCRAPE_DOMAIN_MIN_INTERVAL_SECONDS:-15}
+      SCRAPE_RESULT_CACHE_TTL_SECONDS: ${SCRAPE_RESULT_CACHE_TTL_SECONDS:-300}
       CAMOUFOX_ENABLED: ${CAMOUFOX_ENABLED:-true}
       CAMOUFOX_HEADLESS: ${CAMOUFOX_HEADLESS:-true}
       CAMOUFOX_HUMANIZE: ${CAMOUFOX_HUMANIZE:-true}
       CAMOUFOX_TIMEOUT_MS: ${CAMOUFOX_TIMEOUT_MS:-90000}
       CAMOUFOX_SETTLE_MS: ${CAMOUFOX_SETTLE_MS:-5000}
       CAMOUFOX_MAX_SETTLE_ATTEMPTS: ${CAMOUFOX_MAX_SETTLE_ATTEMPTS:-12}
+      CAMOUFOX_PROXY_URL: ${CAMOUFOX_PROXY_URL:-}
+      CAMOUFOX_USER_DATA_DIR: ${CAMOUFOX_USER_DATA_DIR:-/home/app/.cache/scout-api/camoufox-profiles/default}
+      CAMOUFOX_DISABLE_COOP: ${CAMOUFOX_DISABLE_COOP:-true}
+      CAMOUFOX_WARMUP_ORIGIN: ${CAMOUFOX_WARMUP_ORIGIN:-true}
     ports:
       - "${PORT:-8000}:8000"
+    volumes:
+      - camoufox-profiles:/home/app/.cache/scout-api/camoufox-profiles
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:8000/health', timeout=3)"]
@@ -38,3 +47,4 @@ services:
 
 volumes:
   redis-data:
+  camoufox-profiles:

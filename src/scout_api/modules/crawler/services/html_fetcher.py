@@ -8,11 +8,13 @@ from __future__ import annotations
 import logging
 import re
 import sys
+import threading
 from collections.abc import Callable
 from contextlib import AbstractContextManager
+from pathlib import Path
 from typing import Any, Protocol
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 from urllib.request import Request as UrlRequest
 from urllib.request import urlopen
 
@@ -30,9 +32,22 @@ class HtmlFetcher(Protocol):
         """Return a Scrapy response ready for ``parse_product``."""
 
 
+def is_hard_block_page(html: str, *, title: str | None = None) -> bool:
+    """Detect Cloudflare / WAF hard bans (IP block), not solvable JS challenges."""
+    title_text = (title or "").strip().lower()
+    if "attention required" in title_text:
+        return True
+    lower = html.lower()
+    return "you have been blocked" in lower or "sorry, you have been blocked" in lower
+
+
 def is_challenge_page(html: str, *, title: str | None = None) -> bool:
     """Detect Cloudflare / Akamai interstitial pages that are not product HTML."""
+    if is_hard_block_page(html, title=title):
+        return True
     title_text = (title or "").strip().lower()
+    if title_text.startswith("loading "):
+        return True
     if "just a moment" in title_text or "un momento" in title_text:
         return True
     lower = html.lower()
@@ -52,11 +67,40 @@ def locale_for_url(url: str) -> str | None:
     hostname = (urlparse(url).hostname or "").lower()
     if hostname == "nissei.com" or hostname.endswith(".nissei.com"):
         return "es-PY"
-    if hostname == "magazineluiza.com.br" or hostname.endswith(
-        ".magazineluiza.com.br"
-    ):
+    if hostname == "magazineluiza.com.br" or hostname.endswith(".magazineluiza.com.br"):
         return "pt-BR"
     return None
+
+
+def warmup_url_for(url: str) -> str | None:
+    """Origin warm-up URL used to mint Cloudflare cookies before the product page."""
+    parsed = urlparse(url)
+    hostname = (parsed.hostname or "").lower()
+    if not hostname or not parsed.scheme:
+        return None
+    if hostname == "nissei.com" or hostname.endswith(".nissei.com"):
+        return f"{parsed.scheme}://{parsed.netloc}/py/"
+    return None
+
+
+def proxy_settings_from_url(proxy_url: str) -> dict[str, str]:
+    """Convert ``http(s)://user:pass@host:port`` into Camoufox/Playwright proxy dict."""
+    parsed = urlparse(proxy_url.strip())
+    if not parsed.scheme or not parsed.hostname:
+        raise ValueError(f"Invalid proxy URL: {proxy_url!r}")
+    server = f"{parsed.scheme}://{parsed.hostname}"
+    if parsed.port is not None:
+        server = f"{server}:{parsed.port}"
+    settings: dict[str, str] = {"server": server}
+    if parsed.username:
+        settings["username"] = unquote(parsed.username)
+    if parsed.password:
+        settings["password"] = unquote(parsed.password)
+    return settings
+
+
+def default_user_data_dir() -> Path:
+    return Path.home() / ".cache" / "scout-api" / "camoufox-profiles" / "default"
 
 
 class UrllibHtmlFetcher:
@@ -147,6 +191,10 @@ class CamoufoxHtmlFetcher:
         timeout_ms: int = 90_000,
         settle_ms: int = 5_000,
         max_settle_attempts: int = 12,
+        proxy_url: str | None = None,
+        user_data_dir: str | Path | None = None,
+        disable_coop: bool = True,
+        warmup_origin: bool = True,
         browser_factory: BrowserFactory | None = None,
     ) -> None:
         self._headless = headless
@@ -154,14 +202,37 @@ class CamoufoxHtmlFetcher:
         self._timeout_ms = timeout_ms
         self._settle_ms = settle_ms
         self._max_settle_attempts = max_settle_attempts
+        self._proxy_url = proxy_url
+        if user_data_dir:
+            self._user_data_dir = Path(user_data_dir)
+        else:
+            self._user_data_dir = default_user_data_dir()
+        self._disable_coop = disable_coop
+        self._warmup_origin = warmup_origin
         self._browser_factory = browser_factory
+        self._lock = threading.Lock()
 
     def fetch(self, url: str) -> HtmlResponse:
+        with self._lock:
+            return self._fetch_locked(url)
+
+    def _fetch_locked(self, url: str) -> HtmlResponse:
         try:
             with self._open_browser(url=url) as browser:
-                page = browser.new_page()
-                page.goto(url, wait_until="domcontentloaded", timeout=self._timeout_ms)
+                page = self._new_page(browser)
+                if self._warmup_origin:
+                    self._maybe_warmup(page, url)
+                self._goto(page, url)
                 html, final_url, title = self._wait_for_product_html(page)
+                if is_hard_block_page(html, title=title):
+                    raise RequestError(
+                        "A loja bloqueou o IP de saída (hard-block anti-bot); "
+                        "configure um proxy residencial (CAMOUFOX_PROXY_URL)",
+                        code="UPSTREAM_BLOCKED",
+                        url=final_url or url,
+                        upstream_status=403,
+                        retryable=False,
+                    )
                 if is_challenge_page(html, title=title):
                     raise RequestError(
                         "A loja bloqueou a requisição (desafio anti-bot)",
@@ -203,16 +274,78 @@ class CamoufoxHtmlFetcher:
         headless: bool | str = self._headless
         if self._headless is True and sys.platform.startswith("linux"):
             headless = "virtual"
+        profile_dir = self._ensure_user_data_dir()
         kwargs: dict[str, Any] = {
             "headless": headless,
             "humanize": self._humanize,
             "os": "windows",
             "geoip": True,
+            "persistent_context": True,
+            "user_data_dir": str(profile_dir),
         }
-        locale = locale_for_url(url)
-        if locale is not None:
-            kwargs["locale"] = locale
+        if self._disable_coop:
+            # Needed so Turnstile iframes are interactable; ack Camoufox leak warning.
+            kwargs["disable_coop"] = True
+            kwargs["i_know_what_im_doing"] = True
+        if self._proxy_url:
+            kwargs["proxy"] = proxy_settings_from_url(self._proxy_url)
+            # Let geoip derive locale/timezone from the proxy egress IP.
+        else:
+            locale = locale_for_url(url)
+            if locale is not None:
+                kwargs["locale"] = locale
         return kwargs
+
+    def _ensure_user_data_dir(self) -> Path:
+        try:
+            self._user_data_dir.mkdir(parents=True, exist_ok=True)
+            return self._user_data_dir
+        except OSError as exc:
+            fallback = Path("/tmp/scout-api-camoufox-profiles/default")
+            logger.warning(
+                "camoufox_profile_dir_unwritable",
+                extra={
+                    "configured": str(self._user_data_dir),
+                    "fallback": str(fallback),
+                    "error": str(exc),
+                },
+            )
+            fallback.mkdir(parents=True, exist_ok=True)
+            self._user_data_dir = fallback
+            return fallback
+
+    @staticmethod
+    def _new_page(browser: Any) -> Any:
+        if hasattr(browser, "new_page"):
+            return browser.new_page()
+        pages = getattr(browser, "pages", None)
+        if pages:
+            return pages[0]
+        raise RuntimeError("Camoufox browser has no page factory")
+
+    def _maybe_warmup(self, page: Any, url: str) -> None:
+        warmup = warmup_url_for(url)
+        if warmup is None:
+            return
+        logger.info("camoufox_warmup_origin", extra={"url": warmup})
+        self._goto(page, warmup)
+        # Brief pause so JS challenge / cookie minting can finish before product.
+        page.wait_for_timeout(min(self._settle_ms, 3_000))
+
+    def _goto(self, page: Any, url: str) -> None:
+        page.goto(url, wait_until="domcontentloaded", timeout=self._timeout_ms)
+        wait_for_load_state = getattr(page, "wait_for_load_state", None)
+        if callable(wait_for_load_state):
+            try:
+                wait_for_load_state(
+                    "networkidle", timeout=min(20_000, self._timeout_ms)
+                )
+            except Exception:
+                logger.debug(
+                    "camoufox_networkidle_timeout",
+                    extra={"url": url},
+                    exc_info=True,
+                )
 
     def _wait_for_product_html(self, page: Any) -> tuple[str, str, str]:
         html = ""
@@ -227,6 +360,8 @@ class CamoufoxHtmlFetcher:
                 title = str(page.title())
             except Exception:
                 title = ""
+            if is_hard_block_page(html, title=title):
+                return html, final_url, title
             if not is_challenge_page(html, title=title):
                 return html, final_url, title
             logger.info(
@@ -246,6 +381,10 @@ def build_html_fetcher(
     camoufox_timeout_ms: int = 90_000,
     camoufox_settle_ms: int = 5_000,
     camoufox_max_settle_attempts: int = 12,
+    camoufox_proxy_url: str | None = None,
+    camoufox_user_data_dir: str | None = None,
+    camoufox_disable_coop: bool = True,
+    camoufox_warmup_origin: bool = True,
 ) -> HtmlFetcher:
     if camoufox_enabled:
         return CamoufoxHtmlFetcher(
@@ -254,5 +393,9 @@ def build_html_fetcher(
             timeout_ms=camoufox_timeout_ms,
             settle_ms=camoufox_settle_ms,
             max_settle_attempts=camoufox_max_settle_attempts,
+            proxy_url=camoufox_proxy_url,
+            user_data_dir=camoufox_user_data_dir,
+            disable_coop=camoufox_disable_coop,
+            warmup_origin=camoufox_warmup_origin,
         )
     return UrllibHtmlFetcher(user_agent=user_agent, timeout=urllib_timeout)

@@ -7,6 +7,7 @@ from scrapy.http import HtmlResponse, Request
 from scout_api.modules.crawler.core.exceptions import ParseError
 from scout_api.modules.crawler.spiders.base import BaseStoreSpider
 from scout_api.modules.crawler.spiders.brazil.magazineluiza import MagazineLuizaSpider
+from scout_api.modules.crawler.spiders.paraguay.nissei import NisseiSpider
 
 
 class ExampleSpider(BaseStoreSpider):
@@ -89,3 +90,48 @@ def test_magalu_missing_price_is_parse_error() -> None:
     )
     with pytest.raises(ParseError):
         MagazineLuizaSpider().parse_product(response)
+
+
+def test_nissei_extracts_structured_identity_and_rendered_installment() -> None:
+    body = b"""
+    <main id="maincontent">
+      <title>Placa Madre Gigabyte X870 Aorus Stealth ICE AM5 DDR5 ATX</title>
+      <div class="product-info-main">
+        <h1><span class="base">Placa Madre Gigabyte X870 Aorus Stealth ICE AM5 DDR5 ATX</span></h1>
+        <a class="amshopby-brand-title-link">GIGABYTE</a>
+        <div class="price-box" data-role="priceBox" data-product-id="1644544">
+          <span class="price-wrapper" data-price-amount="3226999.996001"
+                data-price-type="finalPrice">
+            <span class="price">Gs. 3.227.000</span>
+          </span>
+          <meta itemprop="price" content="3226999.996001">
+        </div>
+        <div class="stock available"><span>En stock</span></div>
+        <div class="bancos-adheridos principal-cuotas">
+          <h3>Hasta <span>18</span> cuotas
+            <span>sin intereses de Gs. 179.278</span></h3>
+        </div>
+      </div>
+      <table class="product-attribute-specs-table">
+        <tr><th>UPC</th><td>889523051276</td></tr>
+      </table>
+      <form data-product-sku="148321"></form>
+    </main>
+    """
+    url = "https://nissei.com/py/informatica/producto"
+    response = HtmlResponse(url, body=body, encoding="utf-8", request=Request(url))
+
+    item = NisseiSpider().parse_product(response)
+
+    assert item.title == "Placa Madre Gigabyte X870 Aorus Stealth ICE AM5 DDR5 ATX"
+    assert item.gtin == "889523051276"
+    assert item.brand == "GIGABYTE"
+    assert item.installment_price == Decimal("179278")
+    assert item.installment_count == 18
+    assert item.original_price is None
+    assert item.discount_percentage is None
+    assert item.model is None
+    assert item.variant is None
+    assert item.seller is None
+    assert item.shipping_price is None
+    assert item.available is True

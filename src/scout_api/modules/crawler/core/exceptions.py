@@ -25,9 +25,11 @@ class RequestError(CrawlerError):
         url: str | None = None,
         upstream_status: int | None = None,
         retryable: bool = False,
+        retry_after: int | None = None,
     ) -> None:
         super().__init__(message)
         self.code = code
         self.url = url
         self.upstream_status = upstream_status
         self.retryable = retryable
+        self.retry_after = retry_after

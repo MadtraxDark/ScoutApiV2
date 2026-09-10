@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     retry_backoff_cap: float = 60.0
     circuit_breaker_failure_threshold: int = 5
     circuit_breaker_cooldown: int = 300
+    scrape_url_cooldown_seconds: int = 300
+    scrape_domain_min_interval_seconds: float = 15.0
+    scrape_result_cache_ttl_seconds: int = 300
     mitmproxy_enabled: bool = False
     mitmproxy_url: str | None = None
     rotating_proxies_enabled: bool = False
@@ -36,6 +39,10 @@ class Settings(BaseSettings):
     camoufox_timeout_ms: int = 90_000
     camoufox_settle_ms: int = 5_000
     camoufox_max_settle_attempts: int = 12
+    camoufox_proxy_url: str | None = None
+    camoufox_user_data_dir: str | None = None
+    camoufox_disable_coop: bool = True
+    camoufox_warmup_origin: bool = True
 
     @field_validator("debug", mode="before")
     @classmethod
