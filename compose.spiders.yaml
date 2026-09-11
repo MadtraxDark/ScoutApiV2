@@ -1,0 +1,16 @@
+services:
+  api:
+    environment:
+      PYTHONPATH: /app/src
+    volumes:
+      - ./src/scout_api/modules/crawler/spiders:/app/src/scout_api/modules/crawler/spiders:ro
+    command:
+      - uvicorn
+      - scout_api.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --reload
+      - --reload-dir
+      - /app/src/scout_api/modules/crawler/spiders

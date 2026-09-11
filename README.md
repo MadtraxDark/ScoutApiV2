@@ -26,6 +26,17 @@ Execute `python -m venv .venv`, `python -m pip install -e ".[dev]"` e `uvicorn s
 
 Execute `python -m pytest`, `ruff check .`, `ruff format --check .` e `mypy src`.
 
+Para desenvolvimento, atualize somente os spiders sem reconstruir a imagem:
+
+```powershell
+.\scripts\update-spiders.ps1
+```
+
+Esse comando monta `src/scout_api/modules/crawler/spiders` no container e ativa o
+reload automático. Use `.\scripts\update-spiders.ps1 logs` para acompanhar a API
+ou `.\scripts\update-spiders.ps1 down` para pará-la. Alterações no Dockerfile,
+dependências ou bibliotecas do sistema ainda exigem `docker compose up --build`.
+
 ## ADRs
 
 As decisões ficam em [`docs/adr`](docs/adr/). Para uma nova decisão, copie [`docs/adr/template.md`](docs/adr/template.md), use o próximo número e registre contexto, alternativas, decisão, justificativa e consequências.
