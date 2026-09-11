@@ -10,3 +10,4 @@ Uma mudança que contradiga um ADR aceito deve ser explicitamente registrada em 
 - [0009](0009-camoufox-html-fetch.md) — Camoufox como fetcher HTML
 - [0010](0010-camoufox-cloudflare-strategy.md) — estratégia Cloudflare + ScrapeGuard
 - [0011](0011-offer-vs-product-details.md) — separação Product Offer vs Product Details
+- [0012](0012-optional-image-extraction.md) — extração opcional de imagens (`include_images`)

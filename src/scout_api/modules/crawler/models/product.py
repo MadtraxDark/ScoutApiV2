@@ -76,6 +76,7 @@ class ProductPriceItem(BaseModel):
     installment_count: int | None = None
     shipping_price: Decimal | None = None
     available: bool = True
+    images: list[str] = Field(default_factory=list)
     scraped_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     last_changed_at: datetime | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
@@ -129,6 +130,7 @@ def compose_product_price_item(
         shipping_price=shipping_price,
         available=offer.available,
         availability=offer.availability,
+        images=list(details.images),
         scraped_at=offer.scraped_at,
         last_changed_at=last_changed_at,
         metadata=metadata,

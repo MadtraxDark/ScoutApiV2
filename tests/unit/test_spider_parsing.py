@@ -107,8 +107,23 @@ def test_magalu_extract_offer_is_independent_of_catalog_details() -> None:
     assert details.title
     assert details.brand == "Sony"
     assert details.model == "PS5 CFI 2114B Edição Digital"
+    assert details.images == []
     assert "brand" not in offer.model_dump()
     assert "price" not in details.model_dump()
+
+
+def test_magalu_extract_images_normalizes_gallery() -> None:
+    spider = MagazineLuizaSpider()
+    response = response_from_fixture("product_structured_offer.html")
+    details = spider.extract_details(response)
+    images = spider.extract_images(response)
+
+    assert details.images == []
+    assert images == [
+        "https://a-static.mlcdn.com.br/ps5-front.jpg",
+        "https://a-static.mlcdn.com.br/ps5-side.jpg",
+        "https://www.magazineluiza.com.br/relative/ps5-back.jpg",
+    ]
 
 
 def test_magalu_does_not_infer_original_price_from_unrelated_numbers() -> None:
@@ -189,3 +204,25 @@ def test_nissei_extracts_structured_identity_and_rendered_installment() -> None:
     assert item.seller is None
     assert item.shipping_price is None
     assert item.available is True
+
+
+def test_nissei_extract_images_deduplicates_magento_cache_variants() -> None:
+    body = b"""
+    <div class="product.media">
+      <img src="/media/catalog/product/cache/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/2/n/main.jpg">
+      <img src="/media/catalog/product/cache/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/2/n/main.jpg">
+      <img src="/media/catalog/product/cache/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/A/Q/detail.jpg">
+      <img src="/media/catalog/product/cache/cccccccccccccccccccccccccccccccc/A/Q/detail.jpg">
+      <img src="/media/catalog/product/cache/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/T/7/side.jpg">
+    </div>
+    """
+    url = "https://nissei.com/br/produto"
+    response = HtmlResponse(url, body=body, encoding="utf-8", request=Request(url))
+
+    images = NisseiSpider().extract_images(response)
+
+    assert images == [
+        "https://nissei.com/media/catalog/product/cache/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/2/n/main.jpg",
+        "https://nissei.com/media/catalog/product/cache/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/A/Q/detail.jpg",
+        "https://nissei.com/media/catalog/product/cache/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/T/7/side.jpg",
+    ]

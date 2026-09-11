@@ -41,14 +41,16 @@ múltiplos workers, conecte os seams de deduplicação, lock, estado e históric
 Redis/PostgreSQL.
 
 - `POST /crawl` — scraping completo (oferta + detalhes) via `ProductScrapeService`.
+  Use `include_images=true` para incluir a galeria (`extract_images`); o padrão é
+  `false` (sem parsing de imagens). Ver ADR 0012.
 - `POST /crawl/offer` — consulta leve (preço/seller/disponibilidade) via
-  `OfferScrapeService`, sem executar a extração de detalhes.
+  `OfferScrapeService`, sem executar a extração de detalhes nem de imagens.
 
 Ambos buscam HTML com **Camoufox** (Firefox anti-detect) por padrão e delegam o
 parsing aos spiders (`magazineluiza`, `nissei`, …). Spiders não fazem I/O de rede.
 No Linux/Docker o browser usa display virtual (`Xvfb`) + `geoip` para passar
 Cloudflare (Nissei). Desative com `CAMOUFOX_ENABLED=false` para fallback `urllib`.
-Na primeira instalação local, rode `python -m camoufox fetch`. Ver ADR 0011.
+Na primeira instalação local, rode `python -m camoufox fetch`. Ver ADR 0011 e 0012.
 
 Spiders de referência: `kabum`, `bestbuy`, `magazineluiza` e `nissei`. Eles são
 `Spider` customizados (não `CrawlSpider`) porque o parsing de produto e JSON-LD é

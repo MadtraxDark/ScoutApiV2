@@ -50,18 +50,23 @@ class ProductScrapeService:
         self._fetcher = fetcher or get_shared_html_fetcher()
         self._guard = guard or get_shared_scrape_guard()
 
-    def scrape(self, url: str) -> ProductPriceItem:
+    def scrape(self, url: str, *, include_images: bool = False) -> ProductPriceItem:
         cached = self._guard.get_cached(url)
         if cached is not None:
+            if not include_images and cached.images:
+                return cached.model_copy(update={"images": []})
             return cached
 
         spider = self._spider_for(url)
         self._guard.acquire_for_live_fetch(url)
         response = self._fetch(url)
-        item = compose_product_price_item(
-            spider.extract_offer(response),
-            spider.extract_details(response),
-        )
+        offer = spider.extract_offer(response)
+        details = spider.extract_details(response)
+        if include_images:
+            details = details.model_copy(
+                update={"images": spider.extract_images(response)}
+            )
+        item = compose_product_price_item(offer, details)
         self._guard.store_success(url, item)
         return item
 

@@ -89,7 +89,7 @@ def test_crawl_endpoint_maps_duplicate_to_429() -> None:
     from scout_api.modules.crawler.router import get_product_scrape_service
 
     class BlockingService:
-        def scrape(self, url: str) -> Any:
+        def scrape(self, url: str, *, include_images: bool = False) -> Any:
             raise RequestError(
                 "cooldown",
                 code="DUPLICATE_REQUEST",

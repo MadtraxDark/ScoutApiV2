@@ -19,11 +19,18 @@ class ProductDetailsService:
         self._fetcher = fetcher or get_shared_html_fetcher()
         self._guard = guard or get_shared_scrape_guard()
 
-    def scrape_details(self, url: str) -> ProductDetails:
+    def scrape_details(
+        self, url: str, *, include_images: bool = False
+    ) -> ProductDetails:
         spider = self._spider_for(url)
         self._guard.acquire_for_live_fetch(url)
         response = self._fetch(url)
-        return spider.extract_details(response)
+        details = spider.extract_details(response)
+        if include_images:
+            details = details.model_copy(
+                update={"images": spider.extract_images(response)}
+            )
+        return details
 
     def _fetch(self, url: str) -> HtmlResponse:
         return self._fetcher.fetch(url)

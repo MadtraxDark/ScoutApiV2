@@ -103,8 +103,10 @@ def test_product_scrape_service_composes_offer_and_details(monkeypatch) -> None:
     spider = MagazineLuizaSpider()
     offer_mock = MagicMock(wraps=spider.extract_offer)
     details_mock = MagicMock(wraps=spider.extract_details)
+    images_mock = MagicMock(wraps=spider.extract_images)
     monkeypatch.setattr(spider, "extract_offer", offer_mock)
     monkeypatch.setattr(spider, "extract_details", details_mock)
+    monkeypatch.setattr(spider, "extract_images", images_mock)
     monkeypatch.setattr(
         "scout_api.modules.crawler.services.product_scrape_service.resolve_store_spider",
         lambda _url: spider,
@@ -121,7 +123,107 @@ def test_product_scrape_service_composes_offer_and_details(monkeypatch) -> None:
 
     offer_mock.assert_called_once()
     details_mock.assert_called_once()
+    images_mock.assert_not_called()
     assert item.title  # from details
     assert item.brand == "Sony"
     assert item.price == Decimal("5058.85")
     assert item.seller == "kabum"
+    assert item.images == []
+
+
+def test_offer_scrape_service_never_calls_extract_images(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    url = "https://www.magazineluiza.com.br/p/240590700"
+    html = _response_from_fixture("product_structured_offer.html")
+
+    class FakeFetcher:
+        def fetch(self, fetch_url: str) -> HtmlResponse:
+            return html
+
+    spider = MagazineLuizaSpider()
+    images_mock = MagicMock(wraps=spider.extract_images)
+    monkeypatch.setattr(spider, "extract_images", images_mock)
+    monkeypatch.setattr(
+        "scout_api.modules.crawler.services.offer_scrape_service.resolve_store_spider",
+        lambda _url: spider,
+    )
+
+    OfferScrapeService(
+        fetcher=FakeFetcher(),
+        guard=ScrapeGuard(
+            url_cooldown_seconds=1,
+            domain_min_interval_seconds=0,
+            result_cache_ttl_seconds=1,
+        ),
+    ).scrape_offer(url)
+
+    images_mock.assert_not_called()
+
+
+def test_product_scrape_include_images_false_skips_extract_images(
+    monkeypatch,
+) -> None:  # type: ignore[no-untyped-def]
+    url = "https://www.magazineluiza.com.br/p/aebh5a7a94"
+    html = _response_from_fixture("product_structured_offer.html")
+
+    class FakeFetcher:
+        def fetch(self, fetch_url: str) -> HtmlResponse:
+            return html
+
+    spider = MagazineLuizaSpider()
+    images_mock = MagicMock(wraps=spider.extract_images)
+    monkeypatch.setattr(spider, "extract_images", images_mock)
+    monkeypatch.setattr(
+        "scout_api.modules.crawler.services.product_scrape_service.resolve_store_spider",
+        lambda _url: spider,
+    )
+
+    item = ProductScrapeService(
+        fetcher=FakeFetcher(),
+        guard=ScrapeGuard(
+            url_cooldown_seconds=1,
+            domain_min_interval_seconds=0,
+            result_cache_ttl_seconds=1,
+        ),
+    ).scrape(url, include_images=False)
+
+    images_mock.assert_not_called()
+    assert item.images == []
+
+
+def test_product_scrape_include_images_true_extracts_once(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    url = "https://www.magazineluiza.com.br/p/aebh5a7a94"
+    html = _response_from_fixture("product_structured_offer.html")
+
+    class FakeFetcher:
+        def fetch(self, fetch_url: str) -> HtmlResponse:
+            return html
+
+    spider = MagazineLuizaSpider()
+    offer_mock = MagicMock(wraps=spider.extract_offer)
+    details_mock = MagicMock(wraps=spider.extract_details)
+    images_mock = MagicMock(wraps=spider.extract_images)
+    monkeypatch.setattr(spider, "extract_offer", offer_mock)
+    monkeypatch.setattr(spider, "extract_details", details_mock)
+    monkeypatch.setattr(spider, "extract_images", images_mock)
+    monkeypatch.setattr(
+        "scout_api.modules.crawler.services.product_scrape_service.resolve_store_spider",
+        lambda _url: spider,
+    )
+
+    item = ProductScrapeService(
+        fetcher=FakeFetcher(),
+        guard=ScrapeGuard(
+            url_cooldown_seconds=1,
+            domain_min_interval_seconds=0,
+            result_cache_ttl_seconds=1,
+        ),
+    ).scrape(url, include_images=True)
+
+    offer_mock.assert_called_once()
+    details_mock.assert_called_once()
+    images_mock.assert_called_once()
+    assert item.images == [
+        "https://a-static.mlcdn.com.br/ps5-front.jpg",
+        "https://a-static.mlcdn.com.br/ps5-side.jpg",
+        "https://www.magazineluiza.com.br/relative/ps5-back.jpg",
+    ]

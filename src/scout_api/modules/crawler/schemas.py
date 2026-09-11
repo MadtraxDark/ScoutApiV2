@@ -1,8 +1,12 @@
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl
 
 
 class CrawlRequest(BaseModel):
     url: HttpUrl
+    include_images: bool = Field(
+        default=False,
+        description="When true, extract and normalize the product image gallery.",
+    )
 
 
 class CrawlError(BaseModel):

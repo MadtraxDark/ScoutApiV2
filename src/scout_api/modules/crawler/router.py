@@ -34,7 +34,7 @@ def crawl_product(
     service: Annotated[ProductScrapeService, Depends(get_product_scrape_service)],
 ) -> ProductPriceItem:
     try:
-        return service.scrape(str(payload.url))
+        return service.scrape(str(payload.url), include_images=payload.include_images)
     except RequestError as exc:
         raise HTTPException(
             status_code=_status_for_request_error(exc),

@@ -157,7 +157,6 @@ class MagazineLuizaSpider(BaseStoreSpider):
             variant=self._string(variant),
             description=None,
             specifications={},
-            images=[],
             metadata={
                 "source": {
                     "title": "product-state" if item.get("title") else "json-ld-or-h1",
@@ -170,6 +169,20 @@ class MagazineLuizaSpider(BaseStoreSpider):
                 }
             },
         )
+
+    def extract_images(self, response: Response) -> list[str]:
+        state = self._next_data(response)
+        item = self._state_item(state)
+        candidates = (
+            item.get("images")
+            or item.get("medias")
+            or item.get("media")
+            or item.get("gallery")
+        )
+        urls = self.normalize_image_urls(candidates, base_url=response.url)
+        if urls:
+            return urls
+        return super().extract_images(response)
 
     @staticmethod
     def _next_data(response: Response) -> dict[str, Any]:

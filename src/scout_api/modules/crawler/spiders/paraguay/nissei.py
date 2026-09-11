@@ -113,6 +113,31 @@ class NisseiSpider(BaseStoreSpider):
             metadata={"source": {"title": "json-ld-or-h1"}},
         )
 
+    def extract_images(self, response: Response) -> list[str]:
+        gallery = response.css(
+            ".gallery-placeholder img::attr(src), "
+            ".fotorama__img::attr(src), "
+            ".product.media img::attr(src), "
+            "[data-gallery-role='gallery'] img::attr(src)"
+        ).getall()
+        urls = self.normalize_image_urls(gallery, base_url=response.url)
+        if urls:
+            unique: list[str] = []
+            seen: set[str] = set()
+            for url in urls:
+                identity = self._gallery_image_identity(url)
+                if identity in seen:
+                    continue
+                seen.add(identity)
+                unique.append(url)
+            return unique
+        return super().extract_images(response)
+
+    @staticmethod
+    def _gallery_image_identity(url: str) -> str:
+        """Collapse Magento cache variants to the same catalog image path."""
+        return re.sub(r"/cache/[0-9a-f]{32}/", "/", url, count=1, flags=re.I)
+
     def _price(self, raw: object) -> Decimal:
         if raw is None:
             return parse_money(None, self.currency)

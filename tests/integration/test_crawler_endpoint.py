@@ -11,7 +11,15 @@ from scout_api.modules.crawler.router import (
 
 
 class FakeScrapeService:
-    def scrape(self, url: str) -> ProductPriceItem:
+    def scrape(self, url: str, *, include_images: bool = False) -> ProductPriceItem:
+        images = (
+            [
+                "https://a-static.mlcdn.com.br/ps5-front.jpg",
+                "https://a-static.mlcdn.com.br/ps5-side.jpg",
+            ]
+            if include_images
+            else []
+        )
         return ProductPriceItem(
             store="magazineluiza",
             country="BR",
@@ -28,6 +36,7 @@ class FakeScrapeService:
             pix_price=Decimal("4399.00"),
             available=True,
             availability="available",
+            images=images,
         )
 
 
@@ -69,6 +78,28 @@ def test_crawl_endpoint_returns_normalized_product() -> None:
     assert payload["title"] == "Produto de teste"
     assert payload["brand"] == "Sony"
     assert payload["model"] == "PS5"
+    assert payload["images"] == []
+
+
+def test_crawl_endpoint_include_images_true_returns_gallery() -> None:
+    app.dependency_overrides[get_product_scrape_service] = FakeScrapeService
+    try:
+        response = TestClient(app).post(
+            "/crawl",
+            json={
+                "url": "https://www.magazineluiza.com.br/p/240590700",
+                "include_images": True,
+            },
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["images"] == [
+        "https://a-static.mlcdn.com.br/ps5-front.jpg",
+        "https://a-static.mlcdn.com.br/ps5-side.jpg",
+    ]
 
 
 def test_crawl_offer_endpoint_returns_offer_contract_only() -> None:

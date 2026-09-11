@@ -4,7 +4,7 @@ from abc import ABC
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any, ClassVar, cast
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 import scrapy
 from scrapy.http import Response
@@ -159,6 +159,46 @@ class BaseStoreSpider(scrapy.Spider, ABC):
             title=str(title).strip(),
             metadata={"source": "json-ld-or-selector"},
         )
+
+    def extract_images(self, response: Response) -> list[str]:
+        """Extract and normalize gallery URLs. Not called unless include_images."""
+        data = self.json_ld(response)
+        return self.normalize_image_urls(data.get("image"), base_url=response.url)
+
+    @staticmethod
+    def normalize_image_urls(raw: Any, *, base_url: str) -> list[str]:
+        """Flatten common image shapes into absolute, de-duplicated URL strings."""
+        values: list[Any]
+        if raw is None:
+            values = []
+        elif isinstance(raw, list):
+            values = raw
+        else:
+            values = [raw]
+
+        seen: set[str] = set()
+        result: list[str] = []
+        for value in values:
+            candidate: Any = value
+            if isinstance(value, dict):
+                candidate = (
+                    value.get("url")
+                    or value.get("contentUrl")
+                    or value.get("src")
+                    or value.get("image")
+                    or value.get("path")
+                )
+            if candidate is None:
+                continue
+            text = str(candidate).strip()
+            if not text:
+                continue
+            absolute = urljoin(base_url, text)
+            if absolute in seen:
+                continue
+            seen.add(absolute)
+            result.append(absolute)
+        return result
 
     @staticmethod
     def first(response: Any, selectors: list[str]) -> str | None:

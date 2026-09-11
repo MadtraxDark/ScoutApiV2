@@ -52,6 +52,9 @@ Adotar a separação **Product Offer** vs **Product Details**:
 6. Magazine Luiza é a primeira loja com extração de oferta realmente separada
    da de detalhes.
 
+A extração opcional de imagens (`include_images` / `extract_images`) é definida
+no ADR 0012 e estende este contrato sem alterar a separação offer/details.
+
 ## Justificativa
 
 A comparação entre lojas precisa de um contrato comercial estável e barato de
