@@ -1,23 +1,3 @@
-from urllib.parse import urlparse
+from ..spiders.registry import resolve_store_spider
 
-from ..core.exceptions import RequestError
-from ..spiders.base import BaseStoreSpider
-from ..spiders.brazil.kabum import KabumSpider
-from ..spiders.brazil.magazineluiza import MagazineLuizaSpider
-from ..spiders.paraguay.nissei import NisseiSpider
-
-
-def resolve_store_spider(url: str) -> BaseStoreSpider:
-    """Map a product URL hostname to the store spider adapter."""
-    hostname = (urlparse(url).hostname or "").lower()
-    if hostname == "magazineluiza.com.br" or hostname.endswith(".magazineluiza.com.br"):
-        return MagazineLuizaSpider()
-    if hostname == "nissei.com" or hostname.endswith(".nissei.com"):
-        return NisseiSpider()
-    if hostname == "kabum.com.br" or hostname.endswith(".kabum.com.br"):
-        return KabumSpider()
-    raise RequestError(
-        "Nenhum spider disponível para este domínio",
-        code="UNSUPPORTED_STORE",
-        url=url,
-    )
+__all__ = ["resolve_store_spider"]

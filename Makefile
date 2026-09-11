@@ -4,7 +4,7 @@
 
 help:
 	@echo "Comandos disponíveis:"
-	@echo "  make spiders       Inicia a API com reload apenas dos spiders"
+	@echo "  make spiders       Inicia a API com reload de spiders/services do crawler"
 	@echo "  make spiders-logs  Mostra os logs da API em modo spiders"
 	@echo "  make spiders-down  Para o ambiente em modo spiders"
 	@echo "  make up            Inicia a API reconstruindo a imagem"

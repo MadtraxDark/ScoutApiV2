@@ -55,11 +55,15 @@ class ProductScrapeService:
         if cached is not None:
             if not include_images and cached.images:
                 return cached.model_copy(update={"images": []})
-            return cached
+            if include_images and cached.images:
+                return cached
+            if not include_images:
+                return cached
 
         spider = self._spider_for(url)
+        fetch_url = spider.prepare_fetch_url(url)
         self._guard.acquire_for_live_fetch(url)
-        response = self._fetch(url)
+        response = self._fetch(fetch_url)
         offer = spider.extract_offer(response)
         details = spider.extract_details(response)
         if include_images:

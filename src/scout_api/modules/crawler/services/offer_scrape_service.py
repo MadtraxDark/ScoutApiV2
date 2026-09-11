@@ -26,7 +26,7 @@ class OfferScrapeService:
 
         spider = self._spider_for(url)
         self._guard.acquire_for_live_fetch(url)
-        response = self._fetch(url)
+        response = self._fetch(spider.prepare_fetch_url(url))
         return spider.extract_offer(response)
 
     def _fetch(self, url: str) -> HtmlResponse:

@@ -32,9 +32,10 @@ Para desenvolvimento, atualize somente os spiders sem reconstruir a imagem:
 .\scripts\update-spiders.ps1
 ```
 
-Esse comando monta `src/scout_api/modules/crawler/spiders` no container e ativa o
-reload automático. Use `.\scripts\update-spiders.ps1 logs` para acompanhar a API
-ou `.\scripts\update-spiders.ps1 down` para pará-la. Alterações no Dockerfile,
+Esse comando monta `spiders` e `services` do crawler no container e ativa o
+reload automático. Assim novos spiders (e o `store_resolver`) entram sem
+rebuild. Use `.\scripts\update-spiders.ps1 logs` para acompanhar a API ou
+`.\scripts\update-spiders.ps1 down` para pará-la. Alterações no Dockerfile,
 dependências ou bibliotecas do sistema ainda exigem `docker compose up --build`.
 
 ## ADRs

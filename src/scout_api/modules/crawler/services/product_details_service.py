@@ -24,7 +24,7 @@ class ProductDetailsService:
     ) -> ProductDetails:
         spider = self._spider_for(url)
         self._guard.acquire_for_live_fetch(url)
-        response = self._fetch(url)
+        response = self._fetch(spider.prepare_fetch_url(url))
         details = spider.extract_details(response)
         if include_images:
             details = details.model_copy(

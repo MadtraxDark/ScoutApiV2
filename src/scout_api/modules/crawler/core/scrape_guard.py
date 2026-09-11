@@ -27,9 +27,9 @@ class ScrapeGuard:
         result_cache_ttl_seconds: int = 300,
         cache: ResponseCache | None = None,
     ) -> None:
-        self._url_cooldown_seconds = max(1, url_cooldown_seconds)
+        self._url_cooldown_seconds = max(0, url_cooldown_seconds)
         self._domain_min_interval_seconds = max(0.0, domain_min_interval_seconds)
-        self._result_cache_ttl_seconds = max(1, result_cache_ttl_seconds)
+        self._result_cache_ttl_seconds = max(0, result_cache_ttl_seconds)
         self._cache = cache or ResponseCache()
         self._url_blocked_until: dict[str, float] = {}
         self._domain_next_ok: dict[str, float] = {}

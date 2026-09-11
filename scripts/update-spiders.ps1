@@ -6,7 +6,7 @@ param(
 $composeFiles = @("-f", "compose.yaml", "-f", "compose.spiders.yaml")
 
 if ($Action -eq "up") {
-    docker compose @composeFiles up -d --no-build
+    docker compose @composeFiles up -d --no-build --force-recreate api
     exit $LASTEXITCODE
 }
 

@@ -165,6 +165,10 @@ class BaseStoreSpider(scrapy.Spider, ABC):
         data = self.json_ld(response)
         return self.normalize_image_urls(data.get("image"), base_url=response.url)
 
+    def prepare_fetch_url(self, url: str) -> str:
+        """Store-specific URL adjustments before the HTML fetch."""
+        return url
+
     @staticmethod
     def normalize_image_urls(raw: Any, *, base_url: str) -> list[str]:
         """Flatten common image shapes into absolute, de-duplicated URL strings."""

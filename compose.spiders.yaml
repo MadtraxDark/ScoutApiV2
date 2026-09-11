@@ -4,6 +4,7 @@ services:
       PYTHONPATH: /app/src
     volumes:
       - ./src/scout_api/modules/crawler/spiders:/app/src/scout_api/modules/crawler/spiders:ro
+      - ./src/scout_api/modules/crawler/services:/app/src/scout_api/modules/crawler/services:ro
     command:
       - uvicorn
       - scout_api.main:app
@@ -14,3 +15,5 @@ services:
       - --reload
       - --reload-dir
       - /app/src/scout_api/modules/crawler/spiders
+      - --reload-dir
+      - /app/src/scout_api/modules/crawler/services
