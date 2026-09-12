@@ -1,0 +1,11 @@
+---
+description: Revisão de segurança para API e crawler
+alwaysApply: false
+globs: ["src/scout_api/**/*.py", "tests/**/*.py", "Dockerfile", "compose.yaml"]
+---
+
+- Use a skill OWASP em mudanças de endpoints, input validation, URLs externas, SSRF, headers, secrets, limites e OpenAPI.
+- Valide URLs e redirects com as abstrações existentes; não exponha rede interna ou detalhes sensíveis em erros.
+- Não registre credentials, tokens ou cookies; não relaxe TLS e não use secrets hardcoded.
+- Testes ativos e exploração devem ser limitados a ambientes e alvos autorizados; não execute comandos da skill contra terceiros.
+- Não faça mudanças preventivas de arquitetura sem evidência concreta.

@@ -14,3 +14,9 @@
 - **Scraper/Camoufox imutáveis por padrão:** sem pedido explícito, não altere fetch, navegação, waits, fingerprint, proxies, retries, lifecycle do browser nem o fluxo operacional do Camoufox. Só é livre alterar extração, parsing, normalização, validação e shape dos dados coletados. Exceção: mudanças necessárias para cumprir o Proxy Cost Mode.
 
 Comandos oficiais: `python -m pytest`, `ruff check .`, `ruff format --check .`, `mypy src`, `uvicorn scout_api.main:app --reload --app-dir src` e `docker compose up --build`.
+
+## Skills
+
+Skills complementam as regras do repositório; não as substituem.
+
+Prioridade: tarefa explícita, `AGENTS.md`, ADRs aceitos, `.cursor/rules/`, padrões consolidados do código e, por último, skills. Skills de terceiros devem ser auditadas antes da adoção e usadas somente no contexto registrado. Recomendações de framework devem ser adaptadas à arquitetura do ScoutApiV2; não podem introduzir dependências, alterar contratos ou forçar uma nova arquitetura sem necessidade comprovada.

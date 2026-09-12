@@ -1,0 +1,11 @@
+---
+description: Uso controlado de templates GitHub Actions
+alwaysApply: false
+globs: [".github/workflows/**/*.yml", ".github/workflows/**/*.yaml"]
+---
+
+- Use `github-actions-templates` somente ao criar ou alterar CI/CD em `.github/workflows/`.
+- Antes de gerar workflow, confira `pyproject.toml`, comandos oficiais, versão Python e Dockerfile/Compose.
+- Execute testes, Ruff, mypy e build Docker quando apropriado; não invente ferramentas nem adicione dependências para satisfazer template.
+- Use permissões mínimas, secrets via GitHub Secrets e actions fixadas conforme a política vigente.
+- Não adicione deploy sem solicitação explícita.

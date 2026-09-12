@@ -1,0 +1,10 @@
+---
+description: Padrões de testes do ScoutApiV2
+alwaysApply: false
+globs: ["tests/**/*.py", "src/scout_api/modules/crawler/**/*.py"]
+---
+
+- Corrija bugs com regression test quando aplicável; reproduza a causa e teste comportamento observável.
+- Prefira fixtures reais ou sanitizadas e fakes focados; não transforme a suíte em mocks excessivos.
+- Separe testes unitários de integração/live e bloqueie requests externos inesperados nos testes isolados quando esse padrão existir.
+- Não remova assertions nem use skip/xfail para esconder regressões.

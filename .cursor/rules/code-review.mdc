@@ -1,0 +1,8 @@
+---
+description: Revisões de código orientadas a risco
+alwaysApply: false
+---
+
+- Use `code-review-excellence` em refactors, spiders, concorrência, retry/cache, fetch, contratos e segurança.
+- Priorize regressões, bugs, concorrência, erros, contratos, segurança, legibilidade e testes; evite observações cosméticas enquanto houver risco funcional.
+- Revise arquitetura e comportamento antes dos detalhes locais e preserve ADRs, direção de dependências e Proxy Cost Mode.
