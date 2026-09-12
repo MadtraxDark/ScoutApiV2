@@ -27,3 +27,8 @@ Alterações só de **extração e tratamento de dados**:
 ## Em dúvida
 
 Se a tarefa parecer exigir mudar fetch/Camoufox/navegação e o usuário não pediu isso de forma explícita: **preserve a implementação atual** e mude só parsing/dados.
+
+**Exceção — Proxy Cost Mode:** alterações que fazem o crawler cumprir a regra
+crítica de custo de proxy (direct-first, fallback só em `UPSTREAM_BLOCKED`,
+tráfego mínimo com proxy ativo) são permitidas e preferíveis a deixar o proxy
+pago ativo sem necessidade. Ver `proxy-cost-mode.mdc`.

@@ -22,6 +22,8 @@ services:
       CAMOUFOX_USER_DATA_DIR: ${CAMOUFOX_USER_DATA_DIR:-/home/app/.cache/scout-api/camoufox-profiles/default}
       CAMOUFOX_DISABLE_COOP: ${CAMOUFOX_DISABLE_COOP:-true}
       CAMOUFOX_WARMUP_ORIGIN: ${CAMOUFOX_WARMUP_ORIGIN:-true}
+      SHOPEE_WARMUP_POLICY: ${SHOPEE_WARMUP_POLICY:-once_per_session}
+      SHOPEE_RESOURCE_BLOCKING_ENABLED: ${SHOPEE_RESOURCE_BLOCKING_ENABLED:-true}
     ports:
       - "${PORT:-8000}:8000"
     volumes:

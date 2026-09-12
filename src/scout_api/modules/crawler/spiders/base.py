@@ -30,6 +30,7 @@ class BaseStoreSpider(scrapy.Spider, ABC):
     store: ClassVar[str]
     country: ClassVar[str]
     currency: ClassVar[str]
+    supports_images: ClassVar[bool] = True
     allowed_domains: list[str] = []
     custom_settings: dict[str, Any] = {
         "AUTOTHROTTLE_ENABLED": True,

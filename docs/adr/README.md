@@ -12,3 +12,4 @@ Uma mudança que contradiga um ADR aceito deve ser explicitamente registrada em 
 - [0011](0011-offer-vs-product-details.md) — separação Product Offer vs Product Details
 - [0012](0012-optional-image-extraction.md) — extração opcional de imagens (`include_images`)
 - [0013](0013-bestbuy-availability-semantics.md) — Best Buy: oferta/preço US vs shipping
+- [0014](0014-cost-aware-proxy-routing.md) — proxy store-aware + Shopee minimal fetch

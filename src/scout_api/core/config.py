@@ -43,6 +43,9 @@ class Settings(BaseSettings):
     camoufox_user_data_dir: str | None = None
     camoufox_disable_coop: bool = True
     camoufox_warmup_origin: bool = True
+    # Cost-aware Shopee controls (DataImpulse is billed primarily by GB).
+    shopee_warmup_policy: str = "once_per_session"
+    shopee_resource_blocking_enabled: bool = True
 
     @field_validator("debug", mode="before")
     @classmethod
@@ -50,6 +53,15 @@ class Settings(BaseSettings):
         """Accept the legacy ``DEBUG=release`` value as production mode."""
         if isinstance(value, str) and value.strip().lower() == "release":
             return False
+        return value
+
+    @field_validator("shopee_warmup_policy", mode="before")
+    @classmethod
+    def normalize_shopee_warmup_policy(cls, value: object) -> object:
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"always", "once_per_session", "never"}:
+                return normalized
         return value
 
     model_config = SettingsConfigDict(

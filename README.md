@@ -70,10 +70,16 @@ Redis/PostgreSQL.
   `OfferScrapeService`, sem executar a extração de detalhes nem de imagens.
 
 Ambos buscam HTML com **Camoufox** (Firefox anti-detect) por padrão e delegam o
-parsing aos spiders (`magazineluiza`, `nissei`, …). Spiders não fazem I/O de rede.
+parsing aos spiders (`magazineluiza`, `nissei`, `shopee`, …). Spiders não fazem
+I/O de rede. O proxy residencial (`CAMOUFOX_PROXY_URL`) é **store-aware** (ADR
+0014 / Proxy Cost Mode): todas as lojas tentam **direto primeiro**; proxy só
+após bloqueio classificado (`UPSTREAM_BLOCKED`). Com proxy ativo, tráfego mínimo
+(sem image/media/font; `include_images` ignorado). Na Shopee o fetch para após
+`get_pc`, omite galeria por política de custo e cacheia `ProductOffer` no
+`ScrapeGuard`.
 No Linux/Docker o browser usa display virtual (`Xvfb`) + `geoip` para passar
 Cloudflare (Nissei). Desative com `CAMOUFOX_ENABLED=false` para fallback `urllib`.
-Na primeira instalação local, rode `python -m camoufox fetch`. Ver ADR 0011 e 0012.
+Na primeira instalação local, rode `python -m camoufox fetch`. Ver ADR 0011–0014.
 
 Spiders de referência: `kabum`, `bestbuy`, `magazineluiza` e `nissei`. Eles são
 `Spider` customizados (não `CrawlSpider`) porque o parsing de produto e JSON-LD é

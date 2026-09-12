@@ -23,6 +23,7 @@ build/
 *.db
 .cache/
 data/camoufox-profiles/
+data/fetch-cost-metrics/
 .idea/
 .vscode/*.code-snippets
 .DS_Store

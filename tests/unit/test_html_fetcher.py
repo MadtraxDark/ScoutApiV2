@@ -73,7 +73,9 @@ def test_locale_and_warmup_for_url() -> None:
     assert locale_for_url("https://example.com/") is None
     assert warmup_url_for("https://nissei.com/py/produto") == "https://nissei.com/py/"
     assert warmup_url_for("https://www.magazineluiza.com.br/p/1") is None
-    assert warmup_url_for("https://shopee.com.br/item-i.1.2") == "https://shopee.com.br/"
+    assert (
+        warmup_url_for("https://shopee.com.br/item-i.1.2") == "https://shopee.com.br/"
+    )
     assert shopee_ids_from_url(
         "https://shopee.com.br/prod-i.341936748.29277977480"
     ) == ("341936748", "29277977480")
@@ -86,19 +88,27 @@ def test_locale_and_warmup_for_url() -> None:
         "https://shopee.com.br/verify/traffic/error?next=x", ""
     )
     assert "data-shopee-pdp" in wrap_shopee_pdp_json('{"item":{"item_id":1}}')
-    assert apply_shopee_br_proxy_targeting(
-        "http://login:pass@gw.dataimpulse.com:10001",
-        "https://shopee.com.br/i.1.2",
-    ) == "http://login__cr.br:pass@gw.dataimpulse.com:10001"
-    assert apply_shopee_br_proxy_targeting(
-        "http://login__cr.br:pass@gw.dataimpulse.com:10001",
-        "https://shopee.com.br/i.1.2",
-    ) == "http://login__cr.br:pass@gw.dataimpulse.com:10001"
-    assert apply_shopee_br_proxy_targeting(
-        "http://login:pass@gw.dataimpulse.com:10001",
-        "https://www.kabum.com.br/p/1",
-    ) == "http://login:pass@gw.dataimpulse.com:10001"
-
+    assert (
+        apply_shopee_br_proxy_targeting(
+            "http://login:pass@gw.dataimpulse.com:10001",
+            "https://shopee.com.br/i.1.2",
+        )
+        == "http://login__cr.br:pass@gw.dataimpulse.com:10001"
+    )
+    assert (
+        apply_shopee_br_proxy_targeting(
+            "http://login__cr.br:pass@gw.dataimpulse.com:10001",
+            "https://shopee.com.br/i.1.2",
+        )
+        == "http://login__cr.br:pass@gw.dataimpulse.com:10001"
+    )
+    assert (
+        apply_shopee_br_proxy_targeting(
+            "http://login:pass@gw.dataimpulse.com:10001",
+            "https://www.kabum.com.br/p/1",
+        )
+        == "http://login:pass@gw.dataimpulse.com:10001"
+    )
 
 
 def test_urllib_fetcher_maps_http_403() -> None:
@@ -439,8 +449,8 @@ def test_camoufox_intercepts_shopee_get_pc_network_response(tmp_path: Any) -> No
                 self._handlers = []
 
             def on(self, event: str, handler: Any) -> None:
-                assert event == "response"
-                self._handlers.append(handler)
+                if event == "response":
+                    self._handlers.append(handler)
 
             def goto(self, target: str, **goto_kwargs: Any) -> None:
                 del goto_kwargs

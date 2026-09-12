@@ -131,6 +131,34 @@ def test_product_scrape_service_composes_offer_and_details(monkeypatch) -> None:
     assert item.images == []
 
 
+def test_offer_scrape_service_stores_offer_cache(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    url = "https://www.magazineluiza.com.br/p/240590700"
+    html = _response_from_fixture("product_structured_offer.html")
+    fetches: list[str] = []
+
+    class FakeFetcher:
+        def fetch(self, fetch_url: str) -> HtmlResponse:
+            fetches.append(fetch_url)
+            return html
+
+    spider = MagazineLuizaSpider()
+    monkeypatch.setattr(
+        "scout_api.modules.crawler.services.offer_scrape_service.resolve_store_spider",
+        lambda _url: spider,
+    )
+    guard = ScrapeGuard(
+        url_cooldown_seconds=60,
+        domain_min_interval_seconds=0,
+        result_cache_ttl_seconds=60,
+    )
+    service = OfferScrapeService(fetcher=FakeFetcher(), guard=guard)
+    first = service.scrape_offer(url)
+    second = service.scrape_offer(url)
+    assert first.price == Decimal("5058.85")
+    assert second.metadata.get("cache_hit") is True
+    assert len(fetches) == 1
+
+
 def test_offer_scrape_service_never_calls_extract_images(monkeypatch) -> None:  # type: ignore[no-untyped-def]
     url = "https://www.magazineluiza.com.br/p/240590700"
     html = _response_from_fixture("product_structured_offer.html")

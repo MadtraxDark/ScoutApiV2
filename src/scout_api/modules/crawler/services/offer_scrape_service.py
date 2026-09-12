@@ -1,7 +1,7 @@
 from scrapy.http import HtmlResponse
 
 from ..core.scrape_guard import ScrapeGuard
-from ..models.product import ProductOffer, product_offer_from_price_item
+from ..models.product import ProductOffer
 from ..spiders.base import BaseStoreSpider
 from .html_fetcher import HtmlFetcher
 from .product_scrape_service import get_shared_html_fetcher, get_shared_scrape_guard
@@ -20,14 +20,22 @@ class OfferScrapeService:
         self._guard = guard or get_shared_scrape_guard()
 
     def scrape_offer(self, url: str) -> ProductOffer:
-        cached = self._guard.get_cached(url)
+        cached = self._guard.get_cached_offer(url)
         if cached is not None:
-            return product_offer_from_price_item(cached)
+            return cached
 
-        spider = self._spider_for(url)
-        self._guard.acquire_for_live_fetch(url)
-        response = self._fetch(spider.prepare_fetch_url(url))
-        return spider.extract_offer(response)
+        def _live() -> ProductOffer:
+            again = self._guard.get_cached_offer(url)
+            if again is not None:
+                return again
+            spider = self._spider_for(url)
+            self._guard.acquire_for_live_fetch(url)
+            response = self._fetch(spider.prepare_fetch_url(url))
+            offer = spider.extract_offer(response)
+            self._guard.store_offer_success(url, offer)
+            return offer
+
+        return self._guard.run_coalesced(url, _live)
 
     def _fetch(self, url: str) -> HtmlResponse:
         return self._fetcher.fetch(url)

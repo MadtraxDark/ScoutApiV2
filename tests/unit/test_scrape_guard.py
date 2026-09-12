@@ -124,3 +124,33 @@ def test_scrape_guard_cache_key_ignores_tracking_params() -> None:
     cached = guard.get_cached("https://nissei.com/py/x")
     assert cached is not None
     assert cached.metadata["cache_hit"] is True
+
+
+def test_scrape_guard_offer_cache_and_projection() -> None:
+    from scout_api.modules.crawler.models.product import ProductOffer
+
+    url = "https://nissei.com/py/produto-offer"
+    guard = ScrapeGuard(
+        url_cooldown_seconds=60,
+        domain_min_interval_seconds=0,
+        result_cache_ttl_seconds=60,
+    )
+    offer = ProductOffer(
+        store="nissei",
+        country="PY",
+        product_id="1",
+        url=url,
+        canonical_url=url,
+        currency="PYG",
+        price=Decimal("1000"),
+    )
+    guard.store_offer_success(url, offer)
+    cached_offer = guard.get_cached_offer(url)
+    assert cached_offer is not None
+    assert cached_offer.metadata["cache_hit"] is True
+    assert guard.get_cached(url) is None
+
+    # Full item upgrades and serves both paths.
+    guard.store_success(url, _item(url))
+    assert guard.get_cached(url) is not None
+    assert guard.get_cached_offer(url) is not None

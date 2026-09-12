@@ -9,7 +9,9 @@ import logging
 import re
 import sys
 import threading
-from collections.abc import Callable
+import time
+from collections import Counter
+from collections.abc import Callable, Sequence
 from contextlib import AbstractContextManager
 from pathlib import Path
 from typing import Any, Protocol
@@ -21,10 +23,18 @@ from urllib.request import urlopen
 from scrapy.http import HtmlResponse, Request
 
 from ..core.exceptions import RequestError
+from ..core.fetch_metrics import FetchCostMetrics
+from ..core.fingerprints import canonicalize_url
+from ..core.proxy_policy import proxy_policy_for_url, resolve_store_config
 
 logger = logging.getLogger(__name__)
 
 BrowserFactory = Callable[..., AbstractContextManager[Any]]
+
+SHOPEE_BLOCKED_RESOURCE_TYPES: tuple[str, ...] = ("image", "media", "font")
+# Alias: any paid-proxy session runs in minimal-traffic mode.
+PROXY_COST_BLOCKED_RESOURCE_TYPES: tuple[str, ...] = SHOPEE_BLOCKED_RESOURCE_TYPES
+WarmupPolicy = str  # always | once_per_session | never
 
 
 class HtmlFetcher(Protocol):
@@ -188,6 +198,24 @@ def default_user_data_dir() -> Path:
     return Path.home() / ".cache" / "scout-api" / "camoufox-profiles" / "default"
 
 
+def _estimate_response_bytes(response: Any) -> int:
+    try:
+        headers = getattr(response, "headers", None)
+        if headers is not None:
+            cl = headers.get("content-length")
+            if cl is not None:
+                return max(0, int(cl))
+    except Exception:
+        pass
+    try:
+        body = response.body()
+        if body is not None:
+            return len(body)
+    except Exception:
+        pass
+    return 0
+
+
 class UrllibHtmlFetcher:
     """Lightweight HTTP fetch for stores without a hard WAF (tests / fallback)."""
 
@@ -280,6 +308,10 @@ class CamoufoxHtmlFetcher:
         user_data_dir: str | Path | None = None,
         disable_coop: bool = True,
         warmup_origin: bool = True,
+        warmup_policy: WarmupPolicy = "always",
+        block_resource_types: Sequence[str] | None = None,
+        early_stop_on_shopee_get_pc: bool = True,
+        fetch_strategy: str = "camoufox",
         browser_factory: BrowserFactory | None = None,
     ) -> None:
         self._headless = headless
@@ -294,23 +326,72 @@ class CamoufoxHtmlFetcher:
             self._user_data_dir = default_user_data_dir()
         self._disable_coop = disable_coop
         self._warmup_origin = warmup_origin
+        self._warmup_policy = warmup_policy
+        self._block_resource_types = tuple(block_resource_types or ())
+        self._early_stop_on_shopee_get_pc = early_stop_on_shopee_get_pc
+        self._fetch_strategy = fetch_strategy
         self._browser_factory = browser_factory
         self._lock = threading.Lock()
+        self._warmed_origins: set[str] = set()
+
+    @property
+    def proxy_url(self) -> str | None:
+        return self._proxy_url
+
+    @property
+    def block_resource_types(self) -> tuple[str, ...]:
+        return self._block_resource_types
+
+    @property
+    def warmed_origins(self) -> frozenset[str]:
+        return frozenset(self._warmed_origins)
 
     def fetch(self, url: str) -> HtmlResponse:
         with self._lock:
             return self._fetch_locked(url)
 
     def _fetch_locked(self, url: str) -> HtmlResponse:
+        store_cfg = resolve_store_config(url)
+        metrics = FetchCostMetrics(
+            store=store_cfg.key if store_cfg else None,
+            canonical_url=canonicalize_url(url),
+            proxy_used=bool(self._proxy_url),
+            proxy_policy=proxy_policy_for_url(url).value,
+            fetch_strategy=self._fetch_strategy,
+            blocked_resource_types=self._block_resource_types,
+        )
+        request_types: Counter[str] = Counter()
+        transferred = 0
+        t0 = time.perf_counter()
         try:
             with self._open_browser(url=url) as browser:
                 page = self._new_page(browser)
+                self._maybe_attach_resource_blocking(page, url)
+                self._attach_cost_listeners(page, request_types)
+                byte_holder = {"n": 0}
+
+                def on_response(response: Any) -> None:
+                    byte_holder["n"] += _estimate_response_bytes(response)
+
+                on_fn = getattr(page, "on", None)
+                if callable(on_fn):
+                    on_fn("response", on_response)
+
                 captured: dict[str, str] = {}
-                if is_shopee_url(url):
+                shopee = is_shopee_url(url)
+                if shopee:
                     self._attach_shopee_get_pc_listener(page, captured, url)
-                if self._warmup_origin:
-                    self._maybe_warmup(page, url)
-                self._goto(page, url)
+                warmup_used = False
+                if self._should_warmup(url):
+                    warmup_used = self._maybe_warmup(page, url)
+                metrics.warmup_used = warmup_used
+
+                if shopee and self._early_stop_on_shopee_get_pc:
+                    self._goto_shopee_early_stop(page, url, captured)
+                    metrics.early_stop = True
+                else:
+                    self._goto(page, url)
+
                 html, final_url, title = self._wait_for_product_html(
                     page, captured=captured
                 )
@@ -318,11 +399,14 @@ class CamoufoxHtmlFetcher:
                     html = wrap_shopee_pdp_json(captured["body"])
                     final_url = url
                     title = "Shopee PDP"
+                    metrics.get_pc_captured = True
                     logger.info(
                         "shopee_get_pc_intercepted",
                         extra={"url": captured.get("response_url") or url},
                     )
                 if is_shopee_traffic_block(final_url or url, html):
+                    metrics.result = "blocked"
+                    self._log_metrics(metrics, request_types, byte_holder["n"], t0)
                     raise RequestError(
                         "Shopee bloqueou a requisição "
                         "(verificação de tráfego / anti-bot)",
@@ -332,6 +416,8 @@ class CamoufoxHtmlFetcher:
                         retryable=True,
                     )
                 if is_hard_block_page(html, title=title):
+                    metrics.result = "blocked"
+                    self._log_metrics(metrics, request_types, byte_holder["n"], t0)
                     raise RequestError(
                         "A loja bloqueou o IP de saída (hard-block anti-bot); "
                         "configure um proxy residencial (CAMOUFOX_PROXY_URL)",
@@ -341,6 +427,8 @@ class CamoufoxHtmlFetcher:
                         retryable=False,
                     )
                 if is_challenge_page(html, title=title):
+                    metrics.result = "blocked"
+                    self._log_metrics(metrics, request_types, byte_holder["n"], t0)
                     raise RequestError(
                         "A loja bloqueou a requisição (desafio anti-bot)",
                         code="UPSTREAM_BLOCKED",
@@ -349,7 +437,7 @@ class CamoufoxHtmlFetcher:
                         retryable=True,
                     )
                 body = html.encode("utf-8")
-                return HtmlResponse(
+                response = HtmlResponse(
                     url=final_url or url,
                     status=200,
                     headers={"Content-Type": "text/html; charset=utf-8"},
@@ -357,9 +445,20 @@ class CamoufoxHtmlFetcher:
                     encoding="utf-8",
                     request=Request(url),
                 )
+                transferred = byte_holder["n"]
+                metrics.result = "success"
+                self._log_metrics(metrics, request_types, transferred, t0)
+                response.meta["fetch_metrics"] = metrics.as_log_dict()
+                try:
+                    page.close()
+                except Exception:
+                    logger.debug("camoufox_page_close_failed", exc_info=True)
+                return response
         except RequestError:
             raise
         except Exception as exc:
+            metrics.result = "error"
+            self._log_metrics(metrics, request_types, transferred, t0)
             logger.exception("camoufox_fetch_failed", extra={"url": url})
             raise RequestError(
                 "Falha ao renderizar a página com Camoufox",
@@ -367,6 +466,90 @@ class CamoufoxHtmlFetcher:
                 url=url,
                 retryable=True,
             ) from exc
+
+    def _log_metrics(
+        self,
+        metrics: FetchCostMetrics,
+        request_types: Counter[str],
+        transferred: int,
+        t0: float,
+    ) -> None:
+        metrics.network_request_count = sum(request_types.values())
+        metrics.requests_by_resource_type = dict(request_types)
+        metrics.estimated_transferred_bytes = transferred
+        metrics.duration_ms = round((time.perf_counter() - t0) * 1000, 1)
+        payload = metrics.as_log_dict()
+        logger.info(
+            "fetch_cost_metrics store=%s proxy_used=%s proxy_policy=%s "
+            "warmup_used=%s get_pc_captured=%s early_stop=%s "
+            "network_request_count=%s estimated_transferred_bytes=%s "
+            "duration_ms=%s result=%s requests_by_resource_type=%s",
+            payload.get("store"),
+            payload.get("proxy_used"),
+            payload.get("proxy_policy"),
+            payload.get("warmup_used"),
+            payload.get("get_pc_captured"),
+            payload.get("early_stop"),
+            payload.get("network_request_count"),
+            payload.get("estimated_transferred_bytes"),
+            payload.get("duration_ms"),
+            payload.get("result"),
+            payload.get("requests_by_resource_type"),
+            extra=payload,
+        )
+
+    def _attach_cost_listeners(
+        self,
+        page: Any,
+        request_types: Counter[str],
+    ) -> None:
+        def on_request(request: Any) -> None:
+            rtype = str(getattr(request, "resource_type", "unknown") or "unknown")
+            request_types[rtype] += 1
+
+        on_fn = getattr(page, "on", None)
+        if callable(on_fn):
+            on_fn("request", on_request)
+
+    def _maybe_attach_resource_blocking(self, page: Any, url: str) -> None:
+        # Proxy cost mode: abort heavy assets on any proxied navigation.
+        del url
+        if not self._block_resource_types:
+            return
+        blocked = set(self._block_resource_types)
+        route_fn = getattr(page, "route", None)
+        if not callable(route_fn):
+            logger.debug("camoufox_route_unavailable")
+            return
+
+        def _route(route: Any, request: Any) -> None:
+            if getattr(request, "resource_type", None) in blocked:
+                route.abort()
+            else:
+                route.continue_()
+
+        route_fn("**/*", _route)
+
+    def _should_warmup(self, url: str) -> bool:
+        if not self._warmup_origin:
+            return False
+        if self._warmup_policy == "never":
+            return False
+        warm = warmup_url_for(url)
+        if warm is None:
+            return False
+        if self._warmup_policy == "once_per_session":
+            origin = (urlparse(warm).netloc or "").lower()
+            return bool(origin) and origin not in self._warmed_origins
+        return True
+
+    def _mark_warmup(self, url: str) -> None:
+        warm = warmup_url_for(url)
+        if warm is None:
+            return
+        origin = (urlparse(warm).netloc or "").lower()
+        if origin:
+            self._warmed_origins.add(origin)
 
     def _open_browser(self, *, url: str) -> AbstractContextManager[Any]:
         launch_kwargs = self._launch_kwargs(url=url)
@@ -443,21 +626,24 @@ class CamoufoxHtmlFetcher:
             return pages[0]
         raise RuntimeError("Camoufox browser has no page factory")
 
-    def _maybe_warmup(self, page: Any, url: str) -> None:
+    def _maybe_warmup(self, page: Any, url: str) -> bool:
         warmup = warmup_url_for(url)
         if warmup is None:
-            return
+            return False
         logger.info("camoufox_warmup_origin", extra={"url": warmup})
         try:
             self._goto(page, warmup)
             # Brief pause so JS challenge / cookie minting can finish before product.
             page.wait_for_timeout(min(self._settle_ms, 3_000))
+            self._mark_warmup(url)
+            return True
         except Exception:
             logger.warning(
                 "camoufox_warmup_failed",
                 extra={"url": warmup},
                 exc_info=True,
             )
+            return False
 
     def _goto(self, page: Any, url: str) -> None:
         page.goto(url, wait_until="domcontentloaded", timeout=self._timeout_ms)
@@ -473,6 +659,19 @@ class CamoufoxHtmlFetcher:
                     extra={"url": url},
                     exc_info=True,
                 )
+
+    def _goto_shopee_early_stop(
+        self, page: Any, url: str, captured: dict[str, str]
+    ) -> None:
+        """Navigate to PDP and stop as soon as a valid get_pc payload arrives."""
+        page.goto(url, wait_until="domcontentloaded", timeout=self._timeout_ms)
+        deadline = time.perf_counter() + (self._timeout_ms / 1000.0)
+        while not captured.get("body") and time.perf_counter() < deadline:
+            if is_shopee_traffic_block(str(getattr(page, "url", "") or ""), ""):
+                break
+            page.wait_for_timeout(150)
+        if captured.get("body"):
+            self._mark_warmup(url)
 
     def _wait_for_product_html(
         self,
@@ -558,6 +757,14 @@ class CamoufoxHtmlFetcher:
         on_fn("response", on_response)
 
 
+def profile_dirs_for_base(base: Path) -> tuple[Path, Path]:
+    """Return ``(direct_profile, proxied_profile)`` under the Camoufox profiles root."""
+    # Seeded sticky Shopee sessions live in ``default``; direct stores use a sibling.
+    if base.name == "default":
+        return base.parent / "direct", base
+    return Path(f"{base}-direct"), base
+
+
 def build_html_fetcher(
     *,
     camoufox_enabled: bool,
@@ -572,17 +779,52 @@ def build_html_fetcher(
     camoufox_user_data_dir: str | None = None,
     camoufox_disable_coop: bool = True,
     camoufox_warmup_origin: bool = True,
+    shopee_warmup_policy: WarmupPolicy = "once_per_session",
+    shopee_resource_blocking_enabled: bool = True,
 ) -> HtmlFetcher:
-    if camoufox_enabled:
-        return CamoufoxHtmlFetcher(
-            headless=camoufox_headless,
-            humanize=camoufox_humanize,
-            timeout_ms=camoufox_timeout_ms,
-            settle_ms=camoufox_settle_ms,
-            max_settle_attempts=camoufox_max_settle_attempts,
+    """Build the shared store-aware fetcher (direct + optional proxied Camoufox)."""
+    if not camoufox_enabled:
+        return UrllibHtmlFetcher(user_agent=user_agent, timeout=urllib_timeout)
+
+    from .store_aware_fetcher import StoreAwareHtmlFetcher
+
+    base_dir = (
+        Path(camoufox_user_data_dir)
+        if camoufox_user_data_dir
+        else default_user_data_dir()
+    )
+    direct_dir, proxy_dir = profile_dirs_for_base(base_dir)
+
+    common: dict[str, Any] = {
+        "headless": camoufox_headless,
+        "humanize": camoufox_humanize,
+        "timeout_ms": camoufox_timeout_ms,
+        "settle_ms": camoufox_settle_ms,
+        "max_settle_attempts": camoufox_max_settle_attempts,
+        "disable_coop": camoufox_disable_coop,
+        "warmup_origin": camoufox_warmup_origin,
+    }
+    direct = CamoufoxHtmlFetcher(
+        **common,
+        proxy_url=None,
+        user_data_dir=direct_dir,
+        warmup_policy="once_per_session",
+        early_stop_on_shopee_get_pc=True,
+        fetch_strategy="camoufox-direct",
+    )
+    proxied: CamoufoxHtmlFetcher | None = None
+    if camoufox_proxy_url:
+        proxied = CamoufoxHtmlFetcher(
+            **common,
             proxy_url=camoufox_proxy_url,
-            user_data_dir=camoufox_user_data_dir,
-            disable_coop=camoufox_disable_coop,
-            warmup_origin=camoufox_warmup_origin,
+            user_data_dir=proxy_dir,
+            warmup_policy=shopee_warmup_policy,
+            block_resource_types=(
+                PROXY_COST_BLOCKED_RESOURCE_TYPES
+                if shopee_resource_blocking_enabled
+                else ()
+            ),
+            early_stop_on_shopee_get_pc=True,
+            fetch_strategy="camoufox-proxy",
         )
-    return UrllibHtmlFetcher(user_agent=user_agent, timeout=urllib_timeout)
+    return StoreAwareHtmlFetcher(direct=direct, proxied=proxied)

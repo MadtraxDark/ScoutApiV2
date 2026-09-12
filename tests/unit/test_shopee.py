@@ -73,7 +73,15 @@ def test_palit_details_and_images() -> None:
     assert details.gtin == "4710568870011"
     assert details.variant == "Modelo: GAMINGPRO OC"
     assert details.images == []
-    images = spider.extract_images(response)
+    assert spider.supports_images is False
+    assert spider.extract_images(response) == []
+    # Gallery parser retained for fixtures/debug; not used in the live cost path.
+    payload = spider._pdp_payload(response)
+    item = spider._item(payload)
+    model = spider._selected_model(
+        item, payload, response.url, spider._url_identity(response.url)
+    )
+    images = spider._gallery_urls(payload, item, model)
     assert images[0].endswith("br-11134207-7r98o-palit-oc")
     assert "br-11134207-7r98o-palit-main" in images[1]
     assert all(
@@ -161,8 +169,10 @@ def test_include_images_gate(monkeypatch) -> None:  # type: ignore[no-untyped-de
     assert without.images == []
 
     with_images = service.scrape(KINGSTON_URL, include_images=True)
-    images.assert_called_once()
-    assert len(with_images.images) >= 2
+    # Shopee store-cost policy: supports_images=False skips extract_images.
+    images.assert_not_called()
+    assert with_images.images == []
+    assert with_images.metadata.get("images_omitted") == "store-cost-policy"
 
 
 def test_palit_price_detail_extracts_pix_coupon_and_installment() -> None:

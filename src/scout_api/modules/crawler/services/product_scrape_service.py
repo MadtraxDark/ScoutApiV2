@@ -1,4 +1,5 @@
 from functools import lru_cache
+from typing import Any
 
 from scrapy.http import HtmlResponse
 
@@ -26,6 +27,8 @@ def get_shared_html_fetcher() -> HtmlFetcher:
         camoufox_user_data_dir=settings.camoufox_user_data_dir,
         camoufox_disable_coop=settings.camoufox_disable_coop,
         camoufox_warmup_origin=settings.camoufox_warmup_origin,
+        shopee_warmup_policy=settings.shopee_warmup_policy,
+        shopee_resource_blocking_enabled=settings.shopee_resource_blocking_enabled,
     )
 
 
@@ -37,6 +40,11 @@ def get_shared_scrape_guard() -> ScrapeGuard:
         domain_min_interval_seconds=settings.scrape_domain_min_interval_seconds,
         result_cache_ttl_seconds=settings.scrape_result_cache_ttl_seconds,
     )
+
+
+def _proxy_used(response: HtmlResponse) -> bool:
+    metrics: dict[str, Any] = response.meta.get("fetch_metrics") or {}
+    return bool(metrics.get("proxy_used"))
 
 
 class ProductScrapeService:
@@ -59,20 +67,56 @@ class ProductScrapeService:
                 return cached
             if not include_images:
                 return cached
+            # Cached without images but caller wants them: only re-fetch when
+            # the store supports gallery extraction.
+            spider_probe = self._spider_for(url)
+            if not spider_probe.supports_images:
+                return cached.model_copy(
+                    update={
+                        "images": [],
+                        "metadata": {
+                            **cached.metadata,
+                            "images_omitted": "store-cost-policy",
+                        },
+                    }
+                )
 
-        spider = self._spider_for(url)
-        fetch_url = spider.prepare_fetch_url(url)
-        self._guard.acquire_for_live_fetch(url)
-        response = self._fetch(fetch_url)
-        offer = spider.extract_offer(response)
-        details = spider.extract_details(response)
-        if include_images:
-            details = details.model_copy(
-                update={"images": spider.extract_images(response)}
-            )
-        item = compose_product_price_item(offer, details)
-        self._guard.store_success(url, item)
-        return item
+        def _live() -> ProductPriceItem:
+            again = self._guard.get_cached(url)
+            if again is not None and (not include_images or again.images):
+                if not include_images and again.images:
+                    return again.model_copy(update={"images": []})
+                return again
+
+            spider = self._spider_for(url)
+            fetch_url = spider.prepare_fetch_url(url)
+            self._guard.acquire_for_live_fetch(url)
+            response = self._fetch(fetch_url)
+            offer = spider.extract_offer(response)
+            details = spider.extract_details(response)
+            proxy_used = _proxy_used(response)
+            # Proxy cost mode: never extract galleries on paid egress.
+            allow_images = include_images and spider.supports_images and not proxy_used
+            if allow_images:
+                details = details.model_copy(
+                    update={"images": spider.extract_images(response)}
+                )
+            item = compose_product_price_item(offer, details)
+            if include_images and not allow_images:
+                reason = "proxy-cost-mode" if proxy_used else "store-cost-policy"
+                item = item.model_copy(
+                    update={
+                        "images": [],
+                        "metadata": {
+                            **item.metadata,
+                            "images_omitted": reason,
+                        },
+                    }
+                )
+            self._guard.store_success(url, item)
+            return item
+
+        return self._guard.run_coalesced(url, _live)
 
     def _fetch(self, url: str) -> HtmlResponse:
         return self._fetcher.fetch(url)

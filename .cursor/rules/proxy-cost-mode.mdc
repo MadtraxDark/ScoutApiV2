@@ -1,0 +1,33 @@
+---
+description: Proxy Cost Mode — avoid paid proxy; minimal traffic when proxy is required
+alwaysApply: true
+---
+
+# CRITICAL RULE — Proxy Cost Mode
+
+Proxy pago deve ser evitado sempre que possível.
+
+## Quando o proxy for necessário
+
+- Trafegar somente dados leves e essenciais
+- Não baixar imagens, vídeos, fontes, PDFs ou outros arquivos pesados
+- Coletar apenas texto/JSON necessário para preço, seller, variante e disponibilidade
+- Ignorar `include_images=true` (metadata `images_omitted: proxy-cost-mode`)
+- Evitar requests, retries e recursos desnecessários
+
+## Política por loja
+
+Todas as lojas devem tentar **acesso direto primeiro** e usar proxy apenas como
+**fallback** quando realmente necessário (bloqueio classificado
+`UPSTREAM_BLOCKED`).
+
+Não use proxy só porque `CAMOUFOX_PROXY_URL` está configurado.
+Não faça fallback para proxy por `ParseError`, campo ausente ou Exception genérica.
+
+## Resumo
+
+**Proxy ativo = tráfego mínimo obrigatório.**
+
+Implementação de referência: `ProxyPolicy.FALLBACK` em `StoreConfig`,
+`StoreAwareHtmlFetcher`, bloqueio `image`/`media`/`font` no fetcher proxied,
+ADR 0014.

@@ -208,7 +208,7 @@ def test_nissei_extracts_structured_identity_and_rendered_installment() -> None:
 
 def test_nissei_extract_images_deduplicates_magento_cache_variants() -> None:
     body = b"""
-    <div class="product.media">
+    <div class="product media">
       <img src="/media/catalog/product/cache/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/2/n/main.jpg">
       <img src="/media/catalog/product/cache/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/2/n/main.jpg">
       <img src="/media/catalog/product/cache/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/A/Q/detail.jpg">

@@ -2,6 +2,8 @@
 
 from dataclasses import dataclass
 
+from .core.proxy_policy import ProxyPolicy
+
 
 @dataclass(frozen=True)
 class StoreConfig:
@@ -10,6 +12,8 @@ class StoreConfig:
     currency: str
     domains: tuple[str, ...]
     implemented: bool = False
+    proxy_policy: ProxyPolicy = ProxyPolicy.FALLBACK
+    supports_images: bool = True
 
 
 STORE_CONFIGS = {
@@ -19,7 +23,15 @@ STORE_CONFIGS = {
     ),
     "pichau": StoreConfig("pichau", "BR", "BRL", ("pichau.com.br",)),
     "terabyteshop": StoreConfig("terabyteshop", "BR", "BRL", ("terabyteshop.com.br",)),
-    "shopee": StoreConfig("shopee", "BR", "BRL", ("shopee.com.br",), True),
+    "shopee": StoreConfig(
+        "shopee",
+        "BR",
+        "BRL",
+        ("shopee.com.br",),
+        True,
+        proxy_policy=ProxyPolicy.FALLBACK,
+        supports_images=False,
+    ),
     "aliexpress": StoreConfig("aliexpress", "BR", "BRL", ("aliexpress.com",)),
     "bestbuy": StoreConfig("bestbuy", "US", "USD", ("bestbuy.com",), True),
     "ebay": StoreConfig("ebay", "US", "USD", ("ebay.com",)),
