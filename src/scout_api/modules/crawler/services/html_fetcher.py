@@ -36,6 +36,13 @@ SHOPEE_BLOCKED_RESOURCE_TYPES: tuple[str, ...] = ("image", "media", "font")
 PROXY_COST_BLOCKED_RESOURCE_TYPES: tuple[str, ...] = SHOPEE_BLOCKED_RESOURCE_TYPES
 WarmupPolicy = str  # always | once_per_session | never
 
+# HTTP leg for Amazon only (AmazonHttpFirst). Browser-like UA; not Camoufox spoofing.
+_AMAZON_HTTP_USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/122.0.0.0 Safari/537.36"
+)
+
 
 class HtmlFetcher(Protocol):
     def fetch(self, url: str) -> HtmlResponse:
@@ -52,7 +59,7 @@ def is_hard_block_page(html: str, *, title: str | None = None) -> bool:
 
 
 def is_challenge_page(html: str, *, title: str | None = None) -> bool:
-    """Detect Cloudflare / Akamai interstitial pages that are not product HTML."""
+    """Detect Cloudflare/Akamai/Amazon interstitials that are not product HTML."""
     if is_hard_block_page(html, title=title):
         return True
     title_text = (title or "").strip().lower()
@@ -69,18 +76,72 @@ def is_challenge_page(html: str, *, title: str | None = None) -> bool:
         return True
     if re.search(r"cf-challenge|challenge-platform", lower) and len(html) < 40_000:
         return True
+    if is_amazon_robot_check(html, title=title):
+        return True
+    return False
+
+
+def is_amazon_robot_check(html: str, *, title: str | None = None) -> bool:
+    """Amazon CAPTCHA / robot-check pages must never be parsed as product offers."""
+    title_text = (title or "").strip().casefold()
+    lower = (html or "")[:20_000].casefold()
+    haystack = f"{title_text}\n{lower}"
+    markers = (
+        "validatecaptcha",
+        "/errors/validatecaptcha",
+        "opfcaptcha",
+        "robot check",
+        "type the characters you see",
+        "enter the characters you see",
+        "sorry, we just need to make sure you're not a robot",
+        "clique na caixa para confirmar",
+        "não sou um robô",
+        "nao sou um robo",
+        "to discuss automated access to amazon data",
+    )
+    if any(marker in haystack for marker in markers):
+        return True
+    if "amazon" in haystack and "captcha" in haystack and len(html) < 80_000:
+        if 'id="producttitle"' not in lower and 'name="asin"' not in lower:
+            return True
     return False
 
 
 def locale_for_url(url: str) -> str | None:
     """Prefer store-local locale so Intl/fingerprint match the target site."""
-    hostname = (urlparse(url).hostname or "").lower()
+    hostname = (urlparse(url).hostname or "").lower().removeprefix("www.")
     if hostname == "nissei.com" or hostname.endswith(".nissei.com"):
         return "es-PY"
     if hostname == "magazineluiza.com.br" or hostname.endswith(".magazineluiza.com.br"):
         return "pt-BR"
     if hostname == "shopee.com.br" or hostname.endswith(".shopee.com.br"):
         return "pt-BR"
+    if hostname == "amazon.com.br" or hostname.endswith(".amazon.com.br"):
+        return "pt-BR"
+    if hostname == "amazon.com" or hostname.endswith(".amazon.com"):
+        return "en-US"
+    return None
+
+
+def accept_language_for_url(url: str) -> str:
+    """HTTP Accept-Language aligned with ``locale_for_url`` (no spoofed geo)."""
+    locale = locale_for_url(url)
+    if locale == "pt-BR":
+        return "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7"
+    if locale == "es-PY":
+        return "es-PY,es;q=0.9,en;q=0.8"
+    if locale == "en-US":
+        return "en-US,en;q=0.9"
+    return "en-US,en;q=0.9"
+
+
+def marketplace_referer_for_url(url: str) -> str | None:
+    """Same-marketplace Referer for Amazon PDP fetches (session continuity)."""
+    hostname = (urlparse(url).hostname or "").lower().removeprefix("www.")
+    if hostname == "amazon.com.br" or hostname.endswith(".amazon.com.br"):
+        return "https://www.amazon.com.br/"
+    if hostname == "amazon.com" or hostname.endswith(".amazon.com"):
+        return "https://www.amazon.com/"
     return None
 
 
@@ -231,13 +292,24 @@ class UrllibHtmlFetcher:
         self._timeout = timeout
 
     def fetch(self, url: str) -> HtmlResponse:
-        request = UrlRequest(url, headers={"User-Agent": self._user_agent})
+        headers = {
+            "User-Agent": self._user_agent,
+            "Accept": (
+                "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+            ),
+            "Accept-Language": accept_language_for_url(url),
+        }
+        referer = marketplace_referer_for_url(url)
+        if referer:
+            headers["Referer"] = referer
+        request = UrlRequest(url, headers=headers)
         try:
             with self._opener(request, timeout=self._timeout) as upstream:
                 body = upstream.read()
                 status = int(getattr(upstream, "status", 200))
                 content_type = upstream.headers.get("Content-Type", "")
                 charset = upstream.headers.get_content_charset() or "utf-8"
+                final_url = str(getattr(upstream, "geturl", lambda: url)() or url)
                 if status >= 400:
                     raise RequestError(
                         f"A loja recusou a requisição (HTTP {status})",
@@ -249,21 +321,21 @@ class UrllibHtmlFetcher:
                         retryable=status == 429,
                     )
                 text = body.decode(charset, errors="replace")
-                if is_challenge_page(text):
+                if is_challenge_page(text) or is_amazon_robot_check(text):
                     raise RequestError(
                         "A loja bloqueou a requisição (desafio anti-bot)",
                         code="UPSTREAM_BLOCKED",
-                        url=url,
+                        url=final_url or url,
                         upstream_status=403,
                         retryable=True,
                     )
                 return HtmlResponse(
-                    url=url,
+                    url=final_url or url,
                     status=status,
                     headers={"Content-Type": content_type},
                     body=body,
                     encoding=charset,
-                    request=Request(url),
+                    request=Request(final_url or url),
                 )
         except RequestError:
             raise
@@ -783,9 +855,11 @@ def build_html_fetcher(
     shopee_resource_blocking_enabled: bool = True,
 ) -> HtmlFetcher:
     """Build the shared store-aware fetcher (direct + optional proxied Camoufox)."""
+    http = UrllibHtmlFetcher(user_agent=user_agent, timeout=urllib_timeout)
     if not camoufox_enabled:
-        return UrllibHtmlFetcher(user_agent=user_agent, timeout=urllib_timeout)
+        return http
 
+    from .amazon_http_first_fetcher import AmazonHttpFirstHtmlFetcher
     from .store_aware_fetcher import StoreAwareHtmlFetcher
 
     base_dir = (
@@ -827,4 +901,9 @@ def build_html_fetcher(
             early_stop_on_shopee_get_pc=True,
             fetch_strategy="camoufox-proxy",
         )
-    return StoreAwareHtmlFetcher(direct=direct, proxied=proxied)
+    browser = StoreAwareHtmlFetcher(direct=direct, proxied=proxied)
+    amazon_http = UrllibHtmlFetcher(
+        user_agent=_AMAZON_HTTP_USER_AGENT,
+        timeout=urllib_timeout,
+    )
+    return AmazonHttpFirstHtmlFetcher(http=amazon_http, browser=browser)
