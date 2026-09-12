@@ -16,6 +16,10 @@ from ...models.product import (
     compose_product_price_item,
 )
 from ...utils.parsing import parse_money
+from ...utils.product_attributes import (
+    merge_specification_gaps,
+    resolve_product_identity,
+)
 from ..base import BaseStoreSpider
 
 Availability = Literal["available", "out_of_stock", "unavailable"]
@@ -146,28 +150,53 @@ class MagazineLuizaSpider(BaseStoreSpider):
         brand = self._brand(item, json_ld, response)
         model = self._specification(response, "Modelo")
         variant = item.get("color") or self._specification(response, "Cor")
-
+        title_text = str(title).strip()
+        specifications = self._table_specifications(response)
+        resolved = resolve_product_identity(
+            specifications=specifications,
+            structured={
+                "brand": brand,
+                "model": model,
+                "color": variant,
+            },
+            title=title_text,
+        )
+        specifications = merge_specification_gaps(specifications, resolved)
+        attribute_sources = resolved.found_sources()
+        metadata_source = {
+            "title": "product-state" if item.get("title") else "json-ld-or-h1",
+            "product_id": "product-state" if item.get("id") else "json-ld-or-url",
+            "sku": "offer-seller-state" if seller_data.get("sku") else "json-ld",
+            "brand": attribute_sources.get(
+                "brand", "structured-or-html" if brand else "not-found"
+            ),
+            "model": attribute_sources.get(
+                "model", "html-specification" if model else "not-found"
+            ),
+            "variant": "product-state-or-html" if variant else "not-found",
+            "specifications": "html-table-and-title-fallback"
+            if specifications
+            else "not-found",
+            **{
+                key: source
+                for key, source in attribute_sources.items()
+                if key not in {"brand", "model"}
+            },
+        }
+        if resolved.category:
+            metadata_source["category"] = resolved.category
         return ProductDetails(
             product_id=str(product_id).strip(),
             sku=self._string(sku),
             gtin=self._gtin(item, response),
-            title=str(title).strip(),
-            brand=self._string(brand),
-            model=self._string(model),
-            variant=self._string(variant),
+            title=title_text,
+            brand=self._string(brand) or resolved.value("brand"),
+            model=self._string(model) or resolved.value("model"),
+            # Keep Magalu's raw color/variant label (tests + catalog shape).
+            variant=self._string(variant) or resolved.value("color"),
             description=None,
-            specifications={},
-            metadata={
-                "source": {
-                    "title": "product-state" if item.get("title") else "json-ld-or-h1",
-                    "product_id": "product-state"
-                    if item.get("id")
-                    else "json-ld-or-url",
-                    "sku": "offer-seller-state"
-                    if seller_data.get("sku")
-                    else "json-ld",
-                }
-            },
+            specifications=specifications,
+            metadata={"source": metadata_source},
         )
 
     def extract_images(self, response: Response) -> list[str]:
@@ -399,6 +428,16 @@ class MagazineLuizaSpider(BaseStoreSpider):
             ) == MagazineLuizaSpider._fold(label):
                 return values[-1] or None
         return None
+
+    @staticmethod
+    def _table_specifications(response: Response) -> dict[str, str]:
+        specs: dict[str, str] = {}
+        for row in response.css("tr"):
+            cells = row.css("th, td")
+            values = [" ".join(cell.css("::text").getall()).strip() for cell in cells]
+            if len(values) >= 2 and values[0] and values[-1]:
+                specs[values[0]] = values[-1]
+        return specs
 
     @staticmethod
     def _state_money(raw: Any) -> Decimal:

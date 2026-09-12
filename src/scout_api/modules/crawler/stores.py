@@ -42,6 +42,10 @@ STORE_CONFIGS = {
     "cellshop": StoreConfig("cellshop", "PY", "PYG", ("cellshop.com",)),
     "stargames": StoreConfig("stargames", "PY", "PYG", ("stargames.com.py",)),
     "shoppingchina": StoreConfig(
-        "shoppingchina", "PY", "PYG", ("shoppingchina.com.py",)
+        "shoppingchina",
+        "PY",
+        "PYG",
+        ("shoppingchina.com.py", "shoppingchina.com.br"),
+        True,
     ),
 }

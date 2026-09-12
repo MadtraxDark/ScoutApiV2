@@ -12,6 +12,7 @@ from ...core.exceptions import ParseError
 from ...core.fingerprints import canonicalize_url
 from ...models.product import ProductDetails, ProductOffer
 from ...utils.parsing import parse_money
+from ...utils.product_attributes import resolve_attributes
 from ..base import BaseStoreSpider
 
 Availability = Literal["available", "out_of_stock", "unavailable"]
@@ -511,22 +512,18 @@ class BestBuySpider(BaseStoreSpider):
     def _variants_from_title(cls, title: str | None) -> dict[str, str]:
         if not title:
             return {}
-        result: dict[str, str] = {}
-        storage = re.search(r"\b(\d+\s*(?:GB|TB))\b", title, re.I)
-        if storage:
-            result["storage"] = re.sub(r"\s+", "", storage.group(1)).upper()
-        color = re.search(
-            r"-\s*([A-Za-z][A-Za-z0-9 /+]{1,40})\s*(?:\(|$)",
-            title,
+        resolved = resolve_attributes(
+            ("color", "storage"),
+            title=title,
         )
-        if color:
-            cleaned = cls._clean_short(color.group(1))
-            if cleaned and cleaned.casefold() not in {
-                "wireless",
-                "bluetooth",
-                "noise",
-            }:
-                result.setdefault("color", cleaned)
+        result: dict[str, str] = {}
+        color = resolved.value("color")
+        storage = resolved.value("storage")
+        if color and color.casefold() not in {"wireless", "bluetooth", "noise"}:
+            result["color"] = color
+        if storage:
+            # Preserve Best Buy's compact gallery-style token when possible.
+            result["storage"] = storage.replace(" ", "")
         return result
 
     @classmethod

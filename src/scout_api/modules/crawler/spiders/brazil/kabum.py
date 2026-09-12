@@ -12,6 +12,11 @@ from ...core.exceptions import ParseError
 from ...core.fingerprints import canonicalize_url
 from ...models.product import ProductDetails, ProductOffer
 from ...utils.parsing import parse_money
+from ...utils.product_attributes import (
+    format_variant_dimensions,
+    merge_specification_gaps,
+    resolve_product_identity,
+)
 from ..base import BaseStoreSpider
 
 Availability = Literal["available", "out_of_stock", "unavailable"]
@@ -117,36 +122,58 @@ class KabumSpider(BaseStoreSpider):
             product, "gtin", "ean", "gtin13"
         ) or self._value_for_label(specifications, "ean", "gtin", "código de barras")
         description = product.get("description") or json_ld.get("description")
+        title_text = str(title).strip()
+        resolved = resolve_product_identity(
+            specifications=specifications,
+            structured={
+                "brand": brand,
+                "model": model,
+                "color": self._first_value(product, "color", "colour"),
+            },
+            title=title_text,
+        )
+        specifications = merge_specification_gaps(specifications, resolved)
+        variant = self._string(self._first_value(product, "variant", "color"))
+        if not variant:
+            variant = format_variant_dimensions(resolved)
+        attribute_sources = resolved.found_sources()
+        metadata_source = {
+            "title": "product-state" if product.get("title") else "json-ld-or-h1",
+            "description": "product-state" if product.get("description") else "json-ld",
+            "specifications": "product-technical-information-state"
+            if specifications
+            else "not-found",
+            "brand": attribute_sources.get(
+                "brand",
+                "product-brand-state" if brand else "not-found",
+            ),
+            "model": attribute_sources.get(
+                "model",
+                "technical-information-state" if model else "not-found",
+            ),
+            "gtin": "technical-information-state" if gtin else "not-found",
+            "images": "product-gallery-state" if product.get("medias") else "not-found",
+            **{
+                key: source
+                for key, source in attribute_sources.items()
+                if key not in {"brand", "model"}
+            },
+        }
+        if resolved.category:
+            metadata_source["category"] = resolved.category
         return ProductDetails(
             product_id=str(product_id).strip(),
             sku=self._string(
                 self._first_value(product, "sku", "productSku", "reference")
             ),
             gtin=self._string(gtin),
-            title=str(title).strip(),
-            brand=self._string(brand),
-            model=self._string(model),
-            variant=self._string(self._first_value(product, "variant", "color")),
+            title=title_text,
+            brand=self._string(brand) or resolved.value("brand"),
+            model=self._string(model) or resolved.value("model"),
+            variant=variant,
             description=self._html_text(description),
             specifications=specifications,
-            metadata={
-                "source": {
-                    "title": "product-state"
-                    if product.get("title")
-                    else "json-ld-or-h1",
-                    "description": "product-state"
-                    if product.get("description")
-                    else "json-ld",
-                    "specifications": "product-technical-information-state"
-                    if specifications
-                    else "not-found",
-                    "brand": "product-brand-state" if brand else "not-found",
-                    "gtin": "technical-information-state" if gtin else "not-found",
-                    "images": "product-gallery-state"
-                    if product.get("medias")
-                    else "not-found",
-                }
-            },
+            metadata={"source": metadata_source},
         )
 
     def extract_images(self, response: Response) -> list[str]:

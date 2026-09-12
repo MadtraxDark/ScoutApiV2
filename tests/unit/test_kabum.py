@@ -42,6 +42,9 @@ def test_kabum_details_and_images_use_product_state_only() -> None:
     assert details.model == "RTX 5060 Ti"
     assert details.gtin == "4711377341394"
     assert details.specifications["Memória"] == "8GB GDDR7"
+    assert details.specifications.get("vram") == "8 GB"
+    assert details.specifications.get("gpu_model") is not None
+    assert details.metadata["source"]["category"] == "gpu"
     assert details.images == []
     assert spider.extract_images(response()) == [
         "https://images.kabum.com.br/produtos/fotos/1033699/xlarge/main.png",

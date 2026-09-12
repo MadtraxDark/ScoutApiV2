@@ -15,6 +15,10 @@ from scrapy.selector import Selector
 from ...core.exceptions import ParseError, RequestError
 from ...core.fingerprints import canonicalize_url
 from ...models.product import ProductDetails, ProductOffer
+from ...utils.product_attributes import (
+    merge_specification_gaps,
+    resolve_product_identity,
+)
 from ..base import BaseStoreSpider
 
 Availability = Literal["available", "out_of_stock", "unavailable"]
@@ -131,14 +135,40 @@ class ShopeeSpider(BaseStoreSpider):
         model_id = self._id_str(
             (model or {}).get("model_id") or (model or {}).get("modelid")
         )
+        resolved = resolve_product_identity(
+            specifications=specifications,
+            structured={"brand": brand, "model": model_name},
+            title=title,
+        )
+        specifications = merge_specification_gaps(specifications, resolved)
+        attribute_sources = resolved.found_sources()
+        source = {
+            "title": "pdp-item",
+            "brand": attribute_sources.get(
+                "brand", "product-attributes" if brand else "not-found"
+            ),
+            "model": attribute_sources.get(
+                "model", "product-attributes" if model_name else "not-found"
+            ),
+            "variant": "tier-variations-or-model" if variant else "not-found",
+            "specifications": "product-attributes" if specifications else "not-found",
+            "description": "pdp-item" if description else "not-found",
+            **{
+                key: source_name
+                for key, source_name in attribute_sources.items()
+                if key not in {"brand", "model"}
+            },
+        }
+        if resolved.category:
+            source["category"] = resolved.category
 
         return ProductDetails(
             product_id=str(item_id),
             sku=self._sku(model, item_id),
             gtin=self._gtin(specifications, item),
             title=title,
-            brand=brand,
-            model=model_name,
+            brand=brand or resolved.value("brand"),
+            model=model_name or resolved.value("model"),
             variant=variant,
             description=description,
             specifications=specifications,
@@ -148,16 +178,7 @@ class ShopeeSpider(BaseStoreSpider):
                 "item_id": str(item_id),
                 "model_id": model_id,
                 "display_model_id": url_ids.get("display_model_id"),
-                "source": {
-                    "title": "pdp-item",
-                    "brand": "product-attributes" if brand else "not-found",
-                    "model": "product-attributes" if model_name else "not-found",
-                    "variant": "tier-variations-or-model" if variant else "not-found",
-                    "specifications": "product-attributes"
-                    if specifications
-                    else "not-found",
-                    "description": "pdp-item" if description else "not-found",
-                },
+                "source": source,
             },
         )
 

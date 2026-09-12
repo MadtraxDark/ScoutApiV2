@@ -107,6 +107,9 @@ def test_magalu_extract_offer_is_independent_of_catalog_details() -> None:
     assert details.title
     assert details.brand == "Sony"
     assert details.model == "PS5 CFI 2114B Edição Digital"
+    assert details.variant == "Branco"
+    assert details.specifications.get("storage") == "825 GB"
+    assert details.metadata["source"]["storage"] == "product-title-fallback"
     assert details.images == []
     assert "brand" not in offer.model_dump()
     assert "price" not in details.model_dump()
