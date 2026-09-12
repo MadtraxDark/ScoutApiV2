@@ -19,7 +19,7 @@ class StoreConfig:
 STORE_CONFIGS = {
     "kabum": StoreConfig("kabum", "BR", "BRL", ("kabum.com.br",), True),
     "magazineluiza": StoreConfig(
-        "magazineluiza", "BR", "BRL", ("magazineluiza.com.br",)
+        "magazineluiza", "BR", "BRL", ("magazineluiza.com.br",), True
     ),
     "pichau": StoreConfig("pichau", "BR", "BRL", ("pichau.com.br",)),
     "terabyteshop": StoreConfig("terabyteshop", "BR", "BRL", ("terabyteshop.com.br",)),
