@@ -1,10 +1,14 @@
 ---
 description: Padrões de testes do ScoutApiV2
 alwaysApply: false
-globs: ["tests/**/*.py", "src/scout_api/modules/crawler/**/*.py"]
+globs: ["tests/**/*.py"]
 ---
 
+# Testing
+
+- Use `python-testing-patterns` ao escrever/ajustar testes ou regression tests.
 - Corrija bugs com regression test quando aplicável; reproduza a causa e teste comportamento observável.
 - Prefira fixtures reais ou sanitizadas e fakes focados; não transforme a suíte em mocks excessivos.
-- Separe testes unitários de integração/live e bloqueie requests externos inesperados nos testes isolados quando esse padrão existir.
+- Separe unit de integração/live; bloqueie requests externos inesperados nos testes isolados quando o padrão existir.
 - Não remova assertions nem use skip/xfail para esconder regressões.
+- Não force TDD, freezegun, Hypothesis ou pytest-asyncio sem problema real; preserve `tests/unit|integration|e2e`.

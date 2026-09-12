@@ -4,8 +4,11 @@ alwaysApply: false
 globs: ["src/scout_api/**/*.py", "tests/**/*.py", "Dockerfile", "compose.yaml"]
 ---
 
-- Use a skill OWASP em mudanças de endpoints, input validation, URLs externas, SSRF, headers, secrets, limites e OpenAPI.
+# Security
+
+- Use `api-security-review` quando a mudança tocar **input externo, URLs/redirects, SSRF, secrets, limites, auth futura, OpenAPI ou exposição em erros/logs** — não em todo diff de `src/`.
+- Foque no risco real do ScoutApiV2 (crawl-by-URL, proxy credentials, vazamento em detail/logs); não invente Gateway/JWT/OAuth só por checklist.
 - Valide URLs e redirects com as abstrações existentes; não exponha rede interna ou detalhes sensíveis em erros.
 - Não registre credentials, tokens ou cookies; não relaxe TLS e não use secrets hardcoded.
-- Testes ativos e exploração devem ser limitados a ambientes e alvos autorizados; não execute comandos da skill contra terceiros.
+- Testes ativos e exploração apenas em ambientes/alvos autorizados; não execute scanners da skill contra marketplaces ou terceiros.
 - Não faça mudanças preventivas de arquitetura sem evidência concreta.

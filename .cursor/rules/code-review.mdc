@@ -3,6 +3,22 @@ description: Revisões de código orientadas a risco
 alwaysApply: false
 ---
 
-- Use `code-review-excellence` em refactors, spiders, concorrência, retry/cache, fetch, contratos e segurança.
+# Code review
+
+- Use `code-review-excellence` somente quando houver risco real (ver critérios abaixo).
 - Priorize regressões, bugs, concorrência, erros, contratos, segurança, legibilidade e testes; evite observações cosméticas enquanto houver risco funcional.
 - Revise arquitetura e comportamento antes dos detalhes locais e preserve ADRs, direção de dependências e Proxy Cost Mode.
+- Não empilhe `api-security-review` e esta skill na mesma tarefa sem benefício claro; escolha a lente principal.
+
+## Acionar quando
+
+- novo spider/store adapter;
+- fetch, Camoufox, proxy, concorrência, retry ou cache;
+- contrato Offer / Details / Images;
+- refactor arquitetural ou ADR;
+- surface de segurança (URL, secrets, Docker, erros/logs);
+- diff grande (~200+ linhas) ou cross-cutting.
+
+## Não acionar quando
+
+- typo, rename, docs, ajuste cosmético ou teste trivial.

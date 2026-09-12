@@ -4,8 +4,11 @@ alwaysApply: false
 globs: ["src/scout_api/modules/crawler/**/*.py", "tests/fixtures/**/*"]
 ---
 
+# Crawler
+
 - Preserve `Fetch -> Store Adapter -> Offer / Details / Images -> Services` e a separação fetch/parsing.
-- Use skills de scraping somente para parsing, selectors, normalização, validação e testes; não introduza Scrapy, outro crawler ou adapter paralelo.
+- `scrapy-web-scraping` é referência **conceitual**: selectors, isolation de parsers, normalização, fixtures e validação.
+- **Não** use a skill Scrapy para: migrar fetch, introduzir Splash/Playwright, Scrapy-Redis, fake-UA, middleware/scheduler paralelo, proxy rotation ou outro crawler.
 - Não altere Camoufox, navegação, waits, fingerprint, proxies, retries, concorrência ou lifecycle sem pedido explícito; a exceção é cumprir Proxy Cost Mode.
 - Preserve bloqueio versus indisponibilidade, resolução de variante e associação correta entre estoque e preço.
 - Imagens só quando solicitadas e nunca via proxy pago; consulte sempre `proxy-cost-mode.mdc`.

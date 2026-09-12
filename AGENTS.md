@@ -19,4 +19,8 @@ Comandos oficiais: `python -m pytest`, `ruff check .`, `ruff format --check .`, 
 
 Skills complementam as regras do repositório; não as substituem.
 
-Prioridade: tarefa explícita, `AGENTS.md`, ADRs aceitos, `.cursor/rules/`, padrões consolidados do código e, por último, skills. Skills de terceiros devem ser auditadas antes da adoção e usadas somente no contexto registrado. Recomendações de framework devem ser adaptadas à arquitetura do ScoutApiV2; não podem introduzir dependências, alterar contratos ou forçar uma nova arquitetura sem necessidade comprovada.
+**Política oficial:** skills orientam o agente; nunca decidem arquitetura. Acione só a skill mínima para a tarefa. Precedência: tarefa explícita → `AGENTS.md` → ADRs aceitos → `.cursor/rules/` → padrões do código → skills → genéricos.
+
+Skills de terceiros: pin → auditoria (`skill-scanner`) → registro em `docs/skills/README.md` (e `skills-lock.json` se vendored). Recomendações de framework devem ser adaptadas ao ScoutApiV2; não podem introduzir dependências, alterar contratos ou forçar nova arquitetura sem necessidade comprovada.
+
+Inventário, matriz de acionamento e restrições: `docs/skills/README.md`. Governança agent: `.cursor/rules/skills-governance.mdc`.

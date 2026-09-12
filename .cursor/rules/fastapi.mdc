@@ -4,7 +4,11 @@ alwaysApply: false
 globs: ["src/scout_api/api/**/*.py", "src/scout_api/modules/**/router.py", "src/scout_api/modules/**/schemas.py"]
 ---
 
+# FastAPI
+
+- Use a skill `fastapi` no boundary HTTP (routers, schemas, DI, OpenAPI).
 - Router é boundary HTTP: valida entrada, chama service e traduz erros de domínio para HTTP.
 - Não coloque regra de negócio em routers; services e domínio não dependem de FastAPI ou `HTTPException`.
 - Reutilize DI, schemas e contratos existentes; não crie abstrações ou versões paralelas de endpoints.
 - Preserve a direção `HTTP/router -> service -> repository -> database` e os ADRs aceitos.
+- Ignore recomendações da skill fora do escopo (frontend embutido, SSE, SQLModel, `ty` no lugar de mypy) salvo pedido explícito.

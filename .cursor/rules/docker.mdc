@@ -1,0 +1,12 @@
+---
+description: Limites para skills Docker no ScoutApiV2
+alwaysApply: false
+globs: ["Dockerfile", "compose.yaml", "docker-entrypoint.sh", ".dockerignore"]
+---
+
+# Docker
+
+- Prefira a skill `docker` no dia a dia; use `dockerfile-optimise` só sob pedido explícito de otimizar imagem/build.
+- Preserve runtime com Camoufox: não migre para alpine/distroless sem prova de que libs de browser e `camoufox fetch` continuam funcionais.
+- Não remova healthcheck, usuário non-root ou sync de env com `.env.example` / Compose.
+- Não coloque secrets via `ARG`/`ENV` na imagem; não invente registry/deploy sem solicitação.

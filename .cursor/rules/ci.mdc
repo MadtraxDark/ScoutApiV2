@@ -4,8 +4,11 @@ alwaysApply: false
 globs: [".github/workflows/**/*.yml", ".github/workflows/**/*.yaml"]
 ---
 
+# CI
+
 - Use `github-actions-templates` somente ao criar ou alterar CI/CD em `.github/workflows/`.
-- Antes de gerar workflow, confira `pyproject.toml`, comandos oficiais, versão Python e Dockerfile/Compose.
-- Execute testes, Ruff, mypy e build Docker quando apropriado; não invente ferramentas nem adicione dependências para satisfazer template.
-- Use permissões mínimas, secrets via GitHub Secrets e actions fixadas conforme a política vigente.
+- Antes de gerar workflow, confira `pyproject.toml`, comandos oficiais, versão Python (3.12) e Dockerfile/Compose.
+- Ordem sugerida: `ruff check .` → `ruff format --check .` → `mypy src` → `python -m pytest` → opcional build Docker.
+- Não invente ferramentas nem adicione dependências para satisfazer template (sem Node matrix, K8s, Slack, Snyk obrigatório).
+- Use permissões mínimas, secrets via GitHub Secrets e actions pinadas.
 - Não adicione deploy sem solicitação explícita.
