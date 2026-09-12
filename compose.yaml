@@ -25,7 +25,9 @@ services:
     ports:
       - "${PORT:-8000}:8000"
     volumes:
-      - camoufox-profiles:/home/app/.cache/scout-api/camoufox-profiles
+      # Host bind so local headed seed (scripts/seed_camoufox_profile.py) shares
+      # cookies/device trust with the Docker Camoufox scraper.
+      - ./data/camoufox-profiles:/home/app/.cache/scout-api/camoufox-profiles
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:8000/health', timeout=3)"]
@@ -47,4 +49,3 @@ services:
 
 volumes:
   redis-data:
-  camoufox-profiles:

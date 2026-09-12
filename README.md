@@ -18,6 +18,17 @@ Copie `.env.example` para `.env` e ajuste os valores conforme o ambiente. O `.en
 
 Execute `docker compose up --build`. A API ficará disponível em `http://localhost:8000`; `GET /health` verifica a disponibilidade.
 
+O perfil Camoufox é um bind mount em `./data/camoufox-profiles` (compartilhado com o seed local). Para aquecer a sessão Shopee/WAF com janela:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\pip install -e .
+.\.venv\Scripts\python -m camoufox fetch
+.\scripts\seed-camoufox-profile.ps1
+```
+
+Na janela: resolva challenge/login, abra um produto, pressione Enter no terminal. Depois a API sobe de novo usando o mesmo perfil.
+
 ## Execução local
 
 Execute `python -m venv .venv`, `python -m pip install -e ".[dev]"` e `uvicorn scout_api.main:app --reload --app-dir src`.

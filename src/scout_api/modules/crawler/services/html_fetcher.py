@@ -69,6 +69,8 @@ def locale_for_url(url: str) -> str | None:
         return "es-PY"
     if hostname == "magazineluiza.com.br" or hostname.endswith(".magazineluiza.com.br"):
         return "pt-BR"
+    if hostname == "shopee.com.br" or hostname.endswith(".shopee.com.br"):
+        return "pt-BR"
     return None
 
 
@@ -80,7 +82,90 @@ def warmup_url_for(url: str) -> str | None:
         return None
     if hostname == "nissei.com" or hostname.endswith(".nissei.com"):
         return f"{parsed.scheme}://{parsed.netloc}/py/"
+    if hostname == "shopee.com.br" or hostname.endswith(".shopee.com.br"):
+        return f"{parsed.scheme}://{parsed.netloc}/"
     return None
+
+
+_SHOPEE_ITEM_PATH = re.compile(
+    r"[.-]i\.(?P<shop_id>\d+)\.(?P<item_id>\d+)",
+    re.IGNORECASE,
+)
+
+
+def shopee_ids_from_url(url: str) -> tuple[str, str] | None:
+    """Extract shop_id / item_id from a Shopee product URL path."""
+    path = urlparse(url).path or ""
+    match = _SHOPEE_ITEM_PATH.search(path)
+    if not match:
+        return None
+    return match.group("shop_id"), match.group("item_id")
+
+
+def looks_like_shopee_pdp(html: str) -> bool:
+    """True when HTML/JSON already carries a Shopee item payload."""
+    head = (html or "")[:20_000]
+    return '"item"' in head and (
+        '"item_id"' in head or '"itemid"' in head or '"models"' in head
+    )
+
+
+def is_shopee_url(url: str) -> bool:
+    hostname = (urlparse(url).hostname or "").lower()
+    return hostname == "shopee.com.br" or hostname.endswith(".shopee.com.br")
+
+
+def is_shopee_traffic_block(url: str, html: str = "") -> bool:
+    """Shopee anti-fraud interstitial (verify/traffic), not a product page."""
+    folded_url = (url or "").casefold()
+    folded_html = (html or "")[:8_000].casefold()
+    return "/verify/traffic" in folded_url or "verify/traff" in folded_html
+
+
+def wrap_shopee_pdp_json(raw: str) -> str:
+    """Embed a captured get_pc JSON body so spiders parse a normal HtmlResponse."""
+    return (
+        '<!DOCTYPE html><html><head><meta charset="utf-8">'
+        "<title>Shopee PDP</title></head><body>"
+        f'<script type="application/json" data-shopee-pdp="1">{raw}</script>'
+        "</body></html>"
+    )
+
+
+def is_shopee_get_pc_url(url: str) -> bool:
+    path = (urlparse(url).path or "").casefold()
+    return "/api/v4/pdp/get_pc" in path or path.endswith("/api/v4/pdp/get")
+
+
+def apply_shopee_br_proxy_targeting(proxy_url: str, page_url: str) -> str:
+    """Pin DataImpulse-style username geo to Brazil for shopee.com.br."""
+    if not proxy_url or not is_shopee_url(page_url):
+        return proxy_url
+    parsed = urlparse(proxy_url.strip())
+    if not parsed.hostname or not parsed.username:
+        return proxy_url
+    username = unquote(parsed.username)
+    if "__cr." in username:
+        return proxy_url
+    from urllib.parse import quote, urlunparse
+
+    netloc = (
+        f"{quote(username + '__cr.br', safe='')}"
+        f":{quote(unquote(parsed.password or ''), safe='')}"
+        f"@{parsed.hostname}"
+    )
+    if parsed.port is not None:
+        netloc = f"{netloc}:{parsed.port}"
+    return urlunparse(
+        (
+            parsed.scheme,
+            netloc,
+            parsed.path,
+            parsed.params,
+            parsed.query,
+            parsed.fragment,
+        )
+    )
 
 
 def proxy_settings_from_url(proxy_url: str) -> dict[str, str]:
@@ -220,10 +305,32 @@ class CamoufoxHtmlFetcher:
         try:
             with self._open_browser(url=url) as browser:
                 page = self._new_page(browser)
+                captured: dict[str, str] = {}
+                if is_shopee_url(url):
+                    self._attach_shopee_get_pc_listener(page, captured, url)
                 if self._warmup_origin:
                     self._maybe_warmup(page, url)
                 self._goto(page, url)
-                html, final_url, title = self._wait_for_product_html(page)
+                html, final_url, title = self._wait_for_product_html(
+                    page, captured=captured
+                )
+                if captured.get("body"):
+                    html = wrap_shopee_pdp_json(captured["body"])
+                    final_url = url
+                    title = "Shopee PDP"
+                    logger.info(
+                        "shopee_get_pc_intercepted",
+                        extra={"url": captured.get("response_url") or url},
+                    )
+                if is_shopee_traffic_block(final_url or url, html):
+                    raise RequestError(
+                        "Shopee bloqueou a requisição "
+                        "(verificação de tráfego / anti-bot)",
+                        code="UPSTREAM_BLOCKED",
+                        url=final_url or url,
+                        upstream_status=403,
+                        retryable=True,
+                    )
                 if is_hard_block_page(html, title=title):
                     raise RequestError(
                         "A loja bloqueou o IP de saída (hard-block anti-bot); "
@@ -283,13 +390,26 @@ class CamoufoxHtmlFetcher:
             "persistent_context": True,
             "user_data_dir": str(profile_dir),
         }
+        # uBlock triggers Shopee "automated tools" detection (Camoufox #345).
+        try:
+            from camoufox.addons import DefaultAddons
+
+            kwargs["exclude_addons"] = [DefaultAddons.UBO]
+        except Exception:
+            logger.debug("camoufox_exclude_addons_unavailable", exc_info=True)
         if self._disable_coop:
             # Needed so Turnstile iframes are interactable; ack Camoufox leak warning.
             kwargs["disable_coop"] = True
             kwargs["i_know_what_im_doing"] = True
         if self._proxy_url:
-            kwargs["proxy"] = proxy_settings_from_url(self._proxy_url)
-            # Let geoip derive locale/timezone from the proxy egress IP.
+            proxy_url = apply_shopee_br_proxy_targeting(self._proxy_url, url)
+            kwargs["proxy"] = proxy_settings_from_url(proxy_url)
+            # Some HTTP residential proxies break Camoufox's geoip IP probe (SSL to
+            # ipecho/etc). Keep residential egress; pin locale from the store URL.
+            kwargs["geoip"] = False
+            locale = locale_for_url(url)
+            if locale is not None:
+                kwargs["locale"] = locale
         else:
             locale = locale_for_url(url)
             if locale is not None:
@@ -328,9 +448,16 @@ class CamoufoxHtmlFetcher:
         if warmup is None:
             return
         logger.info("camoufox_warmup_origin", extra={"url": warmup})
-        self._goto(page, warmup)
-        # Brief pause so JS challenge / cookie minting can finish before product.
-        page.wait_for_timeout(min(self._settle_ms, 3_000))
+        try:
+            self._goto(page, warmup)
+            # Brief pause so JS challenge / cookie minting can finish before product.
+            page.wait_for_timeout(min(self._settle_ms, 3_000))
+        except Exception:
+            logger.warning(
+                "camoufox_warmup_failed",
+                extra={"url": warmup},
+                exc_info=True,
+            )
 
     def _goto(self, page: Any, url: str) -> None:
         page.goto(url, wait_until="domcontentloaded", timeout=self._timeout_ms)
@@ -347,11 +474,18 @@ class CamoufoxHtmlFetcher:
                     exc_info=True,
                 )
 
-    def _wait_for_product_html(self, page: Any) -> tuple[str, str, str]:
+    def _wait_for_product_html(
+        self,
+        page: Any,
+        *,
+        captured: dict[str, str] | None = None,
+    ) -> tuple[str, str, str]:
         html = ""
         final_url = ""
         title = ""
         for attempt in range(max(1, self._max_settle_attempts)):
+            if captured and captured.get("body"):
+                break
             if attempt > 0:
                 page.wait_for_timeout(self._settle_ms)
             html = page.content()
@@ -362,6 +496,8 @@ class CamoufoxHtmlFetcher:
                 title = ""
             if is_hard_block_page(html, title=title):
                 return html, final_url, title
+            if is_shopee_traffic_block(final_url, html):
+                return html, final_url, title
             if not is_challenge_page(html, title=title):
                 return html, final_url, title
             logger.info(
@@ -369,6 +505,57 @@ class CamoufoxHtmlFetcher:
                 extra={"url": final_url, "attempt": attempt + 1},
             )
         return html, final_url, title
+
+    @classmethod
+    def _attach_shopee_get_pc_listener(
+        cls,
+        page: Any,
+        captured: dict[str, str],
+        request_url: str,
+    ) -> None:
+        """Capture the browser's own signed get_pc response (Mode A)."""
+        ids = shopee_ids_from_url(request_url)
+        wanted_shop = ids[0] if ids else None
+        wanted_item = ids[1] if ids else None
+
+        def on_response(response: Any) -> None:
+            if captured.get("body"):
+                return
+            try:
+                response_url = str(getattr(response, "url", "") or "")
+            except Exception:
+                return
+            if not is_shopee_get_pc_url(response_url):
+                return
+            if wanted_shop and wanted_shop not in response_url:
+                return
+            if wanted_item and wanted_item not in response_url:
+                return
+            try:
+                status = int(getattr(response, "status", 0) or 0)
+            except (TypeError, ValueError):
+                status = 0
+            if status and status >= 400:
+                return
+            try:
+                raw = response.text()
+            except Exception:
+                logger.debug("shopee_get_pc_body_read_failed", exc_info=True)
+                return
+            if not isinstance(raw, str) or not raw.strip().startswith("{"):
+                return
+            if '"error"' in raw[:200] and "90309999" in raw[:400]:
+                return
+            if not looks_like_shopee_pdp(raw):
+                return
+            captured["body"] = raw
+            captured["response_url"] = response_url
+
+        on_fn = getattr(page, "on", None)
+        if not callable(on_fn):
+            logger.debug("shopee_get_pc_listener_unavailable")
+            return
+        on_fn("response", on_response)
 
 
 def build_html_fetcher(

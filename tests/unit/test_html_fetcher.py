@@ -57,15 +57,48 @@ def test_proxy_settings_from_url_parses_credentials() -> None:
 
 def test_locale_and_warmup_for_url() -> None:
     from scout_api.modules.crawler.services.html_fetcher import (
+        apply_shopee_br_proxy_targeting,
+        is_shopee_get_pc_url,
+        is_shopee_traffic_block,
         locale_for_url,
+        looks_like_shopee_pdp,
+        shopee_ids_from_url,
         warmup_url_for,
+        wrap_shopee_pdp_json,
     )
 
     assert locale_for_url("https://nissei.com/py/x") == "es-PY"
     assert locale_for_url("https://www.magazineluiza.com.br/p/1") == "pt-BR"
+    assert locale_for_url("https://shopee.com.br/i.1.2") == "pt-BR"
     assert locale_for_url("https://example.com/") is None
     assert warmup_url_for("https://nissei.com/py/produto") == "https://nissei.com/py/"
     assert warmup_url_for("https://www.magazineluiza.com.br/p/1") is None
+    assert warmup_url_for("https://shopee.com.br/item-i.1.2") == "https://shopee.com.br/"
+    assert shopee_ids_from_url(
+        "https://shopee.com.br/prod-i.341936748.29277977480"
+    ) == ("341936748", "29277977480")
+    assert looks_like_shopee_pdp('{"data":{"item":{"item_id":1}}}') is True
+    assert looks_like_shopee_pdp("<html>verify</html>") is False
+    assert is_shopee_get_pc_url(
+        "https://shopee.com.br/api/v4/pdp/get_pc?shop_id=1&item_id=2"
+    )
+    assert is_shopee_traffic_block(
+        "https://shopee.com.br/verify/traffic/error?next=x", ""
+    )
+    assert "data-shopee-pdp" in wrap_shopee_pdp_json('{"item":{"item_id":1}}')
+    assert apply_shopee_br_proxy_targeting(
+        "http://login:pass@gw.dataimpulse.com:10001",
+        "https://shopee.com.br/i.1.2",
+    ) == "http://login__cr.br:pass@gw.dataimpulse.com:10001"
+    assert apply_shopee_br_proxy_targeting(
+        "http://login__cr.br:pass@gw.dataimpulse.com:10001",
+        "https://shopee.com.br/i.1.2",
+    ) == "http://login__cr.br:pass@gw.dataimpulse.com:10001"
+    assert apply_shopee_br_proxy_targeting(
+        "http://login:pass@gw.dataimpulse.com:10001",
+        "https://www.kabum.com.br/p/1",
+    ) == "http://login:pass@gw.dataimpulse.com:10001"
+
 
 
 def test_urllib_fetcher_maps_http_403() -> None:
@@ -246,8 +279,8 @@ def test_camoufox_launch_kwargs_include_proxy_profile_and_coop(tmp_path: Any) ->
         "username": "u",
         "password": "p",
     }
-    assert "locale" not in captured
-    assert captured["geoip"] is True
+    assert captured["locale"] == "es-PY"
+    assert captured["geoip"] is False
     assert captured["persistent_context"] is True
     assert captured["disable_coop"] is True
     assert captured["user_data_dir"] == str(tmp_path / "profile")
@@ -375,3 +408,69 @@ def test_product_scrape_service_supports_nissei_domain() -> None:
     assert item.store == "nissei"
     assert item.sku == "148321"
     assert item.price == Decimal("3227000")
+
+
+def test_camoufox_intercepts_shopee_get_pc_network_response(tmp_path: Any) -> None:
+    url = "https://shopee.com.br/Kingston-i.341936748.29277977480"
+    payload = (
+        '{"data":{"item":{"item_id":29277977480,"shop_id":341936748,'
+        '"title":"Kingston","price":159900000,"models":[]}}}'
+    )
+
+    @contextmanager
+    def fake_factory(**kwargs: Any) -> Iterator[Any]:
+        del kwargs
+
+        class FakeResponse:
+            url = (
+                "https://shopee.com.br/api/v4/pdp/get_pc"
+                "?shop_id=341936748&item_id=29277977480"
+            )
+            status = 200
+
+            def text(self) -> str:
+                return payload
+
+        class FakePage:
+            url = "https://shopee.com.br/verify/traffic/error"
+            _handlers: list[Any]
+
+            def __init__(self) -> None:
+                self._handlers = []
+
+            def on(self, event: str, handler: Any) -> None:
+                assert event == "response"
+                self._handlers.append(handler)
+
+            def goto(self, target: str, **goto_kwargs: Any) -> None:
+                del goto_kwargs
+                self.url = target
+                for handler in self._handlers:
+                    handler(FakeResponse())
+
+            def content(self) -> str:
+                return "<html><title>verify</title><body>verify/traffic</body></html>"
+
+            def title(self) -> str:
+                return "verify"
+
+            def wait_for_timeout(self, ms: int) -> None:
+                del ms
+
+        class FakeBrowser:
+            def new_page(self) -> FakePage:
+                return FakePage()
+
+        yield FakeBrowser()
+
+    fetcher = CamoufoxHtmlFetcher(
+        browser_factory=fake_factory,
+        settle_ms=0,
+        max_settle_attempts=2,
+        user_data_dir=tmp_path / "profile",
+        warmup_origin=False,
+    )
+    response = fetcher.fetch(url)
+    assert "data-shopee-pdp" in response.text
+    assert "29277977480" in response.text
+    assert response.url == url

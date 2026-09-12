@@ -22,6 +22,7 @@ build/
 *.sqlite3
 *.db
 .cache/
+data/camoufox-profiles/
 .idea/
 .vscode/*.code-snippets
 .DS_Store

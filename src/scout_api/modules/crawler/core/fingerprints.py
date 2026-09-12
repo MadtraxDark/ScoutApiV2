@@ -7,10 +7,12 @@ TRACKING_KEYS = {
     "ref",
     "ref_",
     "source",
+    "sp_atk",
     "utm_campaign",
     "utm_medium",
     "utm_source",
     "utm_term",
+    "xptdk",
 }
 
 

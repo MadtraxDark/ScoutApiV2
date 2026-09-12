@@ -19,7 +19,7 @@ STORE_CONFIGS = {
     ),
     "pichau": StoreConfig("pichau", "BR", "BRL", ("pichau.com.br",)),
     "terabyteshop": StoreConfig("terabyteshop", "BR", "BRL", ("terabyteshop.com.br",)),
-    "shopee": StoreConfig("shopee", "BR", "BRL", ("shopee.com.br",)),
+    "shopee": StoreConfig("shopee", "BR", "BRL", ("shopee.com.br",), True),
     "aliexpress": StoreConfig("aliexpress", "BR", "BRL", ("aliexpress.com",)),
     "bestbuy": StoreConfig("bestbuy", "US", "USD", ("bestbuy.com",), True),
     "ebay": StoreConfig("ebay", "US", "USD", ("ebay.com",)),
