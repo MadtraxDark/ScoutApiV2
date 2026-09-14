@@ -15,6 +15,7 @@ dependencies = [
     "pillow>=10.0.0,<12",
     "psycopg[binary]>=3.2,<4.0",
     "pydantic-settings>=2.6,<3.0",
+    "redis>=5,<7",
     "scrapy>=2.11,<3.0",
     "sqlalchemy>=2.0,<3.0",
     "uvicorn[standard]>=0.32,<1.0",
@@ -36,6 +37,9 @@ where = ["src"]
 addopts = "--strict-markers --strict-config"
 testpaths = ["tests"]
 pythonpath = ["src"]
+markers = [
+    "integration: tests that require external services (e.g. Redis)",
+]
 
 [tool.ruff]
 line-length = 88

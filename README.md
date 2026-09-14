@@ -61,9 +61,9 @@ O crawler fica em `src/scout_api/modules/crawler`. Ele separa **oferta comercial
 (`ProductOffer`) de **detalhes do produto** (`ProductDetails`) e compõe o contrato
 completo (`ProductPriceItem`) no fluxo full. Usa `Decimal` para dinheiro, TTL
 adaptativo, fila de prioridade, fingerprint determinística, cache, backoff/jitter
-e circuit breaker. O armazenamento local é uma implementação substituível; para
-múltiplos workers, conecte os seams de deduplicação, lock, estado e histórico a
-Redis/PostgreSQL.
+e circuit breaker. Cache, single-flight e cooldown do `ScrapeGuard` usam Redis
+quando `REDIS_URL` está definido (L1 memória + L2 Redis, fail-open; ADR 0020).
+PostgreSQL permanece a fonte de verdade de matching e histórico.
 
 - `POST /crawl` — scraping completo (oferta + detalhes) via `ProductScrapeService`.
   Use `include_images=true` para incluir a galeria (`extract_images`); o padrão é
@@ -81,6 +81,9 @@ Redis/PostgreSQL.
 
 PostgreSQL: serviço `postgres` no Compose; configure `DATABASE_URL` (ver
 `.env.example`). Migrações: `alembic upgrade head`.
+
+Redis: serviço `redis` no Compose (cache/coordenação, não persistente). Opcional
+fora do Compose — sem `REDIS_URL` a API usa só memória local.
 
 Ambos buscam HTML com **Camoufox** (Firefox anti-detect) por padrão e delegam o
 parsing aos spiders (`magazineluiza`, `nissei`, `shopee`, `amazon`, …). Spiders não fazem

@@ -38,6 +38,7 @@ Política de quando criar/atualizar docs:
 | [0017](0017-captcha-challenge-resolution.md) | Resolução obrigatória de challenge/CAPTCHA | Accepted |
 | [0018](0018-auth-wall-bypass.md) | Auth bypass obrigatório (login/session wall) | Accepted |
 | [0019](0019-product-matching.md) | Product Matching cross-store + histórico de ofertas | Accepted |
+| [0020](0020-distributed-scrape-cache-redis.md) | Cache/single-flight/cooldown distribuídos via Redis | Accepted |
 
 ## Quando criar ADR
 

@@ -35,7 +35,7 @@ class OfferScrapeService:
             self._guard.store_offer_success(url, offer)
             return offer
 
-        return self._guard.run_coalesced(url, _live)
+        return self._guard.run_coalesced(url, _live, result_kind="offer")
 
     def _fetch(self, url: str) -> HtmlResponse:
         return self._fetcher.fetch(url)

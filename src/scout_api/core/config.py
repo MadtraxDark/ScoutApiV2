@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
     redis_url: str | None = None
+    redis_connect_timeout_seconds: float = 0.3
+    redis_socket_timeout_seconds: float = 0.5
     database_url: str | None = None
     scraper_user_agent: str = "ScoutApiV2/0.1 (+price-monitoring)"
     scraper_log_level: str = "INFO"
@@ -29,6 +31,10 @@ class Settings(BaseSettings):
     scrape_url_cooldown_seconds: int = 300
     scrape_domain_min_interval_seconds: float = 15.0
     scrape_result_cache_ttl_seconds: int = 300
+    scrape_distributed_lock_enabled: bool = True
+    scrape_single_flight_lock_ttl_seconds: int = 180
+    scrape_single_flight_wait_seconds: float = 120.0
+    scrape_distributed_cooldown_enabled: bool = True
     mitmproxy_enabled: bool = False
     mitmproxy_url: str | None = None
     rotating_proxies_enabled: bool = False

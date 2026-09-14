@@ -12,7 +12,7 @@ from urllib.parse import parse_qs, quote_plus, unquote, urljoin, urlparse
 from scrapy.http import Response
 from scrapy.selector import Selector
 
-from ...core.exceptions import ParseError, RequestError
+from ...core.exceptions import ParseError, RequestError, shopee_auth_required_error
 from ...core.fingerprints import canonicalize_url
 from ...models.product import ProductDetails, ProductOffer
 from ...models.search import SearchCandidate
@@ -349,21 +349,9 @@ class ShopeeSpider(BaseStoreSpider):
             title = ""
 
         if "/verify/traffic" in url or "verify/traff" in text.casefold():
-            raise RequestError(
-                "Shopee bloqueou a requisição (verificação de tráfego / anti-bot)",
-                code="UPSTREAM_BLOCKED",
-                url=response.url,
-                upstream_status=403,
-                retryable=True,
-            )
+            raise shopee_auth_required_error(url=response.url)
         if "login" in url and "next=" in url:
-            raise RequestError(
-                "Shopee redirecionou para login; página de produto indisponível",
-                code="UPSTREAM_BLOCKED",
-                url=response.url,
-                upstream_status=401,
-                retryable=True,
-            )
+            raise shopee_auth_required_error(url=response.url)
         if re.search(r'"error"\s*:\s*90309999', text):
             raise RequestError(
                 "Shopee bloqueou a requisição (anti-bot error 90309999)",

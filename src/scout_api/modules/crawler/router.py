@@ -23,6 +23,7 @@ def get_offer_scrape_service() -> OfferScrapeService:
     "",
     response_model=ProductPriceItem,
     responses={
+        401: {"model": CrawlErrorResponse},
         422: {"model": CrawlErrorResponse},
         429: {"model": CrawlErrorResponse},
         502: {"model": CrawlErrorResponse},
@@ -63,6 +64,7 @@ def crawl_product(
     "/offer",
     response_model=ProductOffer,
     responses={
+        401: {"model": CrawlErrorResponse},
         422: {"model": CrawlErrorResponse},
         429: {"model": CrawlErrorResponse},
         502: {"model": CrawlErrorResponse},
@@ -102,4 +104,6 @@ def crawl_offer(
 def _status_for_request_error(exc: RequestError) -> int:
     if exc.code in {"DUPLICATE_REQUEST", "RATE_LIMITED"}:
         return status.HTTP_429_TOO_MANY_REQUESTS
+    if exc.code == "AUTH_REQUIRED":
+        return status.HTTP_401_UNAUTHORIZED
     return status.HTTP_502_BAD_GATEWAY

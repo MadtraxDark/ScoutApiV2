@@ -22,10 +22,11 @@
 - **Known limitation:** cold/anonymous SERP often hits `verify/traffic` before
   `search_items` fires. Mitigation: seeded Camoufox profile
   (`make seed-shopee` / `make seed-shopee-login`) + `ProxyPolicy.FALLBACK`.
-  Without a warm session, search may still return `UPSTREAM_BLOCKED` — never
-  fabricate matches from the block page.
+  Without a warm session, search may still return `AUTH_REQUIRED` (falta de
+  login) — never fabricate matches from the block page.
 - Anti-bot/SERP fragility is higher than BR retail SERPs; failures surface as
-  empty candidates / `UPSTREAM_BLOCKED`, never as fabricated matches
+  empty candidates / `AUTH_REQUIRED` / `UPSTREAM_BLOCKED`, never as fabricated
+  matches
 - Used by `POST /match` (ADR 0019)
 
 ## Offer source
@@ -66,20 +67,24 @@
 - Camoufox intercepts `/api/v4/pdp/get_pc` (signatures minted by Shopee JS —
   plain HTTP cannot forge `af-ac-enc-dat` / `x-sap-*`)
 - Proxy Cost Mode `FALLBACK`: **direct first**, residential proxy only after
-  classified `UPSTREAM_BLOCKED` (e.g. `/verify/traffic`)
+  classified `UPSTREAM_BLOCKED` / `AUTH_REQUIRED` (e.g. `/verify/traffic`)
 - Gallery never via paid proxy; `exclude_addons=[UBO]` (Camoufox #345)
 
 ## Known blocking behavior
 
-Classify as `UPSTREAM_BLOCKED` (retryable / proxy-eligible) **after** fetch-layer
-resolution attempts fail:
+Classify **after** fetch-layer resolution attempts fail:
 
-- `/verify/traffic`
-- login redirect with `next=` / `/buyer/login` — **must attempt auth bypass**
-  first (ADR 0018): seeded profile (`make seed-shopee-login`) and/or
-  `SHOPEE_AUTH_EMAIL` / `SHOPEE_AUTH_PASSWORD` (operator env only)
-- anti-bot error `90309999`
-- CAPTCHA / unusual-traffic markers without PDP JSON
+- `/verify/traffic` → `RequestError(code="AUTH_REQUIRED")` — retorno claro de
+  **falta de login/sessão** (HTTP 401). Mensagem aponta
+  `SHOPEE_AUTH_EMAIL` / `SHOPEE_AUTH_PASSWORD` ou `make seed-shopee-login`.
+  Continua elegível a proxy FALLBACK.
+- login redirect with `next=` / `/buyer/login` → `AUTH_REQUIRED` — **must
+  attempt auth bypass** first (ADR 0018): seeded profile
+  (`make seed-shopee-login`) and/or `SHOPEE_AUTH_EMAIL` / `SHOPEE_AUTH_PASSWORD`
+  (operator env only)
+- anti-bot error `90309999` → `UPSTREAM_BLOCKED`
+- CAPTCHA / unusual-traffic markers without PDP JSON → `UPSTREAM_BLOCKED`
+  (ou `AUTH_REQUIRED` se a página for auth wall)
 
 Other PDP `error` values → `ParseError` (not proxy fallback).
 
@@ -91,7 +96,7 @@ Goal: remove or replace paid proxy dependency for Shopee BR.
 |---|---|---|
 | Current `FALLBACK` (direct → proxy) | **Stable** | Live: direct `blocked` (`verify/traffic`, no `get_pc`); proxy `success` + `get_pc` intercept (2/2 PDPs) |
 | Plain HTTP `get_pc` (+ Referer / X-API-SOURCE) | Fail | HTTP **403**; community: needs per-request SDK signatures |
-| Camoufox direct only (seeded profile, UBO off) | Fail | `UPSTREAM_BLOCKED` `/verify/traffic` |
+| Camoufox direct only (seeded profile, UBO off) | Fail | `AUTH_REQUIRED` `/verify/traffic` |
 | Direct + disable HTTP/3 prefs | Fail | Still traffic-verify; HTTP/3 prefs help proxy IP-leak, not SGW gate |
 | Reverse-engineer `af-ac-enc-dat` / `x-sap-sec` | Discarded | Fragile, high maintenance; OSS (tail-fin / shopee-mcp) uses **browser capture** instead — already our model |
 | Paid scraper APIs (Oxylabs / Bright Data / etc.) | Not adopted | Paid vendor; needs explicit operator approval; does not beat in-repo Camoufox+FALLBACK |

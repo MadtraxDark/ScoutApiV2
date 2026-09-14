@@ -172,6 +172,31 @@ def test_shopee_without_proxy_uses_direct() -> None:
     assert response.meta["fetch_metrics"]["proxy_used"] is False
 
 
+def test_shopee_falls_back_to_proxy_after_auth_required() -> None:
+    calls: list[str] = []
+
+    class Direct:
+        def fetch(self, url: str) -> HtmlResponse:
+            calls.append("direct")
+            raise RequestError(
+                "falta de login", code="AUTH_REQUIRED", url=url, retryable=True
+            )
+
+    class Proxied:
+        def fetch(self, url: str) -> HtmlResponse:
+            calls.append("proxied")
+            return HtmlResponse(
+                url, body=b"<html>ok</html>", encoding="utf-8", request=Request(url)
+            )
+
+    response = StoreAwareHtmlFetcher(direct=Direct(), proxied=Proxied()).fetch(
+        KINGSTON_URL
+    )
+    assert calls == ["direct", "proxied"]
+    assert response.meta["fetch_metrics"]["proxy_used"] is True
+    assert response.meta["fetch_metrics"].get("proxy_fallback") is True
+
+
 def test_shopee_falls_back_to_proxy_after_upstream_blocked() -> None:
     calls: list[str] = []
 
@@ -411,10 +436,10 @@ def test_offer_cache_ttl_expiry_allows_refetch(monkeypatch: pytest.MonkeyPatch) 
     service.scrape_offer(KINGSTON_URL)
     assert len(fetches) == 1
 
-    # Expire cache entry.
-    key = canonicalize_url(KINGSTON_URL)
-    entry = guard._cache._entries[key]
-    entry.expires_at = 0
+    # Expire cache entry via public delete.
+    from scout_api.modules.crawler.core.redis_keys import scrape_cache_key
+
+    guard._cache.delete(scrape_cache_key(KINGSTON_URL))
 
     again = service.scrape_offer(KINGSTON_URL)
     assert again.metadata.get("cache_hit") is not True

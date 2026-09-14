@@ -57,6 +57,7 @@ def get_refresh_service(
     "/match",
     response_model=MatchResponse,
     responses={
+        401: {"model": CrawlErrorResponse},
         422: {"model": CrawlErrorResponse},
         429: {"model": CrawlErrorResponse},
         502: {"model": CrawlErrorResponse},
@@ -110,6 +111,7 @@ def match_product(
     "/offers/refresh",
     response_model=OfferRefreshResponse,
     responses={
+        401: {"model": CrawlErrorResponse},
         422: {"model": CrawlErrorResponse},
         429: {"model": CrawlErrorResponse},
         502: {"model": CrawlErrorResponse},
@@ -175,4 +177,6 @@ def _status_for_request_error(exc: RequestError) -> int:
         return status.HTTP_503_SERVICE_UNAVAILABLE
     if exc.code in {"INVALID_REQUEST", "UNSUPPORTED_STORE", "SEARCH_UNSUPPORTED"}:
         return status.HTTP_422_UNPROCESSABLE_ENTITY
+    if exc.code == "AUTH_REQUIRED":
+        return status.HTTP_401_UNAUTHORIZED
     return status.HTTP_502_BAD_GATEWAY

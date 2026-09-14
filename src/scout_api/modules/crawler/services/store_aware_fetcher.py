@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 
 from scrapy.http import HtmlResponse
 
-from ..core.exceptions import RequestError
+from ..core.exceptions import PROXY_FALLBACK_ERROR_CODES, RequestError
 from ..core.proxy_policy import ProxyPolicy, proxy_policy_for_url
 from .html_fetcher import CamoufoxHtmlFetcher, HtmlFetcher
 
@@ -79,11 +79,15 @@ class StoreAwareHtmlFetcher:
             response = self._direct.fetch(url)
             return self._annotate(response, proxy_used=False, policy=policy)
         except RequestError as exc:
-            if exc.code != "UPSTREAM_BLOCKED" or self._proxied is None:
+            if exc.code not in PROXY_FALLBACK_ERROR_CODES or self._proxied is None:
                 raise
             logger.info(
                 "proxy_fallback_after_block",
-                extra={"url": url, "proxy_policy": policy.value},
+                extra={
+                    "url": url,
+                    "proxy_policy": policy.value,
+                    "code": exc.code,
+                },
             )
             response = self._proxied.fetch(url)
             return self._annotate(

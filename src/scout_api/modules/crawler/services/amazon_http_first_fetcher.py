@@ -145,6 +145,7 @@ class AmazonHttpFirstHtmlFetcher:
         except RequestError as exc:
             if exc.code not in {
                 "UPSTREAM_BLOCKED",
+                "AUTH_REQUIRED",
                 "UPSTREAM_HTTP_ERROR",
                 "UPSTREAM_NETWORK_ERROR",
             }:

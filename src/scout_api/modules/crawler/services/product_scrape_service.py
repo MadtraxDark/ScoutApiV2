@@ -4,6 +4,10 @@ from typing import Any
 from scrapy.http import HtmlResponse
 
 from ....core.config import get_settings
+from ..core.cache import ResponseCache, build_cache_backend
+from ..core.distributed_cooldown import DistributedCooldown
+from ..core.distributed_single_flight import DistributedSingleFlight
+from ..core.redis_client import build_redis_gateway
 from ..core.scrape_guard import ScrapeGuard
 from ..models.product import ProductPriceItem, compose_product_price_item
 from ..spiders.base import BaseStoreSpider
@@ -44,10 +48,35 @@ def get_shared_html_fetcher() -> HtmlFetcher:
 @lru_cache
 def get_shared_scrape_guard() -> ScrapeGuard:
     settings = get_settings()
+    gateway = build_redis_gateway(settings)
+    cache = ResponseCache(backend=build_cache_backend(redis_gateway=gateway))
+    distributed_flight = (
+        DistributedSingleFlight(
+            gateway,
+            lock_ttl_seconds=settings.scrape_single_flight_lock_ttl_seconds,
+            wait_seconds=settings.scrape_single_flight_wait_seconds,
+        )
+        if gateway is not None and settings.scrape_distributed_lock_enabled
+        else None
+    )
+    distributed_cooldown = (
+        DistributedCooldown(gateway)
+        if gateway is not None and settings.scrape_distributed_cooldown_enabled
+        else None
+    )
     return ScrapeGuard(
         url_cooldown_seconds=settings.scrape_url_cooldown_seconds,
         domain_min_interval_seconds=settings.scrape_domain_min_interval_seconds,
         result_cache_ttl_seconds=settings.scrape_result_cache_ttl_seconds,
+        cache=cache,
+        distributed_flight=distributed_flight,
+        distributed_cooldown=distributed_cooldown,
+        distributed_lock_enabled=bool(
+            gateway is not None and settings.scrape_distributed_lock_enabled
+        ),
+        distributed_cooldown_enabled=bool(
+            gateway is not None and settings.scrape_distributed_cooldown_enabled
+        ),
     )
 
 
@@ -125,7 +154,7 @@ class ProductScrapeService:
             self._guard.store_success(url, item)
             return item
 
-        return self._guard.run_coalesced(url, _live)
+        return self._guard.run_coalesced(url, _live, result_kind="product")
 
     def _fetch(self, url: str) -> HtmlResponse:
         return self._fetcher.fetch(url)

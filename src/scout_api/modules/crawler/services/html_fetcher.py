@@ -23,7 +23,7 @@ from urllib.request import Request as UrlRequest
 
 from scrapy.http import HtmlResponse, Request
 
-from ..core.exceptions import RequestError
+from ..core.exceptions import RequestError, shopee_auth_required_error
 from ..core.fetch_metrics import FetchCostMetrics
 from ..core.fingerprints import canonicalize_url
 from ..core.proxy_policy import proxy_policy_for_url, resolve_store_config
@@ -624,14 +624,7 @@ class CamoufoxHtmlFetcher:
                     ):
                         metrics.result = "blocked"
                         self._log_metrics(metrics, request_types, byte_holder["n"], t0)
-                        raise RequestError(
-                            "Shopee bloqueou a requisição "
-                            "(verificação de tráfego / anti-bot)",
-                            code="UPSTREAM_BLOCKED",
-                            url=final_url or url,
-                            upstream_status=403,
-                            retryable=True,
-                        )
+                        raise shopee_auth_required_error(url=final_url or url)
                 if is_hard_block_page(html, title=title):
                     metrics.result = "blocked"
                     self._log_metrics(metrics, request_types, byte_holder["n"], t0)
@@ -668,11 +661,24 @@ class CamoufoxHtmlFetcher:
                     ):
                         metrics.result = "blocked"
                         self._log_metrics(metrics, request_types, byte_holder["n"], t0)
+                        page_url = final_url or url
+                        if is_auth_wall_page(html, url=page_url, title=title):
+                            if is_shopee_url(page_url):
+                                raise shopee_auth_required_error(url=page_url)
+                            raise RequestError(
+                                "A loja exige login/sessão autenticada "
+                                "(falta de login). Configure as credenciais "
+                                "da loja no ambiente ou faça o seed da sessão.",
+                                code="AUTH_REQUIRED",
+                                url=page_url,
+                                upstream_status=401,
+                                retryable=True,
+                            )
                         raise RequestError(
                             "A loja bloqueou a requisição "
                             "(desafio/auth wall após tentativa de resolução)",
                             code="UPSTREAM_BLOCKED",
-                            url=final_url or url,
+                            url=page_url,
                             upstream_status=403,
                             retryable=True,
                         )

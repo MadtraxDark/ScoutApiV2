@@ -130,6 +130,37 @@ def test_out_of_stock_model() -> None:
     assert offer.availability == "out_of_stock"
 
 
+def test_traffic_verify_raises_auth_required() -> None:
+    html = (
+        "<html><head><title>Shopee</title></head>"
+        "<body>verify/traffic</body></html>"
+    )
+    response = HtmlResponse(
+        "https://shopee.com.br/verify/traffic?anti_bot_tracking_id=x",
+        body=html.encode("utf-8"),
+        encoding="utf-8",
+        request=Request("https://shopee.com.br/product/1/2"),
+    )
+    with pytest.raises(RequestError) as exc:
+        ShopeeSpider().extract_offer(response)
+    assert exc.value.code == "AUTH_REQUIRED"
+    assert "falta de login" in str(exc.value).casefold()
+
+
+def test_login_redirect_raises_auth_required() -> None:
+    html = "<html><body>login</body></html>"
+    response = HtmlResponse(
+        "https://shopee.com.br/buyer/login?next=https%3A%2F%2Fshopee.com.br%2Fx",
+        body=html.encode("utf-8"),
+        encoding="utf-8",
+        request=Request("https://shopee.com.br/product/1/2"),
+    )
+    with pytest.raises(RequestError) as exc:
+        ShopeeSpider().extract_offer(response)
+    assert exc.value.code == "AUTH_REQUIRED"
+    assert "falta de login" in str(exc.value).casefold()
+
+
 def test_blocked_error_raises_upstream_blocked() -> None:
     body = (FIXTURES / "blocked_90309999.json").read_bytes()
     response = TextResponse(

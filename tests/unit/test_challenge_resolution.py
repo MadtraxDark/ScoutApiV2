@@ -552,4 +552,51 @@ def test_camoufox_blocks_when_auth_wall_unresolved(tmp_path: Any) -> None:
     )
     with pytest.raises(RequestError) as exc:
         fetcher.fetch("https://www.amazon.com/dp/B09V9Z1WLN")
-    assert exc.value.code == "UPSTREAM_BLOCKED"
+    assert exc.value.code == "AUTH_REQUIRED"
+    assert "falta de login" in str(exc.value).casefold()
+
+
+def test_camoufox_blocks_shopee_traffic_as_auth_required(tmp_path: Any) -> None:
+    class FakePage:
+        url = "https://shopee.com.br/verify/traffic?anti_bot_tracking_id=x"
+
+        def goto(self, url: str, **kwargs: Any) -> None:
+            del kwargs
+            self.url = "https://shopee.com.br/verify/traffic?anti_bot_tracking_id=x"
+
+        def content(self) -> str:
+            return "<html><title>verify</title><body>verify/traffic</body></html>"
+
+        def title(self) -> str:
+            return "verify"
+
+        def wait_for_timeout(self, ms: int) -> None:
+            del ms
+
+        def on(self, event: str, handler: Any) -> None:
+            del event, handler
+
+        def close(self) -> None:
+            return None
+
+    class FakeBrowser:
+        def new_page(self) -> FakePage:
+            return FakePage()
+
+    @contextmanager
+    def fake_factory(**kwargs: Any) -> Iterator[FakeBrowser]:
+        del kwargs
+        yield FakeBrowser()
+
+    fetcher = CamoufoxHtmlFetcher(
+        browser_factory=fake_factory,
+        settle_ms=0,
+        max_settle_attempts=1,
+        user_data_dir=tmp_path / "profile-shopee-auth",
+        warmup_origin=False,
+    )
+    with pytest.raises(RequestError) as exc:
+        fetcher.fetch("https://shopee.com.br/product/1/2")
+    assert exc.value.code == "AUTH_REQUIRED"
+    assert "falta de login" in str(exc.value).casefold()
+    assert "SHOPEE_AUTH_EMAIL" in str(exc.value)

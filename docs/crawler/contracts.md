@@ -77,8 +77,8 @@ ADR: [0011](../adr/0011-offer-vs-product-details.md), [0012](../adr/0012-optiona
 3. **Auth wall / login-gate bypass is mandatory** (ADR 0018 — critical/immutable).
    Login, soft-auth, or session gates that block public offers must be resolved
    or bypassed (operator-owned session/credentials via env — never in Git).
-   Never parse a login page as a product. `UPSTREAM_BLOCKED` only after
-   resolution attempts are exhausted.
+   Never parse a login page as a product. `AUTH_REQUIRED` (falta de login) or
+   `UPSTREAM_BLOCKED` only after resolution attempts are exhausted.
 4. **Block/challenge/login HTML ≠ `available=false`.** Never invent OOS from a
    robot-check or auth wall page.
 5. **Price and availability belong to the same selected variant/offer.**
@@ -103,11 +103,13 @@ ADR: [0011](../adr/0011-offer-vs-product-details.md), [0012](../adr/0012-optiona
 | Exception | Meaning | Typical HTTP | Proxy fallback? |
 |---|---|---|---|
 | `ParseError` / `MissingPriceError` | Page shape / price not understood | 422 | **No** |
-| `RequestError(UPSTREAM_BLOCKED)` | Challenge/CAPTCHA/auth wall/hard block **after** resolution attempts failed; or unresolved traffic verify | 502/403-class | **Yes** (FALLBACK stores) |
+| `RequestError(AUTH_REQUIRED)` | Login/session gate (falta de login) after resolution attempts; Shopee `/verify/traffic` or `/buyer/login` | 401 | **Yes** (FALLBACK stores) |
+| `RequestError(UPSTREAM_BLOCKED)` | Challenge/CAPTCHA/hard block **after** resolution attempts failed | 502/403-class | **Yes** (FALLBACK stores) |
 | `RequestError(UNSUPPORTED_STORE)` | No spider for hostname | — | No |
 | `ProductUnavailable` | Reserved domain product state | — | No |
 
-Proxy only after classified `UPSTREAM_BLOCKED`. Never fall back on parse errors.
+Proxy only after classified `UPSTREAM_BLOCKED` or `AUTH_REQUIRED`. Never fall
+back on parse errors.
 Canonical: ADR 0014 + `.cursor/rules/proxy-cost-mode.mdc`.
 Challenge resolution: ADR 0017 + `.cursor/rules/captcha-challenge-resolution.mdc`.
 Auth wall bypass: ADR 0018 + `.cursor/rules/auth-wall-resolution.mdc`.

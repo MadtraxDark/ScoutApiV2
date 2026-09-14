@@ -157,7 +157,7 @@ class OfferRefreshService:
             else:
                 offer = self._offer_service.scrape_offer(listing.url)
         except RequestError as exc:
-            if exc.code == "UPSTREAM_BLOCKED":
+            if exc.code in {"UPSTREAM_BLOCKED", "AUTH_REQUIRED"}:
                 diff = diff_offers(previous_payload, None, scrape_failed=True)
                 events = [
                     OfferEventView(
