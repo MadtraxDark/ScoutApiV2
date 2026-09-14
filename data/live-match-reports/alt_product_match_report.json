@@ -1,0 +1,53 @@
+{
+  "started_at": "2026-09-14T14:09:30.803813+00:00",
+  "reference_url": "https://www.kabum.com.br/produto/999541/notebook-lenovo-ideapad-slim-3i-intel-core-3-100u-8gb-256gb-ssd-windows-11-15-3-83nu0000br-luna-grey",
+  "reference": {
+    "store": "kabum",
+    "product_id": "999541",
+    "title": "Notebook Lenovo Ideapad Slim 3i Intel Core 3 100u 8GB 256gb SSD  WINDOWS 11 15.3\" - 83nu0000br Luna Grey",
+    "brand": "Lenovo",
+    "model": "Ideapad Slim 3i Intel Core",
+    "gtin": null,
+    "price": "3999.00",
+    "currency": "BRL",
+    "variant_attrs": {
+      "color": "grey",
+      "storage": "256gb",
+      "ram": "8gb"
+    }
+  },
+  "search_order": [
+    "bestbuy",
+    "nissei",
+    "shoppingchina",
+    "amazon_br",
+    "amazon_us",
+    "magazineluiza",
+    "shopee",
+    "kabum"
+  ],
+  "queries": [
+    "lenovo ideapadslim3iintelcore 256gb grey",
+    "notebook lenovo ideapad slim 3i intel core 3"
+  ],
+  "discovered_gtin": null,
+  "gtin_source": null,
+  "matches": [],
+  "unmatched_stores": [
+    "bestbuy",
+    "nissei",
+    "shoppingchina",
+    "amazon_br",
+    "amazon_us",
+    "magazineluiza",
+    "shopee",
+    "kabum"
+  ],
+  "errors": [
+    {
+      "store": "shopee",
+      "code": "UPSTREAM_BLOCKED",
+      "message": "Shopee bloqueou a requisição (verificação de tráfego / anti-bot)"
+    }
+  ]
+}

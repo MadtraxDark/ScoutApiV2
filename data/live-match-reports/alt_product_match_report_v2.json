@@ -1,0 +1,196 @@
+{
+  "started_at": "2026-09-14T14:37:56.337527+00:00",
+  "reference_url": "https://www.kabum.com.br/produto/999541/notebook-lenovo-ideapad-slim-3i-intel-core-3-100u-8gb-256gb-ssd-windows-11-15-3-83nu0000br-luna-grey",
+  "reference": {
+    "store": "kabum",
+    "product_id": "999541",
+    "title": "Notebook Lenovo Ideapad Slim 3i Intel Core 3 100u 8GB 256gb SSD  WINDOWS 11 15.3\" - 83nu0000br Luna Grey",
+    "brand": "Lenovo",
+    "model": "Ideapad Slim 3i Intel Core",
+    "gtin": null,
+    "price": "3999.00",
+    "currency": "BRL",
+    "variant_attrs": {
+      "color": "grey",
+      "storage": "256gb",
+      "ram": "8gb"
+    }
+  },
+  "search_order": [
+    "bestbuy",
+    "nissei",
+    "shoppingchina",
+    "amazon_br",
+    "amazon_us",
+    "magazineluiza",
+    "shopee",
+    "kabum"
+  ],
+  "queries": [
+    "lenovo ideapadslim3iintelcore 256gb grey",
+    "notebook lenovo ideapad slim 3i intel core 3"
+  ],
+  "discovered_gtin": null,
+  "gtin_source": null,
+  "matches": [
+    {
+      "store": "bestbuy",
+      "decision": "auto_match",
+      "confidence": "0.92",
+      "reasons": [
+        {
+          "code": "brand_match",
+          "detail": "lenovo",
+          "score": 1.0
+        },
+        {
+          "code": "brand_model_exact",
+          "detail": "lenovo:ideapadslim3iintelcore~ideapadslim3i",
+          "score": 1.0
+        },
+        {
+          "code": "title_similarity",
+          "detail": "token_set_ratio=0.450",
+          "score": 0.45
+        }
+      ],
+      "search_query": "lenovo ideapadslim3iintelcore 256gb grey",
+      "product": {
+        "product_id": "JJGH3Q8PXV",
+        "title": "Lenovo - IdeaPad Slim 3i 15.6\" Full HD Laptop - Intel Core i5-1335U 2023 - 16GB Memory - 256GB Storage - Arctic Grey",
+        "brand": "Lenovo",
+        "model": "82X700KEUS",
+        "gtin": null,
+        "price": "499.99",
+        "currency": "USD",
+        "url": "https://www.bestbuy.com/product/lenovo-ideapad-slim-3i-15-6-full-hd-laptop-intel-core-i5-1335u-2023-16gb-memory-256gb-storage-arctic-grey/JJGH3Q8PXV/sku/6668499?intl=nosplash",
+        "variant_attrs": {
+          "color": "arctic grey",
+          "storage": "256gb"
+        }
+      }
+    },
+    {
+      "store": "amazon",
+      "decision": "auto_match",
+      "confidence": "0.92",
+      "reasons": [
+        {
+          "code": "brand_match",
+          "detail": "lenovo",
+          "score": 1.0
+        },
+        {
+          "code": "brand_model_exact",
+          "detail": "lenovo:ideapadslim3iintelcore~ideapadslim3i",
+          "score": 1.0
+        },
+        {
+          "code": "title_similarity",
+          "detail": "token_set_ratio=0.737",
+          "score": 0.7368421052631579
+        }
+      ],
+      "search_query": "notebook lenovo ideapad slim 3i intel core 3",
+      "product": {
+        "product_id": "B0FCVNLSGV",
+        "title": "Notebook Lenovo IdeaPad Slim 3i 15.3\" - Intel Core i5-13420H, 8GB RAM, 256GB SSD, Intel UHD Graphics, Windows 11",
+        "brand": "Lenovo",
+        "model": "IdeaPad Slim 3i",
+        "gtin": null,
+        "price": "3509.10",
+        "currency": "BRL",
+        "url": "https://www.amazon.com.br/Notebook-Lenovo-IdeaPad-15IRH10-i5-13420H/dp/B0FCVNLSGV/ref=sr_1_1_sspa?dib=eyJ2IjoiMSJ9.RtRZevuEcjZ3QE82D0TKS7f9yhOfO078E5zohm01NGiwhTqOkAcFZk-szl3LYLrLHR8goW1VzHj2Lwy3ECPcvPgBFVDKWApNAiheNDtxjJFA8pf_H5lUitDdCpywupbbijk_J3QjpQB2cTbbUtqTOd5EoZfu2S9Lzxo6-6_aCIphp5KE0ZpNxtw-E5LmxUVKxvJgIaJ022_YBoQzLuezsZBvw9TDR0ofgtuX_aXHbz6TybQGYjx4g8n9CPGXrjj1WuyIz3RDoyw8sf6a0IkhamGczKG5_3sH5pCjziK3xBY.63H2ApOp7HXmFWcxPkmETAX9J9c7FN7AOXT0uMo6rXU&dib_tag=se&keywords=notebook%2Blenovo%2Bideapad%2Bslim%2B3i%2Bintel%2Bcore%2B3&qid=1789396125&sr=8-1-spons&ufe=app_do%3Aamzn1.fos.38059ce3-943c-48af-9fc9-22d85542b02c&sp_csd=d2lkZ2V0TmFtZT1zcF9hdGY&th=1",
+        "variant_attrs": {
+          "storage": "256gb"
+        }
+      }
+    },
+    {
+      "store": "amazon",
+      "decision": "auto_match",
+      "confidence": "0.92",
+      "reasons": [
+        {
+          "code": "brand_match",
+          "detail": "lenovo",
+          "score": 1.0
+        },
+        {
+          "code": "brand_model_exact",
+          "detail": "lenovo:ideapadslim3iintelcore~ideapadslim3everydaylaptop",
+          "score": 1.0
+        },
+        {
+          "code": "title_similarity",
+          "detail": "token_set_ratio=0.476",
+          "score": 0.47619047619047616
+        }
+      ],
+      "search_query": "lenovo ideapadslim3iintelcore 256gb grey",
+      "product": {
+        "product_id": "B0C3MNPB8P",
+        "title": "Lenovo IdeaPad Slim 3 - Everyday Laptop - Lightweight - Windows 11-15.6\" FHD - 8GB Memory - 256GB Storage - AMD Ryzen 3 7320U - Arctic Grey",
+        "brand": "Lenovo Store",
+        "model": "IdeaPad Slim 3 Everyday Laptop",
+        "gtin": null,
+        "price": "369.99",
+        "currency": "USD",
+        "url": "https://www.amazon.com/dp/B0C3MNPB8P",
+        "variant_attrs": {
+          "storage": "256gb"
+        }
+      }
+    },
+    {
+      "store": "magazineluiza",
+      "decision": "auto_match",
+      "confidence": "0.92",
+      "reasons": [
+        {
+          "code": "brand_match",
+          "detail": "lenovo",
+          "score": 1.0
+        },
+        {
+          "code": "brand_model_exact",
+          "detail": "lenovo:ideapadslim3iintelcore~ideapadslim3",
+          "score": 1.0
+        },
+        {
+          "code": "title_similarity",
+          "detail": "token_set_ratio=0.778",
+          "score": 0.7777777777777778
+        }
+      ],
+      "search_query": "lenovo ideapadslim3iintelcore 256gb grey",
+      "product": {
+        "product_id": "ead2d63geg",
+        "title": "Notebook Lenovo IdeaPad Slim 3 15IRU10 Intel Core 3 100U 8GB 256GB SSD Linux 15.3\" - 83NUS00000 Luna Grey",
+        "brand": "Lenovo",
+        "model": "83NUS00000",
+        "gtin": null,
+        "price": "3899.00",
+        "currency": "BRL",
+        "url": "https://www.magazineluiza.com.br/notebook-lenovo-ideapad-slim-3-15iru10-intel-core-3-100u-8gb-256gb-ssd-linux-15-3-83nus00000-luna-grey/p/ead2d63geg/in/leip/?seller_id=lenovooficial",
+        "variant_attrs": {
+          "color": "luna grey",
+          "storage": "256gb"
+        }
+      }
+    }
+  ],
+  "unmatched_stores": [
+    "nissei",
+    "shoppingchina",
+    "shopee",
+    "kabum"
+  ],
+  "errors": [
+    {
+      "store": "shopee",
+      "code": "UPSTREAM_BLOCKED",
+      "message": "Shopee bloqueou a requisição (verificação de tráfego / anti-bot)"
+    }
+  ]
+}

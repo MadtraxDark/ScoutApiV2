@@ -31,6 +31,7 @@ class BaseStoreSpider(scrapy.Spider, ABC):
     country: ClassVar[str]
     currency: ClassVar[str]
     supports_images: ClassVar[bool] = True
+    supports_search: ClassVar[bool] = False
     allowed_domains: list[str] = []
     custom_settings: dict[str, Any] = {
         "AUTOTHROTTLE_ENABLED": True,
@@ -169,6 +170,14 @@ class BaseStoreSpider(scrapy.Spider, ABC):
     def prepare_fetch_url(self, url: str) -> str:
         """Store-specific URL adjustments before the HTML fetch."""
         return url
+
+    def build_search_url(self, query: str) -> str:
+        """Build a SERP URL for live product discovery. Opt-in via supports_search."""
+        raise NotImplementedError(f"Busca não implementada para a loja {self.store}")
+
+    def parse_search_results(self, response: Response) -> list[Any]:
+        """Parse SERP HTML into search candidates. Opt-in via supports_search."""
+        raise NotImplementedError(f"Busca não implementada para a loja {self.store}")
 
     @staticmethod
     def normalize_image_urls(raw: Any, *, base_url: str) -> list[str]:

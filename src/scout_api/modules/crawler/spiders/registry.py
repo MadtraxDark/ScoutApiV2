@@ -7,6 +7,7 @@ import pkgutil
 from urllib.parse import urlparse
 
 from ..core.exceptions import RequestError
+from ..stores import STORE_CONFIGS
 from . import __name__ as spiders_package_name
 from . import __path__ as spiders_package_path
 from .base import BaseStoreSpider
@@ -50,3 +51,53 @@ def resolve_store_spider(url: str) -> BaseStoreSpider:
         code="UNSUPPORTED_STORE",
         url=url,
     )
+
+
+def resolve_spider_by_store_key(store_key: str) -> BaseStoreSpider:
+    """Resolve a spider by catalog key (e.g. ``amazon_br``, ``kabum``)."""
+    key = store_key.strip().lower()
+    config = STORE_CONFIGS.get(key)
+    if config is None or not config.implemented:
+        raise RequestError(
+            f"Loja não suportada: {store_key}",
+            code="UNSUPPORTED_STORE",
+            url=None,
+        )
+
+    for spider_cls in _spider_classes():
+        if getattr(spider_cls, "name", None) == key:
+            return spider_cls()
+
+    primary_domain = config.domains[0].lower()
+    for spider_cls in _spider_classes():
+        if spider_cls.store != config.key:
+            continue
+        if any(
+            _hostname_matches(primary_domain, domain)
+            or domain.lower().removeprefix("www.") == primary_domain
+            for domain in spider_cls.allowed_domains
+        ):
+            return spider_cls()
+        if spider_cls.country == config.country:
+            return spider_cls()
+
+    raise RequestError(
+        f"Nenhum spider disponível para a loja {store_key}",
+        code="UNSUPPORTED_STORE",
+        url=None,
+    )
+
+
+def stores_supporting_search() -> tuple[str, ...]:
+    """Catalog keys whose spiders expose live search."""
+    supported: list[str] = []
+    for key, config in STORE_CONFIGS.items():
+        if not config.implemented:
+            continue
+        try:
+            spider = resolve_spider_by_store_key(key)
+        except RequestError:
+            continue
+        if getattr(spider, "supports_search", False):
+            supported.append(key)
+    return tuple(supported)

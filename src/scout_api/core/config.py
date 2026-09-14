@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
     redis_url: str | None = None
+    database_url: str | None = None
     scraper_user_agent: str = "ScoutApiV2/0.1 (+price-monitoring)"
     scraper_log_level: str = "INFO"
     scraper_default_concurrency: int = 2

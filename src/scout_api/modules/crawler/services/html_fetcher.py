@@ -236,9 +236,7 @@ def warmup_url_for(url: str) -> str | None:
         return f"{parsed.scheme}://{parsed.netloc}/py/"
     if hostname == "shopee.com.br" or hostname.endswith(".shopee.com.br"):
         return f"{parsed.scheme}://{parsed.netloc}/"
-    if hostname == "magazineluiza.com.br" or hostname.endswith(
-        ".magazineluiza.com.br"
-    ):
+    if hostname == "magazineluiza.com.br" or hostname.endswith(".magazineluiza.com.br"):
         # Mint Akamai/_abck cookies on the origin before the PDP (ADR 0017).
         return f"{parsed.scheme}://{parsed.netloc}/"
     return None
@@ -289,9 +287,39 @@ def wrap_shopee_pdp_json(raw: str) -> str:
     )
 
 
+def wrap_shopee_search_json(raw: str) -> str:
+    """Embed a captured search_items JSON body for SERP parsing."""
+    return (
+        '<!DOCTYPE html><html><head><meta charset="utf-8">'
+        "<title>Shopee Search</title></head><body>"
+        f'<script type="application/json" data-shopee-search="1">{raw}</script>'
+        "</body></html>"
+    )
+
+
 def is_shopee_get_pc_url(url: str) -> bool:
     path = (urlparse(url).path or "").casefold()
     return "/api/v4/pdp/get_pc" in path or path.endswith("/api/v4/pdp/get")
+
+
+def is_shopee_search_page_url(url: str) -> bool:
+    """True for Shopee HTML search pages (not the JSON API itself)."""
+    if not is_shopee_url(url):
+        return False
+    path = (urlparse(url).path or "").casefold().rstrip("/")
+    return path == "/search" or path.startswith("/search/")
+
+
+def is_shopee_search_api_url(url: str) -> bool:
+    path = (urlparse(url).path or "").casefold()
+    return "/api/v4/search/search_items" in path
+
+
+def looks_like_shopee_search_payload(raw: str) -> bool:
+    sample = (raw or "")[:4_000].casefold()
+    if '"error"' in sample[:300] and "90309999" in sample[:500]:
+        return False
+    return '"items"' in sample or '"item_basic"' in sample or '"itemid"' in sample
 
 
 def apply_shopee_br_proxy_targeting(proxy_url: str, page_url: str) -> str:
@@ -549,8 +577,12 @@ class CamoufoxHtmlFetcher:
 
                 captured: dict[str, str] = {}
                 shopee = is_shopee_url(url)
+                shopee_search = is_shopee_search_page_url(url)
                 if shopee:
-                    self._attach_shopee_get_pc_listener(page, captured, url)
+                    if shopee_search:
+                        self._attach_shopee_search_listener(page, captured)
+                    else:
+                        self._attach_shopee_get_pc_listener(page, captured, url)
                 warmup_used = False
                 if self._should_warmup(url):
                     warmup_used = self._maybe_warmup(page, url)
@@ -566,25 +598,40 @@ class CamoufoxHtmlFetcher:
                     page, captured=captured, resume_url=url
                 )
                 if captured.get("body"):
-                    html = wrap_shopee_pdp_json(captured["body"])
-                    final_url = url
-                    title = "Shopee PDP"
-                    metrics.get_pc_captured = True
-                    logger.info(
-                        "shopee_get_pc_intercepted",
-                        extra={"url": captured.get("response_url") or url},
-                    )
+                    if shopee_search or captured.get("kind") == "search":
+                        html = wrap_shopee_search_json(captured["body"])
+                        final_url = url
+                        title = "Shopee Search"
+                        metrics.get_pc_captured = True
+                        logger.info(
+                            "shopee_search_api_intercepted",
+                            extra={"url": captured.get("response_url") or url},
+                        )
+                    else:
+                        html = wrap_shopee_pdp_json(captured["body"])
+                        final_url = url
+                        title = "Shopee PDP"
+                        metrics.get_pc_captured = True
+                        logger.info(
+                            "shopee_get_pc_intercepted",
+                            extra={"url": captured.get("response_url") or url},
+                        )
                 if is_shopee_traffic_block(final_url or url, html):
-                    metrics.result = "blocked"
-                    self._log_metrics(metrics, request_types, byte_holder["n"], t0)
-                    raise RequestError(
-                        "Shopee bloqueou a requisição "
-                        "(verificação de tráfego / anti-bot)",
-                        code="UPSTREAM_BLOCKED",
-                        url=final_url or url,
-                        upstream_status=403,
-                        retryable=True,
-                    )
+                    # Prefer a captured signed search payload over a traffic wall.
+                    if not (
+                        captured.get("body")
+                        and (shopee_search or captured.get("kind") == "search")
+                    ):
+                        metrics.result = "blocked"
+                        self._log_metrics(metrics, request_types, byte_holder["n"], t0)
+                        raise RequestError(
+                            "Shopee bloqueou a requisição "
+                            "(verificação de tráfego / anti-bot)",
+                            code="UPSTREAM_BLOCKED",
+                            url=final_url or url,
+                            upstream_status=403,
+                            retryable=True,
+                        )
                 if is_hard_block_page(html, title=title):
                     metrics.result = "blocked"
                     self._log_metrics(metrics, request_types, byte_holder["n"], t0)
@@ -919,6 +966,48 @@ class CamoufoxHtmlFetcher:
         return html, final_url, title
 
     @classmethod
+    def _attach_shopee_search_listener(
+        cls,
+        page: Any,
+        captured: dict[str, str],
+    ) -> None:
+        """Capture the browser's own signed ``search_items`` response."""
+
+        def on_response(response: Any) -> None:
+            if captured.get("body"):
+                return
+            try:
+                response_url = str(getattr(response, "url", "") or "")
+            except Exception:
+                return
+            if not is_shopee_search_api_url(response_url):
+                return
+            try:
+                status = int(getattr(response, "status", 0) or 0)
+            except (TypeError, ValueError):
+                status = 0
+            if status and status >= 400:
+                return
+            try:
+                raw = response.text()
+            except Exception:
+                logger.debug("shopee_search_body_read_failed", exc_info=True)
+                return
+            if not isinstance(raw, str) or not raw.strip().startswith("{"):
+                return
+            if not looks_like_shopee_search_payload(raw):
+                return
+            captured["body"] = raw
+            captured["response_url"] = response_url
+            captured["kind"] = "search"
+
+        on_fn = getattr(page, "on", None)
+        if not callable(on_fn):
+            logger.debug("shopee_search_listener_unavailable")
+            return
+        on_fn("response", on_response)
+
+    @classmethod
     def _attach_shopee_get_pc_listener(
         cls,
         page: Any,
@@ -962,6 +1051,7 @@ class CamoufoxHtmlFetcher:
                 return
             captured["body"] = raw
             captured["response_url"] = response_url
+            captured["kind"] = "pdp"
 
         on_fn = getattr(page, "on", None)
         if not callable(on_fn):
@@ -1081,7 +1171,7 @@ def build_html_fetcher(
             early_stop_on_shopee_get_pc=True,
             fetch_strategy="camoufox-proxy",
         )
-    browser = StoreAwareHtmlFetcher(direct=direct, proxied=proxied)
+    browser = StoreAwareHtmlFetcher(direct=direct, proxied=proxied, http=http)
     # Amazon HTTP leg only (non-Amazon never hits this fetcher).
     amazon_http = UrllibHtmlFetcher(
         user_agent=_AMAZON_HTTP_USER_AGENT,

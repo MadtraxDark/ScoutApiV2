@@ -1,0 +1,584 @@
+{
+  "started_at": "2026-09-14T12:52:01.918713+00:00",
+  "reference": {
+    "title": "Apple iPhone 17 256GB Preto 6,3\" 48MP iOS 5G",
+    "variant_attrs": {
+      "color": "preto",
+      "storage": "256gb"
+    },
+    "price": "6332.22",
+    "gtin": null
+  },
+  "queries": [
+    "apple iphone17 256gb preto",
+    "apple iphone 17 256gb preto 6 3 48mp"
+  ],
+  "stores": {
+    "kabum": {
+      "hits": [
+        {
+          "decision": "reject",
+          "confidence": "0.3900",
+          "reasons": [
+            {
+              "code": "brand_match",
+              "detail": "apple",
+              "score": 1.0
+            },
+            {
+              "code": "title_similarity",
+              "detail": "token_set_ratio=0.400",
+              "score": 0.4
+            }
+          ],
+          "title": "Iphone 17 256gb Preto",
+          "product_id": "1016330",
+          "gtin": null,
+          "variant_attrs": {
+            "color": "preto",
+            "storage": "256gb"
+          },
+          "price": "6332.22",
+          "url": "https://www.kabum.com.br/produto/1016330/iphone-17-256gb-preto",
+          "query": "apple iphone17 256gb preto"
+        },
+        {
+          "decision": "reject",
+          "confidence": "0.4367",
+          "reasons": [
+            {
+              "code": "brand_match",
+              "detail": "apple",
+              "score": 1.0
+            },
+            {
+              "code": "title_similarity",
+              "detail": "token_set_ratio=0.533",
+              "score": 0.5333333333333333
+            }
+          ],
+          "title": "iPhone 17 Apple 256GB, Câmera Dupla Fusion 48MP, Tela 6.3\" Super Retina XDR, Preto",
+          "product_id": "925367",
+          "gtin": null,
+          "variant_attrs": {
+            "color": "preto",
+            "storage": "256gb"
+          },
+          "price": "8887.78",
+          "url": "https://www.kabum.com.br/produto/925367/iphone-17-apple-256gb-camera-dupla-fusion-48mp-tela-6-3-super-retina-xdr-preto",
+          "query": "apple iphone17 256gb preto"
+        },
+        {
+          "decision": "reject",
+          "confidence": "0.0000",
+          "reasons": [
+            {
+              "code": "brand_mismatch",
+              "detail": "apple!=outros",
+              "score": 0.0
+            }
+          ],
+          "title": "Apple Iphone 17e 256gb Preto",
+          "product_id": "1015045",
+          "gtin": null,
+          "variant_attrs": {
+            "color": "preto",
+            "storage": "256gb"
+          },
+          "price": "4776.67",
+          "url": "https://www.kabum.com.br/produto/1015045/apple-iphone-17e-256gb-preto",
+          "query": "apple iphone17 256gb preto"
+        },
+        {
+          "decision": "reject",
+          "confidence": "0.0000",
+          "reasons": [
+            {
+              "code": "brand_mismatch",
+              "detail": "apple!=outros",
+              "score": 0.0
+            }
+          ],
+          "title": "Apple Iphone 17e 256gb Preto",
+          "product_id": "1015045",
+          "gtin": null,
+          "variant_attrs": {
+            "color": "preto",
+            "storage": "256gb"
+          },
+          "price": "4776.67",
+          "url": "https://www.kabum.com.br/produto/1015045/apple-iphone-17e-256gb-preto",
+          "query": "apple iphone 17 256gb preto 6 3 48mp"
+        },
+        {
+          "decision": "reject",
+          "confidence": "0.5300",
+          "reasons": [
+            {
+              "code": "brand_match",
+              "detail": "apple",
+              "score": 1.0
+            },
+            {
+              "code": "title_similarity",
+              "detail": "token_set_ratio=0.800",
+              "score": 0.8
+            }
+          ],
+          "title": "Apple iPhone 17e 256GB Preto 6,1\" 48MP iOS 5G",
+          "product_id": "1029127",
+          "gtin": null,
+          "variant_attrs": {
+            "color": "preto",
+            "storage": "256gb"
+          },
+          "price": "4776.67",
+          "url": "https://www.kabum.com.br/produto/1029127/apple-iphone-17e-256gb-preto-6-1-48mp-ios-5g",
+          "query": "apple iphone 17 256gb preto 6 3 48mp"
+        },
+        {
+          "decision": "reject",
+          "confidence": "0.4367",
+          "reasons": [
+            {
+              "code": "brand_match",
+              "detail": "apple",
+              "score": 1.0
+            },
+            {
+              "code": "title_similarity",
+              "detail": "token_set_ratio=0.533",
+              "score": 0.5333333333333333
+            }
+          ],
+          "title": "iPhone 17 Apple 256GB, Câmera Dupla Fusion 48MP, Tela 6.3\" Super Retina XDR, Preto",
+          "product_id": "925367",
+          "gtin": null,
+          "variant_attrs": {
+            "color": "preto",
+            "storage": "256gb"
+          },
+          "price": "8887.78",
+          "url": "https://www.kabum.com.br/produto/925367/iphone-17-apple-256gb-camera-dupla-fusion-48mp-tela-6-3-super-retina-xdr-preto",
+          "query": "apple iphone 17 256gb preto 6 3 48mp"
+        }
+      ],
+      "errors": [],
+      "diagnostics": {
+        "store": "kabum",
+        "query": "apple iphone17 256gb preto",
+        "search_url": "https://www.kabum.com.br/busca/apple+iphone17+256gb+preto",
+        "final_url": "https://www.kabum.com.br/busca/appleiphone17256gbpreto",
+        "page": {
+          "title": "KaBuM! | Maior E-commerce de Tecnologia e Games da América Latina",
+          "html_len": 1287723,
+          "challenge": false,
+          "auth_wall": false,
+          "markers": [
+            "captcha",
+            "__NEXT_DATA__",
+            "não encontramos"
+          ]
+        },
+        "parsed_candidates": 10,
+        "titles": [
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      }
+    },
+    "bestbuy": {
+      "hits": [
+        {
+          "decision": "reject",
+          "confidence": "0.3550",
+          "reasons": [
+            {
+              "code": "brand_match",
+              "detail": "apple",
+              "score": 1.0
+            },
+            {
+              "code": "title_similarity",
+              "detail": "token_set_ratio=0.300",
+              "score": 0.3
+            }
+          ],
+          "title": "Apple - iPhone 17e 256GB - Black (AT&T)",
+          "product_id": "JCQ6HQTZZR",
+          "gtin": null,
+          "variant_attrs": {
+            "color": "black",
+            "storage": "256gb"
+          },
+          "price": "699.99",
+          "url": "https://www.bestbuy.com/product/apple-iphone-17e-256gb-black-at-t/JCQ6HQTZZR/sku/6473176?intl=nosplash",
+          "query": "apple iphone17 256gb preto"
+        },
+        {
+          "decision": "reject",
+          "confidence": "0.3550",
+          "reasons": [
+            {
+              "code": "brand_match",
+              "detail": "apple",
+              "score": 1.0
+            },
+            {
+              "code": "title_similarity",
+              "detail": "token_set_ratio=0.300",
+              "score": 0.3
+            }
+          ],
+          "title": "Apple - iPhone 17e 256GB - Black (AT&T)",
+          "product_id": "JCQ6HQTZZR",
+          "gtin": null,
+          "variant_attrs": {
+            "color": "black",
+            "storage": "256gb"
+          },
+          "price": "699.99",
+          "url": "https://www.bestbuy.com/product/apple-iphone-17e-256gb-black-at-t/JCQ6HQTZZR?intl=nosplash#tabbed-customerreviews",
+          "query": "apple iphone17 256gb preto"
+        },
+        {
+          "decision": "reject",
+          "confidence": "0.0000",
+          "reasons": [
+            {
+              "code": "variant_mismatch",
+              "detail": "variant_color_mismatch:preto!=cosmic orange",
+              "score": 0.0
+            }
+          ],
+          "title": "Apple - iPhone 17 Pro Max 256GB - Cosmic Orange (Verizon)",
+          "product_id": "JCQ6HQTQ5R",
+          "gtin": null,
+          "variant_attrs": {
+            "color": "cosmic orange",
+            "storage": "256gb"
+          },
+          "price": "1199.99",
+          "url": "https://www.bestbuy.com/product/apple-iphone-17-pro-max-256gb-cosmic-orange-verizon/JCQ6HQTQ5R/sku/6472868?intl=nosplash",
+          "query": "apple iphone17 256gb preto"
+        },
+        {
+          "decision": "reject",
+          "confidence": "0.0000",
+          "reasons": [
+            {
+              "code": "variant_mismatch",
+              "detail": "variant_color_mismatch:preto!=white",
+              "score": 0.0
+            }
+          ],
+          "title": "Apple - iPhone 17 256GB - White (Verizon)",
+          "product_id": "JCQ6HHJ5QJ",
+          "gtin": null,
+          "variant_attrs": {
+            "color": "white",
+            "storage": "256gb"
+          },
+          "price": "929.99",
+          "url": "https://www.bestbuy.com/product/apple-iphone-17-256gb-white-verizon/JCQ6HHJ5QJ/sku/6487350?intl=nosplash",
+          "query": "apple iphone 17 256gb preto 6 3 48mp"
+        },
+        {
+          "decision": "reject",
+          "confidence": "0.0000",
+          "reasons": [
+            {
+              "code": "variant_mismatch",
+              "detail": "variant_color_mismatch:preto!=white",
+              "score": 0.0
+            }
+          ],
+          "title": "Apple - iPhone 17 256GB - White (Verizon)",
+          "product_id": "JCQ6HHJ5QJ",
+          "gtin": null,
+          "variant_attrs": {
+            "color": "white",
+            "storage": "256gb"
+          },
+          "price": "929.99",
+          "url": "https://www.bestbuy.com/product/apple-iphone-17-256gb-white-verizon/JCQ6HHJ5QJ?intl=nosplash#tabbed-customerreviews",
+          "query": "apple iphone 17 256gb preto 6 3 48mp"
+        },
+        {
+          "decision": "reject",
+          "confidence": "0.3550",
+          "reasons": [
+            {
+              "code": "brand_match",
+              "detail": "apple",
+              "score": 1.0
+            },
+            {
+              "code": "title_similarity",
+              "detail": "token_set_ratio=0.300",
+              "score": 0.3
+            }
+          ],
+          "title": "Apple - iPhone 17e 256GB - Black (Verizon)",
+          "product_id": "JCQ6HQTW3G",
+          "gtin": null,
+          "variant_attrs": {
+            "color": "black",
+            "storage": "256gb"
+          },
+          "price": "699.99",
+          "url": "https://www.bestbuy.com/product/apple-iphone-17e-256gb-black-verizon/JCQ6HQTW3G/sku/6473013?intl=nosplash",
+          "query": "apple iphone 17 256gb preto 6 3 48mp"
+        }
+      ],
+      "errors": [],
+      "diagnostics": {
+        "store": "bestbuy",
+        "query": "apple iphone17 256gb preto",
+        "search_url": "https://www.bestbuy.com/site/searchpage.jsp?st=apple+iphone17+256gb+preto&intl=nosplash",
+        "final_url": "https://www.bestbuy.com/site/searchpage.jsp?id=pcat17071&st=apple+iphone17+256gb+preto",
+        "page": {
+          "title": "apple iphone17 256gb preto - Best Buy",
+          "html_len": 2004824,
+          "challenge": false,
+          "auth_wall": false,
+          "markers": [
+            "captcha",
+            "akamai"
+          ]
+        },
+        "parsed_candidates": 10,
+        "titles": [
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      }
+    },
+    "amazon_us": {
+      "hits": [
+        {
+          "decision": "reject",
+          "confidence": "0.0000",
+          "reasons": [
+            {
+              "code": "brand_mismatch",
+              "detail": "apple!=amazon renewed store",
+              "score": 0.0
+            }
+          ],
+          "title": "Apple iPhone 17e, 256GB, Black - Unlocked (Renewed)",
+          "product_id": "B0GWN52GC4",
+          "gtin": null,
+          "variant_attrs": {
+            "color": "black",
+            "storage": "256gb"
+          },
+          "price": "549.99",
+          "url": "https://www.amazon.com/dp/B0GWN52GC4",
+          "query": "apple iphone17 256gb preto"
+        },
+        {
+          "decision": "reject",
+          "confidence": "0.0000",
+          "reasons": [
+            {
+              "code": "brand_mismatch",
+              "detail": "apple!=amazon renewed store",
+              "score": 0.0
+            }
+          ],
+          "title": "Apple iPhone 17e, 256GB, Black - Verizon (Renewed)",
+          "product_id": "B0GWS83LKB",
+          "gtin": null,
+          "variant_attrs": {
+            "color": "black",
+            "storage": "256gb"
+          },
+          "price": "508.00",
+          "url": "https://www.amazon.com/dp/B0GWS83LKB",
+          "query": "apple iphone17 256gb preto"
+        },
+        {
+          "decision": "reject",
+          "confidence": "0.0000",
+          "reasons": [
+            {
+              "code": "variant_mismatch",
+              "detail": "variant_color_mismatch:preto!=deep blue",
+              "score": 0.0
+            }
+          ],
+          "title": "Apple iPhone 17 Pro, US Version, 256GB, eSIM, Deep Blue- Unlocked (Renewed)",
+          "product_id": "B0FSB8V9NK",
+          "gtin": null,
+          "variant_attrs": {
+            "size": "256gb",
+            "color": "deep blue",
+            "storage": "256gb"
+          },
+          "price": "984.97",
+          "url": "https://www.amazon.com/dp/B0FSB8V9NK",
+          "query": "apple iphone17 256gb preto"
+        },
+        {
+          "decision": "reject",
+          "confidence": "0.0000",
+          "reasons": [
+            {
+              "code": "brand_mismatch",
+              "detail": "apple!=amazon renewed store",
+              "score": 0.0
+            }
+          ],
+          "title": "Apple iPhone 17e, 256GB, Black - Unlocked (Renewed Premium)",
+          "product_id": "B0H9HH6W59",
+          "gtin": null,
+          "variant_attrs": {
+            "color": "black",
+            "storage": "256gb"
+          },
+          "price": "594.97",
+          "url": "https://www.amazon.com/dp/B0H9HH6W59",
+          "query": "apple iphone 17 256gb preto 6 3 48mp"
+        },
+        {
+          "decision": "reject",
+          "confidence": "0.0000",
+          "reasons": [
+            {
+              "code": "brand_mismatch",
+              "detail": "apple!=amazon renewed store",
+              "score": 0.0
+            }
+          ],
+          "title": "Apple iPhone 17, US Version, 256GB, eSIM, Black- Unlocked (Renewed)",
+          "product_id": "B0FRKHC2DT",
+          "gtin": null,
+          "variant_attrs": {
+            "size": "256gb",
+            "color": "black",
+            "storage": "256gb"
+          },
+          "price": "809.99",
+          "url": "https://www.amazon.com/dp/B0FRKHC2DT",
+          "query": "apple iphone 17 256gb preto 6 3 48mp"
+        },
+        {
+          "decision": "reject",
+          "confidence": "0.0000",
+          "reasons": [
+            {
+              "code": "brand_mismatch",
+              "detail": "apple!=amazon renewed store",
+              "score": 0.0
+            }
+          ],
+          "title": "Apple iPhone 15, 256GB, Black - Unlocked (Renewed)",
+          "product_id": "B0CMPLKVDB",
+          "gtin": null,
+          "variant_attrs": {
+            "size": "256gb",
+            "color": "black",
+            "storage": "256gb"
+          },
+          "price": "469.74",
+          "url": "https://www.amazon.com/dp/B0CMPLKVDB",
+          "query": "apple iphone 17 256gb preto 6 3 48mp"
+        }
+      ],
+      "errors": [],
+      "diagnostics": {
+        "store": "amazon_us",
+        "query": "apple iphone17 256gb preto",
+        "search_url": "https://www.amazon.com/s?k=apple+iphone17+256gb+preto",
+        "final_url": "https://www.amazon.com/s?k=apple+iphone17+256gb+preto",
+        "page": {
+          "title": "Amazon.com : apple iphone17 256gb preto",
+          "html_len": 1574122,
+          "challenge": false,
+          "auth_wall": false,
+          "markers": []
+        },
+        "parsed_candidates": 10,
+        "titles": [
+          "Apple iPhone 17e, 256GB, Black - Unlocked (Renewed)",
+          "Apple iPhone 17e, 256GB, Black - Verizon (Renewed)",
+          "Apple iPhone 17 Pro, US Version, 256GB, eSIM, Deep Blue- Unlocked (Renewed)",
+          "Apple iPhone 16e, 256GB, Black - Unlocked (Renewed)",
+          "Apple iPhone 17e, 256GB, White - Unlocked (Renewed)"
+        ]
+      }
+    },
+    "nissei": {
+      "hits": [],
+      "errors": [],
+      "diagnostics": {
+        "store": "nissei",
+        "query": "apple iphone17 256gb preto",
+        "search_url": "https://nissei.com/catalogsearch/result/?q=apple+iphone17+256gb+preto",
+        "final_url": "https://nissei.com/py/",
+        "page": {
+          "title": "Comprá Nissei - Comprá Online - Retirá en la tienda - El Envío más rápido del Paraguay - Envios a todo el Paraguay",
+          "html_len": 1298089,
+          "challenge": false,
+          "auth_wall": false,
+          "markers": [
+            "captcha"
+          ]
+        },
+        "parsed_candidates": 0,
+        "titles": []
+      }
+    },
+    "shoppingchina": {
+      "hits": [],
+      "errors": [],
+      "diagnostics": {
+        "store": "shoppingchina",
+        "query": "apple iphone17 256gb preto",
+        "search_url": "https://www.shoppingchina.com.py/catalogsearch/result/?q=apple+iphone17+256gb+preto",
+        "final_url": "https://www.shoppingchina.com.py/catalogsearch/result/?q=apple+iphone17+256gb+preto",
+        "page": {
+          "title": "Error 404 | Shopping China",
+          "html_len": 16719,
+          "challenge": false,
+          "auth_wall": false,
+          "markers": []
+        },
+        "parsed_candidates": 0,
+        "titles": []
+      }
+    },
+    "shopee": {
+      "hits": [],
+      "errors": [
+        {
+          "phase": "search",
+          "code": "UPSTREAM_BLOCKED",
+          "message": "Shopee bloqueou a requisição (verificação de tráfego / anti-bot)"
+        },
+        {
+          "phase": "search",
+          "code": "UPSTREAM_BLOCKED",
+          "message": "Shopee bloqueou a requisição (verificação de tráfego / anti-bot)"
+        }
+      ],
+      "diagnostics": {
+        "store": "shopee",
+        "query": "apple iphone17 256gb preto",
+        "search_url": "https://shopee.com.br/search?keyword=apple+iphone17+256gb+preto",
+        "error": {
+          "type": "RequestError",
+          "code": "UPSTREAM_BLOCKED",
+          "message": "Shopee bloqueou a requisição (verificação de tráfego / anti-bot)"
+        }
+      }
+    }
+  }
+}

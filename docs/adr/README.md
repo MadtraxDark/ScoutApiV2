@@ -37,6 +37,7 @@ Política de quando criar/atualizar docs:
 | [0016](0016-amazon-http-first-fetch.md) | Amazon HTTP-first progressive fetch | Accepted |
 | [0017](0017-captcha-challenge-resolution.md) | Resolução obrigatória de challenge/CAPTCHA | Accepted |
 | [0018](0018-auth-wall-bypass.md) | Auth bypass obrigatório (login/session wall) | Accepted |
+| [0019](0019-product-matching.md) | Product Matching cross-store + histórico de ofertas | Accepted |
 
 ## Quando criar ADR
 

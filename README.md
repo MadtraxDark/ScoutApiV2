@@ -70,6 +70,17 @@ Redis/PostgreSQL.
   `false` (sem parsing de imagens). Ver ADR 0012.
 - `POST /crawl/offer` — consulta leve (preço/seller/disponibilidade) via
   `OfferScrapeService`, sem executar a extração de detalhes nem de imagens.
+- `POST /match` — Product Matching: scrape da URL de referência, busca ao vivo
+  nas lojas com `supports_search` (Amazon BR/US, Kabum, Magalu, Shopee,
+  Best Buy, Nissei, Shopping China), score precision-first (GTIN → marca+modelo
+  → título auxiliar) e persistência opcional no PostgreSQL (ADR 0019). Use
+  `persist=false` sem `DATABASE_URL`.
+- `POST /offers/refresh` — reconsulta listings persistidos e registra eventos
+  (`price_changed`, `seller_changed`, `offer_removed`, …) sem sobrescrever
+  histórico (ADR 0019). Requer `DATABASE_URL`.
+
+PostgreSQL: serviço `postgres` no Compose; configure `DATABASE_URL` (ver
+`.env.example`). Migrações: `alembic upgrade head`.
 
 Ambos buscam HTML com **Camoufox** (Firefox anti-detect) por padrão e delegam o
 parsing aos spiders (`magazineluiza`, `nissei`, `shopee`, `amazon`, …). Spiders não fazem

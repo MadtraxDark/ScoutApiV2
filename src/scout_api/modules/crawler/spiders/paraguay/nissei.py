@@ -1,12 +1,14 @@
 import re
 from decimal import Decimal
 from typing import Any, Literal
+from urllib.parse import quote_plus, urljoin, urlparse
 
 from scrapy.http import Response
 
 from ...core.exceptions import ParseError
 from ...core.fingerprints import canonicalize_url
 from ...models.product import ProductDetails, ProductOffer
+from ...models.search import SearchCandidate
 from ...utils.parsing import parse_money
 from ..base import BaseStoreSpider
 
@@ -18,8 +20,57 @@ class NisseiSpider(BaseStoreSpider):
 
     name = "nissei"
     store, country, currency = "nissei", "PY", "PYG"
+    supports_search = True
     allowed_domains = ["nissei.com"]
     start_urls: list[str] = []
+
+    def build_search_url(self, query: str) -> str:
+        # Magento search without locale redirects to home; /py/ is the live SERP.
+        return (
+            f"https://nissei.com/py/catalogsearch/result/?q={quote_plus(query.strip())}"
+        )
+
+    def parse_search_results(self, response: Response) -> list[SearchCandidate]:
+        candidates: list[SearchCandidate] = []
+        seen: set[str] = set()
+        for href in response.css(
+            "a.product-item-link::attr(href), "
+            "li.product-item a::attr(href), "
+            "a.product-item-photo::attr(href), "
+            "a.product::attr(href), "
+            "ol.products a::attr(href)"
+        ).getall():
+            absolute = urljoin(response.url, href.strip())
+            path = (urlparse(absolute).path or "").lower()
+            if "catalogsearch" in path or path.rstrip("/").endswith("/search"):
+                continue
+            if path in {"/py", "/py/", "/br", "/br/", "/"}:
+                continue
+            # Live Magento PDPs are often slug paths without .html
+            # (e.g. /py/apple-iphone-17-a3258-dual).
+            looks_product = (
+                path.endswith(".html")
+                or "/producto" in path
+                or "/product" in path
+                or bool(re.search(r"^/(?:py|br)/[a-z0-9][a-z0-9\-]{2,}/?$", path))
+            )
+            if not looks_product:
+                continue
+            canonical = canonicalize_url(absolute)
+            if canonical in seen:
+                continue
+            seen.add(canonical)
+            title = None
+            candidates.append(
+                SearchCandidate(
+                    url=absolute,
+                    title=title,
+                    metadata={"source": "nissei-search"},
+                )
+            )
+            if len(candidates) >= 10:
+                break
+        return candidates
 
     def extract_offer(self, response: Response) -> ProductOffer:
         data = self.json_ld(response)

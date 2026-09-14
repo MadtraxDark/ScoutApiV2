@@ -89,6 +89,17 @@ Itens resolvidos **não** ficam no índice ativo.
 Arquivo apagado (preferencial) ou pasta [`resolved/`](resolved/) quando arquivado.
 O Git preserva o histórico em qualquer caso.
 
+Resolvidas em 2026-09-14 (SERP matching PENDING-008):
+
+- PENDING-008 Shopping China `/quick_search` HTTP + Nissei `/py/catalogsearch`
+  + Shopee `search_items` intercept (limitação de sessão fria documentada em
+  `docs/crawler/stores/shopee.md`) — arquivo apagado
+
+Resolvidas em 2026-09-14 (product matching search):
+
+- PENDING-007 Search adapters matching para Amazon US, Shopee, Best Buy,
+  Nissei, Shopping China (apagado)
+
 Arquivadas nesta linha de trabalho Amazon / CAPTCHA / auth:
 
 - [`resolved/PENDING-001-amazon-live-validation-blocked.md`](resolved/PENDING-001-amazon-live-validation-blocked.md)

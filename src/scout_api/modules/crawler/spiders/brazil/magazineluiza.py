@@ -3,7 +3,7 @@ import re
 import unicodedata
 from decimal import Decimal, InvalidOperation
 from typing import Any, Literal, cast
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, quote_plus, urljoin, urlparse
 
 from scrapy.http import Response
 
@@ -15,6 +15,7 @@ from ...models.product import (
     ProductPriceItem,
     compose_product_price_item,
 )
+from ...models.search import SearchCandidate
 from ...utils.parsing import parse_money
 from ...utils.product_attributes import (
     merge_specification_gaps,
@@ -30,8 +31,47 @@ class MagazineLuizaSpider(BaseStoreSpider):
 
     name = "magazineluiza"
     store, country, currency = "magazineluiza", "BR", "BRL"
+    supports_search = True
     allowed_domains = ["magazineluiza.com.br", "m.magazineluiza.com.br"]
     start_urls: list[str] = []
+
+    def build_search_url(self, query: str) -> str:
+        q = quote_plus(query.strip())
+        return f"https://www.magazineluiza.com.br/busca/{q}/"
+
+    def parse_search_results(self, response: Response) -> list[SearchCandidate]:
+        candidates: list[SearchCandidate] = []
+        seen: set[str] = set()
+        for href in response.css(
+            "a[data-testid='product-card-link']::attr(href), a[href*='/p/']::attr(href)"
+        ).getall():
+            absolute = urljoin(response.url, href.strip())
+            if "/p/" not in absolute:
+                continue
+            # Skip non-product paths
+            path = urlparse(absolute).path or ""
+            if "/busca/" in path:
+                continue
+            canonical = canonicalize_url(absolute)
+            if canonical in seen:
+                continue
+            seen.add(canonical)
+            product_id = None
+            match = re.search(r"/p/([^/?]+)", path)
+            if match:
+                product_id = match.group(1)
+            title = None
+            candidates.append(
+                SearchCandidate(
+                    url=absolute,
+                    title=title,
+                    product_id=product_id,
+                    metadata={"source": "magalu-search"},
+                )
+            )
+            if len(candidates) >= 10:
+                break
+        return candidates
 
     def parse_product(self, response: Response) -> ProductPriceItem:
         return compose_product_price_item(
@@ -247,7 +287,10 @@ class MagazineLuizaSpider(BaseStoreSpider):
         if folded_h1 == "oops" or folded_h1.startswith("oops"):
             raise ParseError("Página Magalu não encontrada (soft-404)")
         has_product = bool(
-            item.get("id") or item.get("offerId") or item.get("title") or item.get("offers")
+            item.get("id")
+            or item.get("offerId")
+            or item.get("title")
+            or item.get("offers")
         )
         if not has_product:
             title = (response.css("title::text").get() or "").strip()

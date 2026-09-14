@@ -11,6 +11,23 @@
 - `product_id` = `item_id`
 - `sku` = selected `model_id` when present
 
+## Live search (matching)
+
+- `supports_search=True`
+- SERP: `https://shopee.com.br/search?keyword={query}`
+- Camoufox intercepts `/api/v4/search/search_items` (same Mode A as PDP
+  `get_pc` — signatures minted by Shopee JS, never forged)
+- Parser preference: captured search JSON → `-i.{shop_id}.{item_id}` links →
+  embedded ids in page scripts
+- **Known limitation:** cold/anonymous SERP often hits `verify/traffic` before
+  `search_items` fires. Mitigation: seeded Camoufox profile
+  (`make seed-shopee` / `make seed-shopee-login`) + `ProxyPolicy.FALLBACK`.
+  Without a warm session, search may still return `UPSTREAM_BLOCKED` — never
+  fabricate matches from the block page.
+- Anti-bot/SERP fragility is higher than BR retail SERPs; failures surface as
+  empty candidates / `UPSTREAM_BLOCKED`, never as fabricated matches
+- Used by `POST /match` (ADR 0019)
+
 ## Offer source
 
 - Prefer captured PDP JSON (`get_pc` / embedded item payload)

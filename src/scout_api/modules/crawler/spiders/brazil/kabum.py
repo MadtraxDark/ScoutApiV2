@@ -3,7 +3,7 @@ import re
 from decimal import Decimal, InvalidOperation
 from html import unescape
 from typing import Any, Literal
-from urllib.parse import urlparse
+from urllib.parse import quote_plus, urljoin, urlparse
 
 from scrapy.http import Response
 from scrapy.selector import Selector
@@ -11,6 +11,7 @@ from scrapy.selector import Selector
 from ...core.exceptions import ParseError
 from ...core.fingerprints import canonicalize_url
 from ...models.product import ProductDetails, ProductOffer
+from ...models.search import SearchCandidate
 from ...utils.parsing import parse_money
 from ...utils.product_attributes import (
     format_variant_dimensions,
@@ -25,8 +26,42 @@ Availability = Literal["available", "out_of_stock", "unavailable"]
 class KabumSpider(BaseStoreSpider):
     name = "kabum"
     store, country, currency = "kabum", "BR", "BRL"
+    supports_search = True
     allowed_domains = ["kabum.com.br"]
     start_urls: list[str] = []
+
+    def build_search_url(self, query: str) -> str:
+        return f"https://www.kabum.com.br/busca/{quote_plus(query.strip())}"
+
+    def parse_search_results(self, response: Response) -> list[SearchCandidate]:
+        candidates: list[SearchCandidate] = []
+        seen: set[str] = set()
+        for href in response.css(
+            "a.productLink::attr(href), "
+            "a[href*='/produto/']::attr(href), "
+            "main a[href*='/produto/']::attr(href)"
+        ).getall():
+            absolute = urljoin(response.url, href.strip())
+            if "/produto/" not in absolute:
+                continue
+            canonical = canonicalize_url(absolute)
+            if canonical in seen:
+                continue
+            seen.add(canonical)
+            product_id = None
+            match = re.search(r"/produto/(\d+)", absolute)
+            if match:
+                product_id = match.group(1)
+            candidates.append(
+                SearchCandidate(
+                    url=absolute,
+                    product_id=product_id,
+                    metadata={"source": "kabum-search"},
+                )
+            )
+            if len(candidates) >= 10:
+                break
+        return candidates
 
     def extract_offer(self, response: Response) -> ProductOffer:
         product = self._product(response)

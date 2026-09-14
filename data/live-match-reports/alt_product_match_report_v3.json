@@ -1,0 +1,127 @@
+{
+  "started_at": "2026-09-14T14:59:56.645690+00:00",
+  "reference_url": "https://www.kabum.com.br/produto/999541/notebook-lenovo-ideapad-slim-3i-intel-core-3-100u-8gb-256gb-ssd-windows-11-15-3-83nu0000br-luna-grey",
+  "reference": {
+    "store": "kabum",
+    "product_id": "999541",
+    "title": "Notebook Lenovo Ideapad Slim 3i Intel Core 3 100u 8GB 256gb SSD  WINDOWS 11 15.3\" - 83nu0000br Luna Grey",
+    "brand": "Lenovo",
+    "model": "Ideapad Slim 3i Intel Core",
+    "gtin": null,
+    "price": "3999.00",
+    "currency": "BRL",
+    "variant_attrs": {
+      "color": "grey",
+      "storage": "256gb",
+      "ram": "8gb"
+    }
+  },
+  "search_order": [
+    "bestbuy",
+    "nissei",
+    "shoppingchina",
+    "amazon_br",
+    "amazon_us",
+    "magazineluiza",
+    "shopee",
+    "kabum"
+  ],
+  "queries": [
+    "lenovo ideapadslim3iintelcore 256gb grey",
+    "notebook lenovo ideapad slim 3i intel core 3"
+  ],
+  "discovered_gtin": null,
+  "gtin_source": null,
+  "matches": [
+    {
+      "store": "amazon",
+      "decision": "auto_match",
+      "confidence": "0.92",
+      "reasons": [
+        {
+          "code": "brand_match",
+          "detail": "lenovo",
+          "score": 1.0
+        },
+        {
+          "code": "brand_model_exact",
+          "detail": "lenovo:ideapadslim3iintelcore~ideapadslim3",
+          "score": 1.0
+        },
+        {
+          "code": "title_similarity",
+          "detail": "token_set_ratio=0.889",
+          "score": 0.8888888888888888
+        }
+      ],
+      "search_query": "lenovo ideapadslim3iintelcore 256gb grey",
+      "product": {
+        "product_id": "B0G3CY35DN",
+        "title": "Notebook Lenovo IdeaPad Slim 3 15.3\" Luna Grey - Intel Core 3 100U, 8GB RAM, 256GB SSD, Windows 11",
+        "brand": "Lenovo",
+        "model": "IdeaPad Slim 3",
+        "gtin": null,
+        "price": "3284.00",
+        "currency": "BRL",
+        "url": "https://www.amazon.com.br/Notebook-Lenovo-IdeaPad-15IRU10-Windows/dp/B0G3CY35DN/ref=sr_1_1_sspa?dib=eyJ2IjoiMSJ9.uzk5-Sfvq-anWxNCGLHcmoMlR3MXCaN0LjRZ8f9Im6CZdWZqGcsLiBZIiHCoZNdhptKIZYBpl1GEekvsAx2G1qFzjBJyteK-ZHLrR982JJzzoXFUF9eU8vlSzFVC4KkQrexRYSn-aSYeVh4bg70_5A.-xvnfupbLvCzCBfL4rwCt3-mM5Z4J5lk2ySUgyFknn8&dib_tag=se&keywords=lenovo+ideapadslim3iintelcore+256gb+grey&qid=1789397358&sr=8-1-spons&ufe=app_do%3Aamzn1.fos.38059ce3-943c-48af-9fc9-22d85542b02c&sp_csd=d2lkZ2V0TmFtZT1zcF9hdGY&psc=1",
+        "variant_attrs": {
+          "color": "grey",
+          "storage": "256gb",
+          "ram": "8gb"
+        }
+      }
+    },
+    {
+      "store": "magazineluiza",
+      "decision": "auto_match",
+      "confidence": "0.92",
+      "reasons": [
+        {
+          "code": "brand_match",
+          "detail": "lenovo",
+          "score": 1.0
+        },
+        {
+          "code": "brand_model_exact",
+          "detail": "lenovo:ideapadslim3iintelcore~ideapadslim3",
+          "score": 1.0
+        },
+        {
+          "code": "title_similarity",
+          "detail": "token_set_ratio=0.778",
+          "score": 0.7777777777777778
+        }
+      ],
+      "search_query": "lenovo ideapadslim3iintelcore 256gb grey",
+      "product": {
+        "product_id": "ead2d63geg",
+        "title": "Notebook Lenovo IdeaPad Slim 3 15IRU10 Intel Core 3 100U 8GB 256GB SSD Linux 15.3\" - 83NUS00000 Luna Grey",
+        "brand": "Lenovo",
+        "model": "83NUS00000",
+        "gtin": null,
+        "price": "3899.00",
+        "currency": "BRL",
+        "url": "https://www.magazineluiza.com.br/notebook-lenovo-ideapad-slim-3-15iru10-intel-core-3-100u-8gb-256gb-ssd-linux-15-3-83nus00000-luna-grey/p/ead2d63geg/in/leip/?seller_id=lenovooficial",
+        "variant_attrs": {
+          "color": "luna grey",
+          "storage": "256gb"
+        }
+      }
+    }
+  ],
+  "unmatched_stores": [
+    "bestbuy",
+    "nissei",
+    "shoppingchina",
+    "amazon_us",
+    "shopee",
+    "kabum"
+  ],
+  "errors": [
+    {
+      "store": "shopee",
+      "code": "UPSTREAM_BLOCKED",
+      "message": "Shopee bloqueou a requisição (verificação de tráfego / anti-bot)"
+    }
+  ]
+}

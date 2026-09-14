@@ -18,6 +18,15 @@ No FX conversion in spiders.
 - Parent ASIN (when different) → `metadata.parent_asin`
 - GTIN/ISBN from detail tables / JSON-LD when present
 
+## Live search (matching)
+
+- Amazon BR and US: `supports_search=True`
+- SERP BR: `https://www.amazon.com.br/s?k={query}`
+- SERP US: `https://www.amazon.com/s?k={query}`
+- Parser: shared `parse_amazon_search_results` over `s-search-result` cards
+  (`data-asin`)
+- Used by `POST /match` (ADR 0019)
+
 ## Offer source
 
 - **Buy Box only** (`#ppd` / apex price selectors / JSON-LD offer fallback)

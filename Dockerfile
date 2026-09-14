@@ -39,6 +39,8 @@ RUN apt-get update \
 
 COPY pyproject.toml README.md requirements-captcha.txt ./
 COPY src ./src
+COPY alembic.ini ./
+COPY alembic ./alembic
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 
 RUN --mount=type=cache,target=/root/.cache/pip \

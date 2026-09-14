@@ -9,6 +9,7 @@ services:
       HOST: 0.0.0.0
       PORT: 8000
       REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://scout:scout@postgres:5432/scoutapi}
       SCRAPE_URL_COOLDOWN_SECONDS: ${SCRAPE_URL_COOLDOWN_SECONDS:-300}
       SCRAPE_DOMAIN_MIN_INTERVAL_SECONDS: ${SCRAPE_DOMAIN_MIN_INTERVAL_SECONDS:-15}
       SCRAPE_RESULT_CACHE_TTL_SECONDS: ${SCRAPE_RESULT_CACHE_TTL_SECONDS:-300}
@@ -33,6 +34,11 @@ services:
       AMAZON_AUTH_PASSWORD: ${AMAZON_AUTH_PASSWORD:-}
       SHOPEE_AUTH_EMAIL: ${SHOPEE_AUTH_EMAIL:-}
       SHOPEE_AUTH_PASSWORD: ${SHOPEE_AUTH_PASSWORD:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     ports:
       - "${PORT:-8000}:8000"
     volumes:
@@ -57,6 +63,23 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-scout}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-scout}
+      POSTGRES_DB: ${POSTGRES_DB:-scoutapi}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-scout} -d ${POSTGRES_DB:-scoutapi}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   redis-data:
+  postgres-data:

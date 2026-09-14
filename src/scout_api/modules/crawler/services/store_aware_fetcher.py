@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from typing import Any
+from urllib.parse import urlparse
 
 from scrapy.http import HtmlResponse
 
@@ -14,6 +15,15 @@ from .html_fetcher import CamoufoxHtmlFetcher, HtmlFetcher
 logger = logging.getLogger(__name__)
 
 
+def is_shoppingchina_quick_search(url: str) -> bool:
+    """JSON autocomplete/search endpoint — no browser needed (Proxy Cost Mode)."""
+    parsed = urlparse(url)
+    host = (parsed.hostname or "").lower()
+    if "shoppingchina.com" not in host:
+        return False
+    return "/quick_search" in (parsed.path or "").lower()
+
+
 class StoreAwareHtmlFetcher:
     """Route fetches by store policy; never force paid proxy globally."""
 
@@ -22,9 +32,11 @@ class StoreAwareHtmlFetcher:
         *,
         direct: HtmlFetcher,
         proxied: HtmlFetcher | None,
+        http: HtmlFetcher | None = None,
     ) -> None:
         self._direct = direct
         self._proxied = proxied
+        self._http = http
 
     @property
     def direct(self) -> HtmlFetcher:
@@ -35,6 +47,14 @@ class StoreAwareHtmlFetcher:
         return self._proxied
 
     def fetch(self, url: str) -> HtmlResponse:
+        if is_shoppingchina_quick_search(url) and self._http is not None:
+            logger.info("shoppingchina_quick_search_http", extra={"url": url})
+            response = self._http.fetch(url)
+            return self._annotate(
+                response,
+                proxy_used=False,
+                policy=ProxyPolicy.DIRECT,
+            )
         policy = proxy_policy_for_url(url)
         if policy is ProxyPolicy.REQUIRED:
             return self._fetch_required(url, policy)

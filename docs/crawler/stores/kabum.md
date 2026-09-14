@@ -9,6 +9,16 @@
 
 - `product_id` from product state `id`, else JSON-LD / URL `/produto/(\d+)`
 - `sku` from product SKU fields when present
+- GTIN/EAN from product state (`gtin`/`ean`/`gtin13`) or specs (`código de barras`)
+  when present — preferred early target in live match search order
+  (`docs/crawler/contracts.md`)
+
+## Live search (matching)
+
+- `supports_search=True`
+- SERP: `https://www.kabum.com.br/busca/{query}`
+- Parser: product card links `/produto/{id}`
+- Used by `POST /match` (ADR 0019)
 
 ## Offer source
 

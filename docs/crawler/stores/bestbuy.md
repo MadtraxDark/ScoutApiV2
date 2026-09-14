@@ -11,6 +11,13 @@
 - Product id / SKU from product JSON / page state
 - GTIN/UPC when present
 
+## Live search (matching)
+
+- `supports_search=True`
+- SERP: `https://www.bestbuy.com/site/searchpage.jsp?st={query}`
+- Parser: modern `/product/{slug}/{bsin}` and legacy `/site/…/{sku}.p?skuId=`
+- Used by `POST /match` (ADR 0019)
+
 ## Offer source
 
 - Product JSON + semantic markup / JSON-LD

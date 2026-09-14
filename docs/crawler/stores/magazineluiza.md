@@ -9,6 +9,13 @@
 
 - Product identity from `__NEXT_DATA__` item / fallbacks
 
+## Live search (matching)
+
+- `supports_search=True`
+- SERP: `https://www.magazineluiza.com.br/busca/{query}/`
+- Parser: product card `/p/{id}/` links
+- Used by `POST /match` (ADR 0019)
+
 ## Offer source
 
 - `__NEXT_DATA__` item + `offers[]`

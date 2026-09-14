@@ -1,13 +1,15 @@
+import json
 import re
 from decimal import Decimal, InvalidOperation
 from typing import Any, Literal
-from urllib.parse import urlsplit
+from urllib.parse import quote_plus, urljoin, urlsplit
 
 from scrapy.http import Response
 
 from ...core.exceptions import ParseError
 from ...core.fingerprints import canonicalize_url
 from ...models.product import ProductDetails, ProductOffer
+from ...models.search import SearchCandidate
 from ...utils.parsing import parse_money
 from ...utils.product_attributes import (
     SOURCE_NOT_FOUND,
@@ -61,6 +63,7 @@ class ShoppingChinaSpider(BaseStoreSpider):
 
     name = "shoppingchina"
     store, country, currency = "shoppingchina", "PY", "PYG"
+    supports_search = True
     allowed_domains = [
         "shoppingchina.com.py",
         "www.shoppingchina.com.py",
@@ -68,6 +71,110 @@ class ShoppingChinaSpider(BaseStoreSpider):
         "www.shoppingchina.com.br",
     ]
     start_urls: list[str] = []
+
+    def build_search_url(self, query: str) -> str:
+        # Legacy Magento ``/catalogsearch/result`` returns 404. Live storefront
+        # exposes a lightweight JSON autocomplete/search endpoint.
+        return (
+            "https://www.shoppingchina.com.py/quick_search?search="
+            f"{quote_plus(query.strip())}"
+        )
+
+    def parse_search_results(self, response: Response) -> list[SearchCandidate]:
+        text = (response.text or "").strip()
+        if text.startswith("[") or text.startswith("{"):
+            return self._parse_quick_search_json(text, response.url)
+        return self._parse_search_html(response)
+
+    def _parse_quick_search_json(
+        self, text: str, page_url: str
+    ) -> list[SearchCandidate]:
+        try:
+            payload: Any = json.loads(text)
+        except json.JSONDecodeError:
+            return []
+        rows: list[Any]
+        if isinstance(payload, list):
+            rows = payload
+        elif isinstance(payload, dict):
+            raw = payload.get("products") or payload.get("items") or payload.get("data")
+            rows = raw if isinstance(raw, list) else []
+        else:
+            rows = []
+
+        candidates: list[SearchCandidate] = []
+        seen: set[str] = set()
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            href = (
+                row.get("url_po")
+                or row.get("url_es")
+                or row.get("url")
+                or row.get("href")
+            )
+            if not isinstance(href, str) or not href.strip():
+                continue
+            absolute = urljoin(page_url, href.strip())
+            path = urlsplit(absolute).path or ""
+            if "/produto/" not in path.lower() and "/producto/" not in path.lower():
+                continue
+            canonical = canonicalize_url(absolute)
+            if canonical in seen:
+                continue
+            seen.add(canonical)
+            product_id = None
+            match = _PRODUCT_PATH_ID.search(path)
+            if match:
+                product_id = match.group(1)
+            title = row.get("title_po") or row.get("title_es") or row.get("title")
+            if title is not None:
+                title = str(title).strip() or None
+            candidates.append(
+                SearchCandidate(
+                    url=absolute,
+                    title=title,
+                    product_id=product_id,
+                    metadata={"source": "shoppingchina-quick-search"},
+                )
+            )
+            if len(candidates) >= 10:
+                break
+        return candidates
+
+    def _parse_search_html(self, response: Response) -> list[SearchCandidate]:
+        candidates: list[SearchCandidate] = []
+        seen: set[str] = set()
+        for href in response.css(
+            "a[href*='/produto/']::attr(href), "
+            "a[href*='/producto/']::attr(href), "
+            "a.product-item-link::attr(href), "
+            "li.product-item a::attr(href)"
+        ).getall():
+            absolute = urljoin(response.url, href.strip())
+            path = urlsplit(absolute).path or ""
+            if "catalogsearch" in path.lower() or "/site/search" in path.lower():
+                continue
+            if "/produto/" not in path.lower() and "/producto/" not in path.lower():
+                continue
+            canonical = canonicalize_url(absolute)
+            if canonical in seen:
+                continue
+            seen.add(canonical)
+            product_id = None
+            match = _PRODUCT_PATH_ID.search(path)
+            if match:
+                product_id = match.group(1)
+            candidates.append(
+                SearchCandidate(
+                    url=absolute,
+                    product_id=product_id,
+                    metadata={"source": "shoppingchina-search"},
+                )
+            )
+            if len(candidates) >= 10:
+                break
+        return candidates
 
     def extract_offer(self, response: Response) -> ProductOffer:
         self._ensure_product_page(response)

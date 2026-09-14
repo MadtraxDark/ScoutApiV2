@@ -10,6 +10,14 @@
 - Prefer Magento / JSON-LD SKU
 - If missing: fall back to **canonical URL** as `product_id` / `sku`
 
+## Live search (matching)
+
+- `supports_search=True`
+- SERP: `https://nissei.com/py/catalogsearch/result/?q={query}`
+  (locale `/py/` is required — bare `/catalogsearch/…` redirects to home)
+- Parser: Magento product item links (slug PDPs and `.html`)
+- Used by `POST /match` (ADR 0019)
+
 ## Offer source
 
 - Magento product info + JSON-LD; price from product main block / structured data

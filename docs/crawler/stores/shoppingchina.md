@@ -11,6 +11,15 @@
 - Product id from URL path (`…-(\d+)/`) and/or structured data
 - Optional internal id in metadata when distinct
 
+## Live search (matching)
+
+- `supports_search=True`
+- SERP JSON: `https://www.shoppingchina.com.py/quick_search?search={query}`
+  (legacy Magento `/catalogsearch/result` returns 404)
+- Fallback HTML parser for `/site/search?query=` pages when JSON is absent
+- Product URLs: `/produto/` and `/producto/`
+- Used by `POST /match` (ADR 0019)
+
 ## Offer source
 
 - Prefer **visible primary price** on the requested page; JSON-LD as support
