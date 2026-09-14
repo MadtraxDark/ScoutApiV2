@@ -1,0 +1,5 @@
+﻿source: browser-use/plugins
+path: cursor/skills/browser-use/SKILL.md
+commit: 4749bcbfe456e5384b98281a8a66119352197f59
+installed_at: 2026-09-14T08:27:20.7171754-03:00
+plugin_path: C:\Users\Thyago\.cursor\plugins\local\browser-use

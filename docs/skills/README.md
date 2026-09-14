@@ -52,6 +52,7 @@ Revisão registrada em 12/09/2026.
 |---|---|---|---|---|
 | `docker` | `mindrally/skills` | `skills-lock.json` | Dockerfile, Compose, runtime container | MUITO ÚTIL |
 | `dockerfile-optimise` | `pproenca/dot-skills` | `skills-lock.json` | otimização explícita de Dockerfile | ÚTIL EM CASOS ESPECÍFICOS |
+| `browser-use` | `browser-use/plugins` @ `4749bcb` (`cursor/skills/browser-use`) | `skills-lock.json` | validação UI / navegação **do agente** (Chrome CDP ou cloud sob pedido); **não** substitui Camoufox/fetch do crawler | ÚTIL EM CASOS ESPECÍFICOS |
 
 ### Codex (user), auditadas
 
@@ -75,6 +76,12 @@ Revisão registrada em 12/09/2026.
 - SkillKit é monorepo/CLI; metodologias internas não foram instaladas.
 - `scrapy-web-scraping` **não** autoriza migração operacional para Scrapy.
 - `api-security-review` **não** autoriza testes ativos contra terceiros.
+- `browser-use` (2026-09-14): origem `browser-use/plugins` commit
+  `4749bcbfe456e5384b98281a8a66119352197f59`; `skill-scanner` = 0 findings.
+  Plugin Cursor em `~/.cursor/plugins/local/browser-use` + skill vendored em
+  `.agents/skills/browser-use/`. MCP upstream usa `uvx browser-use@latest`
+  (não pinado pelo vendor). **Não** substitui Camoufox/fetch; Browser Use Cloud
+  / API key só com autorização explícita. Chrome local exige remote debugging.
 
 ## Matriz de acionamento
 
@@ -85,6 +92,7 @@ Revisão registrada em 12/09/2026.
 | Novo spider / adapter | scrapy (**só parsing/selectors**), testing; code-review se relevante | Splash/Playwright/Redis/proxy rotation |
 | Parser / fixtures | testing (+ scrapy conceitual) | fastapi, GHA, OWASP full |
 | Fetch / browser / proxy | nenhuma skill — ADRs/rules; code-review se pedido explícito | scrapy, fastapi |
+| Validação visual de site (agente) | `browser-use` (Chrome CDP / plugin Cursor) | trocar Camoufox; cloud pago sem auth |
 | Teste | `python-testing-patterns` | api-security (salvo validação SSRF) |
 | Security (URL, secrets, limites) | `api-security-review` | scrapy, find-skills |
 | CI | `github-actions-templates` | fastapi, scrapy |
@@ -121,7 +129,7 @@ Python **3.12**; actions pinadas; sem matrix Node/K8s/Slack por template.
 ## O que skills NÃO devem introduzir
 
 - Scrapy Splash / Playwright / Scrapy-Redis / fake-UA / proxy rotation
-- Migração do fetch Camoufox
+- Migração do fetch Camoufox (incl. trocar por Browser Use Cloud/CLI no crawler)
 - SQLModel / ORM / repository “preventivo”
 - Frontend embutido no FastAPI / SSE
 - Alpine ou distroless sem prova de que Camoufox continua funcional

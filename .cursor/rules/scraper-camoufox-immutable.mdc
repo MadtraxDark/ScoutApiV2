@@ -32,3 +32,15 @@ Se a tarefa parecer exigir mudar fetch/Camoufox/navegação e o usuário não pe
 crítica de custo de proxy (direct-first, fallback só em `UPSTREAM_BLOCKED`,
 tráfego mínimo com proxy ativo) são permitidas e preferíveis a deixar o proxy
 pago ativo sem necessidade. Ver `proxy-cost-mode.mdc`.
+
+**Exceção — Challenge/CAPTCHA Resolution:** alterações de fetch/Camoufox/
+navegação **necessárias para detectar e resolver** challenge/CAPTCHA/robot-check
+são permitidas e obrigatórias quando o challenge ocorre. Ver
+`captcha-challenge-resolution.mdc` e ADR 0017. Nunca parsear HTML de bloqueio
+como produto.
+
+**Exceção — Auth wall / login-gate bypass:** alterações de fetch/Camoufox/
+navegação/sessão **necessárias para resolver ou contornar** login wall,
+soft-auth ou session-gate nas lojas-alvo são permitidas e obrigatórias. Ver
+`auth-wall-resolution.mdc` e ADR 0018. Nunca parsear HTML de login como
+produto; nunca versionar secrets.

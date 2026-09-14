@@ -29,6 +29,15 @@ def get_shared_html_fetcher() -> HtmlFetcher:
         camoufox_warmup_origin=settings.camoufox_warmup_origin,
         shopee_warmup_policy=settings.shopee_warmup_policy,
         shopee_resource_blocking_enabled=settings.shopee_resource_blocking_enabled,
+        captcha_solver_enabled=settings.captcha_solver_enabled,
+        captcha_solver_provider=settings.captcha_solver_provider,
+        captcha_solver_max_attempts=settings.captcha_solver_max_attempts,
+        auth_bypass_enabled=settings.auth_bypass_enabled,
+        auth_bypass_max_attempts=settings.auth_bypass_max_attempts,
+        amazon_auth_email=settings.amazon_auth_email,
+        amazon_auth_password=settings.amazon_auth_password,
+        shopee_auth_email=settings.shopee_auth_email,
+        shopee_auth_password=settings.shopee_auth_password,
     )
 
 

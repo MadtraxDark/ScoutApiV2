@@ -10,5 +10,6 @@ globs: ["tests/**/*.py"]
 - Corrija bugs com regression test quando aplicável; reproduza a causa e teste comportamento observável.
 - Prefira fixtures reais ou sanitizadas e fakes focados; não transforme a suíte em mocks excessivos.
 - Separe unit de integração/live; bloqueie requests externos inesperados nos testes isolados quando o padrão existir.
+- Se a regressão alterar semântica duradoura de uma loja, atualize `docs/crawler/stores/` na mesma tarefa.
 - Não remova assertions nem use skip/xfail para esconder regressões.
 - Não force TDD, freezegun, Hypothesis ou pytest-asyncio sem problema real; preserve `tests/unit|integration|e2e`.

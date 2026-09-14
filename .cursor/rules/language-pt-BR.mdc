@@ -1,0 +1,40 @@
+---
+description: Comunicação do agente em português do Brasil (pt-BR)
+alwaysApply: true
+---
+
+# Idioma — pt-BR
+
+Todo output textual destinado ao usuário/desenvolvedor deve ser em
+**português do Brasil (pt-BR)**.
+
+Inclui: respostas finais, relatórios, planos, status, explicações,
+troubleshooting, documentação humana nova, ADRs novos, pendências novas,
+runbooks e recomendações.
+
+## O que NÃO traduzir
+
+Identificadores e contratos técnicos permanecem no padrão do projeto:
+
+- classes, funções, variáveis, arquivos, paths
+- endpoints, campos JSON, exceções, bibliotecas, comandos
+- protocolos e termos de contratos existentes
+
+Exemplo correto:
+
+> O `OfferScrapeService` usa `extract_offer()` para montar o `ProductOffer`.
+
+## Código
+
+Código novo segue as convenções atuais (nomes em inglês, como o restante do repo).
+Não renomeie código existente só por causa do pt-BR.
+
+## Comments / docstrings
+
+Não migre em massa. Novos comments/docstrings: siga a convenção predominante
+do arquivo/módulo. Contratos técnicos preservam o idioma original.
+
+## Conteúdo externo
+
+Explique em pt-BR; preserve citações literais de erros/APIs/comandos quando
+precisarem ser reproduzidas.

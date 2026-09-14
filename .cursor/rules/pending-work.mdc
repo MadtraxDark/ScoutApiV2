@@ -1,0 +1,86 @@
+---
+description: Governança de pendências — criar, atualizar e fechar trabalho incompleto
+alwaysApply: true
+---
+
+# Governança de pendências
+
+Trabalho incompleto, bloqueado ou parcialmente validado não pode ficar só no chat.
+
+## Regra de conclusão
+
+Uma tarefa só é **COMPLETA** quando os critérios relevantes de done forem atendidos.
+
+Se algo importante faltou:
+
+1. continue até concluir; ou
+2. registre/atualize um item em `docs/pending/` **na mesma tarefa**.
+
+Nunca finalize em silêncio uma entrega parcial relevante.
+
+## Fonte canônica
+
+- Política + índice ativo: `docs/pending/README.md`
+- Novo item: copiar `docs/pending/template.md` → `docs/pending/PENDING-NNN-slug.md`
+- Próximo número: maior `PENDING-NNN` do índice + 1
+
+Limitações **aceitas** de loja ficam em `docs/crawler/stores/*.md`.
+Trabalho ainda a fazer fica em `docs/pending/`.
+
+## Lifecycle (status)
+
+Visão ativa (única permitida no índice):
+
+- `OPEN` — aberto, ainda não em andamento explícito
+- `IN_PROGRESS` — em andamento nesta ou em tarefa corrente
+- `BLOCKED` — depende de fator externo / decisão / bloqueio upstream
+  (**somente** após investigação em `research-and-problem-solving.mdc`;
+  a pendência deve preservar pesquisa e testes já feitos)
+
+Fechado (nunca no índice ativo):
+
+- `RESOLVED` — critérios de done atendidos
+
+Tipo (campo separado): `INCOMPLETE` | `BUG` | `TESTING` | `TECH_DEBT` | `RESEARCH` | `DOCS`
+
+Prioridade: `P0` | `P1` | `P2` | `P3`
+
+## Bloqueio técnico
+
+Não registre `BLOCKED` / “sem solução” por desistência prematura. Siga
+`.cursor/rules/research-and-problem-solving.mdc` e preencha no template as
+seções de investigação (fontes, testado, descartado, referências).
+
+## Fechar pendência (obrigatório quando concluída)
+
+Antes de fechar, confirme: implementação, validação, testes relevantes, docs
+necessárias, bloqueio removido, TODOs/`FIXME` relacionados tratados.
+
+Então:
+
+1. remova a linha do **índice ativo** em `docs/pending/README.md`;
+2. **padrão:** apague o arquivo `PENDING-NNN-*.md` (o Git guarda o histórico);
+3. **opcional:** mova para `docs/pending/resolved/` se as notas de resolução
+   forem úteis para consulta rápida;
+4. limpe TODOs/`FIXME` e links órfãos que apontem para o item;
+5. atualize playbooks/docs que citavam a pendência.
+
+`RESOLVED` **não** permanece misturado com trabalho aberto.
+
+## Resolução parcial
+
+Não remova a pendência inteira. Atualize “Done” / “Missing” / “Done when”
+para refletir só o que ainda falta. Remova da lista “Missing” o que já terminou.
+
+## Duplicatas
+
+Consolide, preserve um único estado correto, remova duplicatas.
+
+## Relatório final
+
+Sempre declare:
+
+`Pendências restantes: nenhuma.`
+
+ou liste apenas itens **ainda abertos** (`OPEN` / `IN_PROGRESS` / `BLOCKED`).
+Nunca liste como pendente o que foi resolvido na própria tarefa.

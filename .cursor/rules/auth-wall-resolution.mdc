@@ -1,0 +1,61 @@
+---
+description: CRITICAL — auth/login walls that block public price scrape must be bypassed/resolved
+alwaysApply: true
+---
+
+# CRITICAL RULE — Auth wall / login-gate bypass (IMMUTABLE)
+
+Esta regra é **crítica e inalterável**. O ScoutApiV2 **terá obrigatoriamente**
+capacidade de **auth bypass** no sentido de crawler: contornar ou resolver
+paredes de login, soft-auth, session-gate ou interstício equivalente que
+impedem a coleta de **preço/oferta pública** nas lojas-alvo.
+
+Não enfraqueça, não ignore e não reinterpretar como “respeitar login = fim
+aceitável do fluxo”.
+
+## Obrigatoriedade
+
+Quando o crawler enfrentar **login wall**, **auth gate**, **sessão
+obrigatória**, **soft-auth** ou bloqueio equivalente que impede a PDP/oferta
+pública:
+
+1. **Deve tentar resolver / contornar** (automação de sessão, login com
+   credenciais **do operador** via env/secrets locais, warmup headed, cookies
+   de profile próprio, fluxos já previstos no fetch).
+2. **Não** trate a mera detecção do login/auth wall como fim aceitável.
+3. **Não** mapeie página de login/auth para produto:
+   - nunca `available=false`
+   - nunca preço fabricado a partir do HTML de autenticação
+4. Só emita `RequestError(code="UPSTREAM_BLOCKED")` **depois** de esgotar as
+   tentativas legítimas de resolução (e fallbacks HTTP → browser → proxy
+   conforme Proxy Cost Mode).
+5. Alterações de fetch/Camoufox **necessárias** para auth bypass são
+   permitidas (exceção a `scraper-camoufox-immutable.mdc`).
+
+## Relação com CAPTCHA e pesquisa
+
+- Challenge/CAPTCHA permanece obrigatório (ADR 0017).
+- Auth bypass e CAPTCHA costumam aparecer juntos; ambos devem ser resolvidos.
+- Antes de declarar “impossível sem vendor pago”, cumpra
+  `research-and-problem-solving.mdc` (OSS / nativo / comunidade primeiro).
+
+## O que esta regra NÃO autoriza
+
+- Roubar, comprar ou reutilizar cookies/credenciais de **terceiros**
+- Quebrar autenticação da **própria** API ScoutApiV2 ou de sistemas fora das
+  lojas-alvo do crawl
+- Versionar secrets, senhas, tokens ou cookies de sessão no Git
+- Inventar oferta a partir de HTML de login
+- Ataques indiscriminados, credential stuffing em contas alheias, ou abuso
+  fora do escopo de coleta de preço das lojas configuradas
+
+Credenciais de loja (quando necessárias) vêm só de ambiente / secret store
+local do operador — nunca commitadas.
+
+## Fontes canônicas
+
+- Esta rule (operacional / agente)
+- `AGENTS.md` (invariante curto)
+- ADR 0018 (decisão + trade-offs)
+- `docs/crawler/contracts.md` (contrato de erro)
+- ADR 0017 / `captcha-challenge-resolution.mdc` (challenge paralelo)

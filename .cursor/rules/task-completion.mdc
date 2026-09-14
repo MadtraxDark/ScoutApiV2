@@ -1,0 +1,33 @@
+---
+description: Fluxo de conclusão de tarefa — DoD, pendências, docs e idioma
+alwaysApply: true
+---
+
+# Conclusão de tarefa
+
+Antes de declarar uma tarefa concluída, siga:
+
+```text
+Implementar
+  → Testar
+  → Revisar critérios de Done
+  → Pendências relacionadas?
+       → ainda falta trabalho real? → criar/atualizar docs/pending/
+       → resolvida por completo? → remover do índice ativo (+ limpar TODOs)
+       → parcial? → atualizar Done/Missing (manter aberta)
+  → Documentation impact review
+  → Atualizar docs/ADR se necessário
+  → Relatório final em pt-BR
+```
+
+## Checagens obrigatórias
+
+1. Critérios de done da tarefa atendidos (ou pendência registrada).
+2. Índice ativo de `docs/pending/` sem itens já resolvidos.
+3. Sem TODO/`FIXME` apontando para `PENDING-*` inexistente ou resolvido.
+4. Docs canônicas atualizadas quando o conhecimento mudou
+   (`.cursor/rules/documentation-governance.mdc`).
+5. Relatório final em pt-BR (`.cursor/rules/language-pt-BR.mdc`) com
+   `Pendências restantes: ...`.
+
+Não marque pendência como resolvida só porque “parte” do trabalho avançou.

@@ -46,20 +46,50 @@ class BestBuySpider(BaseStoreSpider):
     start_urls: list[str] = []
 
     def prepare_fetch_url(self, url: str) -> str:
-        """Skip Best Buy's international country-selector splash page."""
-        parts = urlsplit(url)
+        """Normalize fetch URL and skip the international country splash.
+
+        Accepts both modern ``/product/{slug}/{bsin}`` and legacy
+        ``/site/{slug}/{sku}.p?skuId={sku}`` forms. ``intl=nosplash`` is only
+        for the fetch request — see ``_canonical_offer_url``.
+        """
+        parts = urlsplit(url.strip())
+        path = parts.path or "/"
         pairs = parse_qsl(parts.query, keep_blank_values=True)
-        if any(key.lower() == "intl" and value == "nosplash" for key, value in pairs):
-            return url
+        sku = next(
+            (value for key, value in pairs if key.lower() == "skuid" and value.strip()),
+            None,
+        )
+        # Bare legacy SKU paths: /site/6556754.p → keep skuId in query.
+        if sku is None:
+            match = re.search(r"/(\d{5,10})\.p/?$", path, re.I)
+            if match:
+                sku = match.group(1)
+                pairs = [(k, v) for k, v in pairs if k.lower() != "skuid"]
+                pairs.append(("skuId", sku))
         pairs = [(key, value) for key, value in pairs if key.lower() != "intl"]
         pairs.append(("intl", "nosplash"))
         return urlunsplit(
-            (parts.scheme, parts.netloc, parts.path, urlencode(pairs), parts.fragment)
+            (parts.scheme, parts.netloc, path, urlencode(pairs), parts.fragment)
         )
+
+    @staticmethod
+    def _canonical_offer_url(url: str) -> str:
+        """Canonical PDP URL without fetch-only ``intl=nosplash``."""
+        parts = urlsplit(url.strip())
+        pairs = [
+            (key, value)
+            for key, value in parse_qsl(parts.query, keep_blank_values=True)
+            if key.lower() != "intl"
+        ]
+        cleaned = urlunsplit(
+            (parts.scheme, parts.netloc, parts.path, urlencode(pairs), "")
+        )
+        return canonicalize_url(cleaned)
 
     def extract_offer(self, response: Response) -> ProductOffer:
         self._ensure_product_page(response)
         product = self._product_data(response)
+        self._ensure_sku_consistency(response, product)
         offer = self._offer_data(product)
         price_raw = self._first_value(
             offer, "price", "currentPrice", "salePrice", "customerPrice"
@@ -116,7 +146,7 @@ class BestBuySpider(BaseStoreSpider):
             sku=self._string(self._first_value(product, "sku", "skuId", "productSku")),
             seller=seller,
             url=response.url,
-            canonical_url=canonicalize_url(response.url),
+            canonical_url=self._canonical_offer_url(response.url),
             currency=self.currency,
             price=price,
             original_price=original,
@@ -131,6 +161,7 @@ class BestBuySpider(BaseStoreSpider):
     def extract_details(self, response: Response) -> ProductDetails:
         self._ensure_product_page(response)
         product = self._product_data(response)
+        self._ensure_sku_consistency(response, product)
         title = self._string(
             self._first_value(product, "name", "title", "productName")
             or self.first(
@@ -278,6 +309,61 @@ class BestBuySpider(BaseStoreSpider):
                 and not cls._looks_like_page_noise(description)
             ):
                 product.setdefault("description", description)
+        apollo = cls._apollo_ssr_product_data(response)
+        for key, value in apollo.items():
+            if product.get(key) in (None, ""):
+                product[key] = value
+        return product
+
+    @classmethod
+    def _apollo_ssr_product_data(cls, response: Response) -> dict[str, Any]:
+        """Extract offer fields from Best Buy Apollo SSR push payloads.
+
+        Modern PDPs embed ``customerPrice`` / ``skuId`` / ``bsin`` inside
+        ``ApolloSSRDataTransport`` script pushes that are not bare JSON, so
+        ``json.loads`` on the whole script fails. Prefer numeric
+        ``price.customerPrice`` event payloads over feature-flag strings.
+        """
+        product: dict[str, Any] = {}
+        price_re = re.compile(
+            r'"price"\s*:\s*\{\s*"customerPrice"\s*:\s*([0-9]+(?:\.[0-9]+)?)'
+        )
+        sku_re = re.compile(r'"skuId"\s*:\s*"(\d{5,12})"')
+        bsin_re = re.compile(r'"bsin"\s*:\s*"([A-Z0-9]{6,16})"')
+        name_re = re.compile(
+            r'"name"\s*:\s*\{\s*"short"\s*:\s*"((?:\\.|[^"\\])*)"',
+            re.I,
+        )
+        for raw in response.css("script::text").getall():
+            text = raw or ""
+            if "customerPrice" not in text:
+                continue
+            if "ApolloSSRDataTransport" not in text and '"price"' not in text:
+                continue
+            price_match = price_re.search(text)
+            if price_match and "customerPrice" not in product:
+                amount = price_match.group(1)
+                product["customerPrice"] = amount
+                product["price"] = {"customerPrice": amount}
+            if "skuId" not in product:
+                sku_match = sku_re.search(text)
+                if sku_match:
+                    product["skuId"] = sku_match.group(1)
+                    product["sku"] = sku_match.group(1)
+            if "productId" not in product and "bsin" not in product:
+                bsin_match = bsin_re.search(text)
+                if bsin_match:
+                    product["bsin"] = bsin_match.group(1)
+                    product["productId"] = bsin_match.group(1)
+            if "name" not in product and "title" not in product:
+                name_match = name_re.search(text)
+                if name_match:
+                    try:
+                        product["name"] = json.loads(f'"{name_match.group(1)}"')
+                    except json.JSONDecodeError:
+                        product["name"] = unescape(name_match.group(1))
+            if "customerPrice" in product and "skuId" in product and "name" in product:
+                break
         return product
 
     @classmethod
@@ -347,13 +433,52 @@ class BestBuySpider(BaseStoreSpider):
         value = cls._first_value(product, "productId", "productIdCode", "bsin")
         if value is None:
             parts = [part for part in urlparse(url).path.split("/") if part]
+            # /product/{slug}/{bsin}/sku/{skuId} → prefer bsin (segment before sku)
             if parts and parts[-1].casefold() == "sku" and len(parts) >= 2:
                 value = parts[-2]
+            elif len(parts) >= 2 and parts[-2].casefold() == "sku":
+                value = parts[-3] if len(parts) >= 3 else parts[-1]
             else:
                 value = parts[-1] if parts else None
+            if isinstance(value, str) and value.casefold().endswith(".p"):
+                value = value[:-2]
+        if value is None:
+            value = cls._requested_sku_id(url)
         if not value:
             raise ParseError("Identificador do produto não encontrado")
         return str(value).strip()
+
+    @staticmethod
+    def _requested_sku_id(url: str) -> str | None:
+        """Numeric Best Buy SKU from query or legacy ``/site/.../{sku}.p`` path."""
+        pairs = parse_qsl(urlsplit(url).query, keep_blank_values=True)
+        for key, value in pairs:
+            if key.lower() == "skuid" and value.strip():
+                return value.strip()
+        match = re.search(r"/(\d{5,10})\.p(?:/|$)", urlsplit(url).path or "", re.I)
+        return match.group(1) if match else None
+
+    @classmethod
+    def _ensure_sku_consistency(
+        cls, response: Response, product: dict[str, Any]
+    ) -> None:
+        """Fail closed when a legacy SKU URL redirects to an unrelated PDP."""
+        request_url = ""
+        if response.request is not None:
+            request_url = str(getattr(response.request, "url", "") or "")
+        requested = cls._requested_sku_id(request_url) or cls._requested_sku_id(
+            response.url
+        )
+        if not requested:
+            return
+        actual = cls._string(
+            cls._first_value(product, "sku", "skuId", "productSku")
+        )
+        if actual and actual != requested:
+            raise ParseError(
+                "Best Buy redirecionou para SKU diferente do solicitado "
+                f"(pedido={requested}, página={actual})"
+            )
 
     @classmethod
     def _availability(

@@ -112,6 +112,22 @@ def test_amazon_br_live_captured_buybox_fixtures() -> None:
     assert second.available is True
 
 
+def test_amazon_br_qualified_buybox_avista_pix() -> None:
+    """#qualifiedBuybox + 'à vista no Pix' uses Buy Box total as pix_price."""
+    offer = AmazonBrazilSpider().extract_offer(
+        response_from_fixture(
+            "br_qualified_buybox_avista_pix.html",
+            "https://www.amazon.com.br/dp/B0FQHFY4RH",
+        )
+    )
+    assert offer.price == Decimal("8999.09")
+    assert offer.original_price == Decimal("9359.10")
+    assert offer.pix_price == Decimal("8999.09")
+    assert offer.metadata["source"]["price"] == "buybox-price"
+    assert offer.metadata["source"]["pix_price"] in {"buybox-pix", "buybox-as-pix"}
+    assert offer.seller == "Loja Teste BR"
+
+
 def test_amazon_br_full_scrape_only_calls_gallery_when_requested(
     monkeypatch,  # type: ignore[no-untyped-def]
 ) -> None:

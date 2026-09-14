@@ -12,6 +12,13 @@
       "sourceType": "github",
       "skillPath": "skills/.experimental/dockerfile-optimise/SKILL.md",
       "computedHash": "ec75e9b183f05dc5436f746c681e6f0809c7228a1e1bd1603b11deae07d685a0"
+    },
+    "browser-use": {
+      "source": "browser-use/plugins",
+      "sourceType": "github",
+      "skillPath": "cursor/skills/browser-use/SKILL.md",
+      "computedHash": "bed3fdc99c25f5bb988c8c0355acd84e98b63e8444e554650c06b90553929356",
+      "pinnedCommit": "4749bcbfe456e5384b98281a8a66119352197f59"
     }
   }
 }

@@ -55,8 +55,9 @@ _INSTALLMENT_BR_RE = re.compile(
     re.I,
 )
 _PIX_PRICE_RE = re.compile(
-    r"""(?:R\$\s*)([\d.]+,\d{2})\s*(?:no\s+pix|via\s+pix|com\s+pix)""",
-    re.I,
+    r"""(?:R\$\s*)([\d.]+,\d{2})\s*(?:no\s+pix|via\s+pix|com\s+pix)"""
+    r"""|(?:R\$\s*)([\d.]+,\d{2})\s*(?:\n|\s){0,40}à\s*vista\s*no\s*Pix""",
+    re.I | re.S,
 )
 _COUPON_VALUE_RE = re.compile(
     r"""(?:apply|aplicar)?\s*(?:R\$\s*)?([\d.,]+)\s*(?:coupon|cupom)""",
@@ -84,6 +85,9 @@ _BUYBOX_PRICE_SELECTORS = (
     "#corePrice_feature_div .a-price .a-offscreen::text",
     "#desktop_buybox .a-price .a-offscreen::text",
     "#apex_desktop .apex-pricetopay-value .a-offscreen::text",
+    "#buybox .a-price .a-offscreen::text",
+    "#qualifiedBuybox .a-price .a-offscreen::text",
+    "#desktop_qualifiedBuyBox .a-price .a-offscreen::text",
 )
 _LIST_PRICE_SELECTORS = (
     "#ppd .apex-basisprice-value .a-offscreen::text",
@@ -91,6 +95,8 @@ _LIST_PRICE_SELECTORS = (
     "#corePriceDisplay_desktop_feature_div .apex-basisprice-value .a-offscreen::text",
     "#corePriceDisplay_desktop_feature_div .a-price.a-text-price .a-offscreen::text",
     "#ppd .a-price[data-a-strike='true'] .a-offscreen::text",
+    "#qualifiedBuybox .a-price[data-a-strike='true'] .a-offscreen::text",
+    "#buybox .a-price[data-a-strike='true'] .a-offscreen::text",
 )
 
 
@@ -126,7 +132,9 @@ def extract_amazon_offer(
         response, marketplace, price=price
     )
     seller, seller_source, fulfilled_by = extract_seller(response, marketplace)
-    pix_price, pix_source = extract_pix_price(response, marketplace)
+    pix_price, pix_source = extract_pix_price(
+        response, marketplace, buybox_price=price
+    )
     installment_price, installment_count, installment_source = extract_installment(
         response, marketplace
     )
@@ -404,7 +412,10 @@ def extract_list_price(
 
 
 def extract_pix_price(
-    response: Response, marketplace: AmazonMarketplace
+    response: Response,
+    marketplace: AmazonMarketplace,
+    *,
+    buybox_price: Decimal | None = None,
 ) -> tuple[Decimal | None, str]:
     if marketplace.country != "BR":
         return None, "not-applicable"
@@ -412,17 +423,27 @@ def extract_pix_price(
         t.strip()
         for t in response.css(
             "#ppd ::text, #corePriceDisplay_desktop_feature_div ::text, "
-            "#apex_desktop ::text"
+            "#apex_desktop ::text, #buybox ::text, #qualifiedBuybox ::text"
         ).getall()
         if t and t.strip()
     )
     match = _PIX_PRICE_RE.search(text)
-    if not match:
-        return None, "not-found"
-    try:
-        return parse_money(match.group(1), marketplace.currency), "buybox-pix"
-    except MissingPriceError:
-        return None, "not-found"
+    if match:
+        raw = next((group for group in match.groups() if group), None)
+        if raw:
+            try:
+                return parse_money(raw, marketplace.currency), "buybox-pix"
+            except MissingPriceError:
+                pass
+    folded = " ".join(text.casefold().split())
+    pix_marker = (
+        "à vista no pix" in folded
+        or "a vista no pix" in folded
+        or ("nupay" in folded and "pix" in folded)
+    )
+    if buybox_price is not None and pix_marker:
+        return buybox_price, "buybox-as-pix"
+    return None, "not-found"
 
 
 def extract_installment(

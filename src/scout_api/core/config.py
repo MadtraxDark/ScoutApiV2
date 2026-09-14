@@ -46,6 +46,17 @@ class Settings(BaseSettings):
     # Cost-aware Shopee controls (DataImpulse is billed primarily by GB).
     shopee_warmup_policy: str = "once_per_session"
     shopee_resource_blocking_enabled: bool = True
+    # Challenge / CAPTCHA resolution (ADR 0017). Default: offline amazoncaptcha.
+    captcha_solver_enabled: bool = True
+    captcha_solver_provider: str = "amazoncaptcha"
+    captcha_solver_max_attempts: int = 2
+    # Auth wall bypass (ADR 0018). Credentials are operator-local — never commit.
+    auth_bypass_enabled: bool = True
+    auth_bypass_max_attempts: int = 2
+    amazon_auth_email: str | None = None
+    amazon_auth_password: str | None = None
+    shopee_auth_email: str | None = None
+    shopee_auth_password: str | None = None
 
     @field_validator("debug", mode="before")
     @classmethod

@@ -13,12 +13,13 @@ import time
 from collections import Counter
 from collections.abc import Callable, Sequence
 from contextlib import AbstractContextManager
+from http.cookiejar import CookieJar
 from pathlib import Path
 from typing import Any, Protocol
 from urllib.error import HTTPError, URLError
 from urllib.parse import unquote, urlparse
+from urllib.request import HTTPCookieProcessor, build_opener
 from urllib.request import Request as UrlRequest
-from urllib.request import urlopen
 
 from scrapy.http import HtmlResponse, Request
 
@@ -38,9 +39,8 @@ WarmupPolicy = str  # always | once_per_session | never
 
 # HTTP leg for Amazon only (AmazonHttpFirst). Browser-like UA; not Camoufox spoofing.
 _AMAZON_HTTP_USER_AGENT = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-    "AppleWebKit/537.36 (KHTML, like Gecko) "
-    "Chrome/122.0.0.0 Safari/537.36"
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
 )
 
 
@@ -58,6 +58,35 @@ def is_hard_block_page(html: str, *, title: str | None = None) -> bool:
     return "you have been blocked" in lower or "sorry, you have been blocked" in lower
 
 
+def is_akamai_sec_cpt_page(html: str) -> bool:
+    """Akamai Bot Manager behavioral / sec-cpt interstitial (Magalu and peers).
+
+    Markers are interstitial-specific (not ordinary Akamai-fronted PDPs). Size
+    gate avoids false positives on large pages that happen to mention Akamai.
+    """
+    text = html or ""
+    if len(text) >= 40_000:
+        return False
+    lower = text.casefold()
+    markers = (
+        "sec-if-cpt-container",
+        "behavioral-content",
+        "scf-akamai-logo",
+        'id="sec-bc-tile-parent"',
+        "sec-bc-text-container",
+    )
+    if any(marker in lower for marker in markers):
+        return True
+    # Sensor bootstrap script alone is not exclusive — keep size-gated.
+    if len(text) < 8_000 and re.search(
+        r"/[_a-z0-9]+/[_a-z0-9]+/[_a-z0-9]+/.+\?v=[0-9a-f-]{8,}",
+        lower,
+    ):
+        if "sec-if-cpt" in lower or "behavioral" in lower:
+            return True
+    return False
+
+
 def is_challenge_page(html: str, *, title: str | None = None) -> bool:
     """Detect Cloudflare/Akamai/Amazon interstitials that are not product HTML."""
     if is_hard_block_page(html, title=title):
@@ -71,6 +100,8 @@ def is_challenge_page(html: str, *, title: str | None = None) -> bool:
     if "akamai-bot" in lower and (
         "não é possível acessar" in lower or "nao e possivel acessar" in lower
     ):
+        return True
+    if is_akamai_sec_cpt_page(html):
         return True
     if "performing security verification" in lower and len(html) < 80_000:
         return True
@@ -101,10 +132,60 @@ def is_amazon_robot_check(html: str, *, title: str | None = None) -> bool:
     )
     if any(marker in haystack for marker in markers):
         return True
+    # Short interstitial often lacks #productTitle / ASIN.
     if "amazon" in haystack and "captcha" in haystack and len(html) < 80_000:
         if 'id="producttitle"' not in lower and 'name="asin"' not in lower:
             return True
     return False
+
+
+def is_auth_wall_page(
+    html: str,
+    *,
+    url: str | None = None,
+    title: str | None = None,
+) -> bool:
+    """Login / soft-auth / session-gate pages that block a public offer scrape."""
+    folded_url = (url or "").casefold()
+    title_text = (title or "").strip().casefold()
+    lower = (html or "")[:40_000].casefold()
+
+    if "ap/signin" in folded_url or "/ap/signin" in lower:
+        return True
+    if ("amazon." in folded_url or "amazon." in lower[:2_000]) and (
+        "sign in" in title_text
+        or "sign-in" in title_text
+        or "fazer login" in title_text
+        or "iniciar sessão" in title_text
+        or "iniciar sesion" in title_text
+    ):
+        if 'id="producttitle"' not in lower and 'name="asin"' not in lower:
+            return True
+
+    if "shopee." in folded_url or "shopee." in lower[:2_000]:
+        if "/buyer/login" in folded_url:
+            return True
+        if "login" in folded_url and "next=" in folded_url:
+            return True
+        if "buyer/login" in lower and "next=" in (folded_url + lower[:4_000]):
+            if '"item_id"' not in lower and '"itemid"' not in lower:
+                return True
+
+    return False
+
+
+def needs_interstitial_resolution(
+    html: str,
+    *,
+    url: str | None = None,
+    title: str | None = None,
+) -> bool:
+    """True when challenge/auth wall must be cleared before treating HTML as PDP."""
+    if is_hard_block_page(html, title=title):
+        return False
+    return is_challenge_page(html, title=title) or is_auth_wall_page(
+        html, url=url, title=title
+    )
 
 
 def locale_for_url(url: str) -> str | None:
@@ -154,6 +235,11 @@ def warmup_url_for(url: str) -> str | None:
     if hostname == "nissei.com" or hostname.endswith(".nissei.com"):
         return f"{parsed.scheme}://{parsed.netloc}/py/"
     if hostname == "shopee.com.br" or hostname.endswith(".shopee.com.br"):
+        return f"{parsed.scheme}://{parsed.netloc}/"
+    if hostname == "magazineluiza.com.br" or hostname.endswith(
+        ".magazineluiza.com.br"
+    ):
+        # Mint Akamai/_abck cookies on the origin before the PDP (ADR 0017).
         return f"{parsed.scheme}://{parsed.netloc}/"
     return None
 
@@ -283,11 +369,16 @@ class UrllibHtmlFetcher:
     def __init__(
         self,
         *,
-        opener: Callable[..., Any] = urlopen,
+        opener: Callable[..., Any] | None = None,
         user_agent: str,
         timeout: int = 30,
     ) -> None:
-        self._opener = opener
+        if opener is None:
+            # Persist cookies across fetches on this instance (session reuse).
+            jar = CookieJar()
+            self._opener = build_opener(HTTPCookieProcessor(jar)).open
+        else:
+            self._opener = opener
         self._user_agent = user_agent
         self._timeout = timeout
 
@@ -298,6 +389,9 @@ class UrllibHtmlFetcher:
                 "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
             ),
             "Accept-Language": accept_language_for_url(url),
+            "Accept-Encoding": "identity",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
         }
         referer = marketplace_referer_for_url(url)
         if referer:
@@ -321,21 +415,23 @@ class UrllibHtmlFetcher:
                         retryable=status == 429,
                     )
                 text = body.decode(charset, errors="replace")
-                if is_challenge_page(text) or is_amazon_robot_check(text):
+                if is_challenge_page(text) or is_auth_wall_page(
+                    text, url=final_url or url
+                ):
                     raise RequestError(
-                        "A loja bloqueou a requisição (desafio anti-bot)",
+                        "A loja bloqueou a requisição (desafio anti-bot / auth wall)",
                         code="UPSTREAM_BLOCKED",
                         url=final_url or url,
                         upstream_status=403,
                         retryable=True,
                     )
                 return HtmlResponse(
-                    url=final_url or url,
+                    url=final_url,
                     status=status,
                     headers={"Content-Type": content_type},
                     body=body,
                     encoding=charset,
-                    request=Request(final_url or url),
+                    request=Request(final_url),
                 )
         except RequestError:
             raise
@@ -385,6 +481,7 @@ class CamoufoxHtmlFetcher:
         early_stop_on_shopee_get_pc: bool = True,
         fetch_strategy: str = "camoufox",
         browser_factory: BrowserFactory | None = None,
+        challenge_resolver: Any | None = None,
     ) -> None:
         self._headless = headless
         self._humanize = humanize
@@ -403,6 +500,7 @@ class CamoufoxHtmlFetcher:
         self._early_stop_on_shopee_get_pc = early_stop_on_shopee_get_pc
         self._fetch_strategy = fetch_strategy
         self._browser_factory = browser_factory
+        self._challenge_resolver = challenge_resolver
         self._lock = threading.Lock()
         self._warmed_origins: set[str] = set()
 
@@ -465,7 +563,7 @@ class CamoufoxHtmlFetcher:
                     self._goto(page, url)
 
                 html, final_url, title = self._wait_for_product_html(
-                    page, captured=captured
+                    page, captured=captured, resume_url=url
                 )
                 if captured.get("body"):
                     html = wrap_shopee_pdp_json(captured["body"])
@@ -498,16 +596,39 @@ class CamoufoxHtmlFetcher:
                         upstream_status=403,
                         retryable=False,
                     )
-                if is_challenge_page(html, title=title):
-                    metrics.result = "blocked"
-                    self._log_metrics(metrics, request_types, byte_holder["n"], t0)
-                    raise RequestError(
-                        "A loja bloqueou a requisição (desafio anti-bot)",
-                        code="UPSTREAM_BLOCKED",
-                        url=final_url or url,
-                        upstream_status=403,
-                        retryable=True,
-                    )
+                if needs_interstitial_resolution(
+                    html, url=final_url or url, title=title
+                ):
+                    # ADR 0017 / 0018: attempt CAPTCHA + auth-wall resolution.
+                    if self._challenge_resolver is not None:
+                        resolved = self._challenge_resolver.try_resolve(
+                            page,
+                            html=html,
+                            title=title,
+                            page_url=final_url or url,
+                            resume_url=url,
+                        )
+                        if resolved:
+                            html = page.content()
+                            final_url = str(page.url)
+                            try:
+                                title = str(page.title())
+                            except Exception:
+                                title = title
+                            metrics.retry_count = int(metrics.retry_count) + 1
+                    if needs_interstitial_resolution(
+                        html, url=final_url or url, title=title
+                    ):
+                        metrics.result = "blocked"
+                        self._log_metrics(metrics, request_types, byte_holder["n"], t0)
+                        raise RequestError(
+                            "A loja bloqueou a requisição "
+                            "(desafio/auth wall após tentativa de resolução)",
+                            code="UPSTREAM_BLOCKED",
+                            url=final_url or url,
+                            upstream_status=403,
+                            retryable=True,
+                        )
                 body = html.encode("utf-8")
                 response = HtmlResponse(
                     url=final_url or url,
@@ -750,6 +871,7 @@ class CamoufoxHtmlFetcher:
         page: Any,
         *,
         captured: dict[str, str] | None = None,
+        resume_url: str | None = None,
     ) -> tuple[str, str, str]:
         html = ""
         final_url = ""
@@ -769,12 +891,31 @@ class CamoufoxHtmlFetcher:
                 return html, final_url, title
             if is_shopee_traffic_block(final_url, html):
                 return html, final_url, title
-            if not is_challenge_page(html, title=title):
+            if not needs_interstitial_resolution(html, url=final_url, title=title):
                 return html, final_url, title
             logger.info(
                 "camoufox_waiting_challenge",
                 extra={"url": final_url, "attempt": attempt + 1},
             )
+            # Mid-settle resolution (CAPTCHA / CF / auth wall).
+            if self._challenge_resolver is not None and attempt >= 1:
+                if self._challenge_resolver.try_resolve(
+                    page,
+                    html=html,
+                    title=title,
+                    page_url=final_url,
+                    resume_url=resume_url,
+                ):
+                    html = page.content()
+                    final_url = str(page.url)
+                    try:
+                        title = str(page.title())
+                    except Exception:
+                        title = title
+                    if not needs_interstitial_resolution(
+                        html, url=final_url, title=title
+                    ):
+                        return html, final_url, title
         return html, final_url, title
 
     @classmethod
@@ -853,14 +994,52 @@ def build_html_fetcher(
     camoufox_warmup_origin: bool = True,
     shopee_warmup_policy: WarmupPolicy = "once_per_session",
     shopee_resource_blocking_enabled: bool = True,
+    captcha_solver_enabled: bool = True,
+    captcha_solver_provider: str = "amazoncaptcha",
+    captcha_solver_max_attempts: int = 2,
+    auth_bypass_enabled: bool = True,
+    auth_bypass_max_attempts: int = 2,
+    amazon_auth_email: str | None = None,
+    amazon_auth_password: str | None = None,
+    shopee_auth_email: str | None = None,
+    shopee_auth_password: str | None = None,
 ) -> HtmlFetcher:
     """Build the shared store-aware fetcher (direct + optional proxied Camoufox)."""
+    from .challenge_resolution import (
+        ChallengeResolver,
+        StoreAuthCredentials,
+        build_image_captcha_solver,
+    )
+
     http = UrllibHtmlFetcher(user_agent=user_agent, timeout=urllib_timeout)
     if not camoufox_enabled:
         return http
 
     from .amazon_http_first_fetcher import AmazonHttpFirstHtmlFetcher
     from .store_aware_fetcher import StoreAwareHtmlFetcher
+
+    image_solver = build_image_captcha_solver(
+        enabled=captcha_solver_enabled,
+        provider=captcha_solver_provider,
+    )
+    resolve_attempts = max(
+        1,
+        captcha_solver_max_attempts,
+        auth_bypass_max_attempts,
+    )
+    challenge_resolver = ChallengeResolver(
+        image_solver=image_solver,
+        max_attempts=resolve_attempts,
+        soft_wait_ms=min(8_000, max(1_000, camoufox_settle_ms)),
+        enabled=captcha_solver_enabled or auth_bypass_enabled,
+        auth_bypass_enabled=auth_bypass_enabled,
+        credentials=StoreAuthCredentials(
+            amazon_email=amazon_auth_email,
+            amazon_password=amazon_auth_password,
+            shopee_email=shopee_auth_email,
+            shopee_password=shopee_auth_password,
+        ),
+    )
 
     base_dir = (
         Path(camoufox_user_data_dir)
@@ -877,6 +1056,7 @@ def build_html_fetcher(
         "max_settle_attempts": camoufox_max_settle_attempts,
         "disable_coop": camoufox_disable_coop,
         "warmup_origin": camoufox_warmup_origin,
+        "challenge_resolver": challenge_resolver,
     }
     direct = CamoufoxHtmlFetcher(
         **common,
@@ -902,6 +1082,7 @@ def build_html_fetcher(
             fetch_strategy="camoufox-proxy",
         )
     browser = StoreAwareHtmlFetcher(direct=direct, proxied=proxied)
+    # Amazon HTTP leg only (non-Amazon never hits this fetcher).
     amazon_http = UrllibHtmlFetcher(
         user_agent=_AMAZON_HTTP_USER_AGENT,
         timeout=urllib_timeout,

@@ -33,6 +33,63 @@ def test_bestbuy_prepare_fetch_url_adds_intl_nosplash() -> None:
     assert spider.prepare_fetch_url(prepared) == prepared
 
 
+def test_bestbuy_prepare_fetch_url_legacy_site_sku() -> None:
+    spider = BestBuySpider()
+    legacy = "https://www.bestbuy.com/site/logitech-mouse/6556754.p?skuId=6556754"
+    prepared = spider.prepare_fetch_url(legacy)
+    assert "intl=nosplash" in prepared
+    assert "skuId=6556754" in prepared
+    bare = "https://www.bestbuy.com/site/6556754.p"
+    prepared_bare = spider.prepare_fetch_url(bare)
+    assert "skuId=6556754" in prepared_bare
+    assert "intl=nosplash" in prepared_bare
+
+
+def test_bestbuy_canonical_offer_url_strips_intl() -> None:
+    dirty = (
+        "https://www.bestbuy.com/product/logitech-mouse/J7H7ZY8YS5"
+        "?intl=nosplash&utm_source=x"
+    )
+    canon = BestBuySpider._canonical_offer_url(dirty)
+    assert "intl=" not in canon
+    assert "utm_source" not in canon
+    assert canon.endswith("/J7H7ZY8YS5") or "/J7H7ZY8YS5" in canon
+
+
+def test_bestbuy_product_id_strips_legacy_dot_p() -> None:
+    assert (
+        BestBuySpider._product_id({}, "https://www.bestbuy.com/site/x/6556754.p")
+        == "6556754"
+    )
+    assert (
+        BestBuySpider._requested_sku_id(
+            "https://www.bestbuy.com/site/x/6556754.p?skuId=6556754"
+        )
+        == "6556754"
+    )
+
+
+def test_bestbuy_sku_mismatch_after_redirect_fails_closed() -> None:
+    html = response_from_fixture("product_available.html")
+    # Fixture SKU is 6418059; request claims a different legacy skuId.
+    mismatched = HtmlResponse(
+        html.url,
+        body=html.body,
+        encoding="utf-8",
+        request=Request(
+            "https://www.bestbuy.com/site/other/9999999.p?skuId=9999999"
+        ),
+    )
+    try:
+        BestBuySpider().extract_offer(mismatched)
+        raise AssertionError("expected ParseError on SKU mismatch")
+    except Exception as exc:  # noqa: BLE001 — assert type below
+        from scout_api.modules.crawler.core.exceptions import ParseError
+
+        assert isinstance(exc, ParseError)
+        assert "SKU diferente" in str(exc)
+
+
 def test_bestbuy_offer_uses_selected_offer_and_normalizes_fields() -> None:
     offer = BestBuySpider().extract_offer(
         response_from_fixture("product_available.html")
@@ -153,6 +210,29 @@ def test_bestbuy_unlocked_is_not_carrier_locked() -> None:
     assert item.installment_price == Decimal("91.67")
     assert item.installment_count == 12
     assert item.price == Decimal("1099.99")
+
+
+def test_bestbuy_apollo_ssr_customer_price() -> None:
+    """Modern PDP embeds price in ApolloSSRDataTransport pushes, not bare JSON."""
+    url = (
+        "https://www.bestbuy.com/product/"
+        "apple-iphone-15-128gb-unlocked-blue/JJGCQX68JS"
+    )
+    response = HtmlResponse(
+        url,
+        body=(FIXTURES / "product_apollo_ssr.html").read_bytes(),
+        encoding="utf-8",
+        request=Request(url),
+    )
+    spider = BestBuySpider()
+    offer = spider.extract_offer(response)
+    assert offer.currency == "USD"
+    assert offer.price == Decimal("629.99")
+    assert offer.product_id == "JJGCQX68JS"
+    assert offer.sku == "6418031"
+    assert offer.available is True
+    details = spider.extract_details(response)
+    assert "iPhone 15" in (details.title or "")
 
 
 def test_bestbuy_full_scrape_only_calls_images_when_requested(monkeypatch) -> None:  # type: ignore[no-untyped-def]

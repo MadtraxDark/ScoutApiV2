@@ -23,7 +23,7 @@ live mostrou que:
 ## Problema / decisão necessária
 
 Como reduzir browser/proxy na Amazon sem sacrificar a precisão da Buy Box e
-com fallback browser/proxy quando HTTP falhar?
+sem contornar CAPTCHA?
 
 ## Alternativas consideradas
 

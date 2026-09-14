@@ -164,6 +164,24 @@ def test_magalu_missing_price_is_parse_error() -> None:
         MagazineLuizaSpider().parse_product(response)
 
 
+def test_magalu_oops_soft_404_is_parse_error_not_product() -> None:
+    """Invalid/retired Magalu URL shell — not an integration failure.
+
+    Live validation must try another available PDP before blaming Magalu.
+    """
+    url = "https://www.magazineluiza.com.br/p/240590700/"
+    response = HtmlResponse(
+        url,
+        body=(FIXTURES / "product_oops_soft_404.html").read_bytes(),
+        encoding="utf-8",
+        request=Request(url),
+    )
+    with pytest.raises(ParseError, match="soft-404"):
+        MagazineLuizaSpider().extract_offer(response)
+    with pytest.raises(ParseError, match="soft-404"):
+        MagazineLuizaSpider().extract_details(response)
+
+
 def test_nissei_extracts_structured_identity_and_rendered_installment() -> None:
     body = b"""
     <main id="maincontent">

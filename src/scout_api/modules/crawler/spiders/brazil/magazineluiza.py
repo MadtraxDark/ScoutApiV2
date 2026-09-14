@@ -43,6 +43,7 @@ class MagazineLuizaSpider(BaseStoreSpider):
         json_ld = self.json_ld(response)
         state = self._next_data(response)
         item = self._state_item(state)
+        self._ensure_product_page(response, item)
         offer = self._selected_offer(item, response.url)
         fallback_offer = self._selected_fallback_offer(item, response.url)
         page_text = " ".join(response.css("body ::text").getall())
@@ -123,6 +124,7 @@ class MagazineLuizaSpider(BaseStoreSpider):
         json_ld = self.json_ld(response)
         state = self._next_data(response)
         item = self._state_item(state)
+        self._ensure_product_page(response, item)
         offer = self._selected_offer(item, response.url)
         seller_value = offer.get("seller")
         seller_data: dict[str, Any] = (
@@ -232,6 +234,25 @@ class MagazineLuizaSpider(BaseStoreSpider):
         data = page_props.get("data") if isinstance(page_props, dict) else None
         item = data.get("item") if isinstance(data, dict) else None
         return item if isinstance(item, dict) else {}
+
+    @classmethod
+    def _ensure_product_page(cls, response: Response, item: dict[str, Any]) -> None:
+        """Fail closed on Magalu soft-404 shells (``Oops!``) before price parse."""
+        h1 = " ".join(
+            part.strip()
+            for part in response.css("h1 ::text").getall()
+            if part and part.strip()
+        )
+        folded_h1 = cls._fold(h1)
+        if folded_h1 == "oops" or folded_h1.startswith("oops"):
+            raise ParseError("Página Magalu não encontrada (soft-404)")
+        has_product = bool(
+            item.get("id") or item.get("offerId") or item.get("title") or item.get("offers")
+        )
+        if not has_product:
+            title = (response.css("title::text").get() or "").strip()
+            if "pra voce e magalu" in cls._fold(title):
+                raise ParseError("Página Magalu não encontrada (soft-404)")
 
     @classmethod
     def _selected_offer(cls, item: dict[str, Any], url: str) -> dict[str, Any]:

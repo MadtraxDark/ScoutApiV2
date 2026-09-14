@@ -1,0 +1,92 @@
+---
+description: Documentation impact review for significant knowledge changes
+alwaysApply: true
+---
+
+# Documentation governance
+
+Important architectural and behavioral knowledge must live in the repository,
+not only in chat history or agent memory.
+
+## Before significant work
+
+Read the relevant source of truth first:
+
+1. `AGENTS.md` — global invariants
+2. Accepted ADRs in `docs/adr/` — architectural decisions
+3. `docs/crawler/` — crawler contracts and store playbooks
+4. Matching `.cursor/rules/` — operational agent rules
+5. Code — resolve conflicts in favor of accepted ADR + current behavior
+
+## Documentation impact review (required before finishing significant changes)
+
+Ask: did this change introduce or alter any of the following?
+
+- architecture / module boundaries / public contracts
+- critical invariant or fallback policy
+- pricing or availability semantics
+- attribute source priority / title fallback
+- error classification (`ParseError` vs `UPSTREAM_BLOCKED` vs OOS)
+- blocking / challenge / CAPTCHA / auth-wall resolution / retry / session / concurrency behavior
+- fetch / Camoufox / proxy policy (only when explicitly allowed)
+- store-specific durable behavior
+- environment variable, endpoint, deployment, or security requirement
+- important operational limitation
+
+If **yes** → update the **canonical** doc in the **same task**.
+If **no** (trivial fix, local refactor, selector tweak with same semantics) →
+do **not** invent documentation.
+
+If the change **leaves unfinished work**, also follow
+`.cursor/rules/pending-work.mdc` and add/update `docs/pending/PENDING-*`.
+Technical blockers require prior investigation per
+`.cursor/rules/research-and-problem-solving.mdc` (preserve research notes in
+the pending item).
+
+If the change **fully resolves** a pending item: remove it from the active
+index, delete or archive the file, and clean related TODOs in the same task
+(`.cursor/rules/task-completion.mdc`).
+
+Final user-facing reports must be in pt-BR
+(`.cursor/rules/language-pt-BR.mdc`).
+
+## Where to write (single source of truth)
+
+| Knowledge | Canonical location |
+|---|---|
+| Global agent invariants | `AGENTS.md` (short; link out) |
+| Architectural decision + rejected alternatives | `docs/adr/` (new ADR; never silently rewrite Accepted) |
+| Crawler contracts / errors / attributes / pricing norms | `docs/crawler/contracts.md` |
+| Store-specific durable behavior | `docs/crawler/stores/<store>.md` |
+| Agent workflow / skills / proxy / fetch immutability / research-before-block | `.cursor/rules/` |
+| Skills inventory | `docs/skills/README.md` |
+| Actionable incomplete work | `docs/pending/` |
+| Operator overview | `README.md` |
+
+Prefer updating an existing document over creating a parallel copy.
+Other files may **link** to the canonical doc; do not paste four full copies
+of the same rule.
+
+## ADR rules
+
+Create an ADR when the decision:
+
+- affects architecture or boundaries;
+- creates a durable rule with meaningful trade-offs;
+- spans modules or will likely be re-litigated;
+- rejects important alternatives.
+
+Do **not** create an ADR for broken CSS selectors, typo fixes, or local refactors.
+
+Never edit an Accepted ADR to flip its decision silently. Supersede with a new
+ADR and update `docs/adr/README.md`.
+
+## Store docs
+
+Document non-obvious durable behavior only (sources, pricing/availability
+semantics, blocking, invariants, limitations). Do not paste implementation
+line-by-line. Never document secrets, cookies, tokens, or credentials.
+
+## Final report
+
+When docs change, mention which files were updated and why in the task summary.

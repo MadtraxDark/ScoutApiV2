@@ -53,6 +53,8 @@ dependências ou bibliotecas do sistema ainda exigem `docker compose up --build`
 
 As decisões ficam em [`docs/adr`](docs/adr/). Para uma nova decisão, copie [`docs/adr/template.md`](docs/adr/template.md), use o próximo número e registre contexto, alternativas, decisão, justificativa e consequências.
 
+Índice de documentação do projeto (arquitetura, crawler, lojas, regras): [`docs/README.md`](docs/README.md).
+
 ## Crawler de preços
 
 O crawler fica em `src/scout_api/modules/crawler`. Ele separa **oferta comercial**
@@ -70,13 +72,15 @@ Redis/PostgreSQL.
   `OfferScrapeService`, sem executar a extração de detalhes nem de imagens.
 
 Ambos buscam HTML com **Camoufox** (Firefox anti-detect) por padrão e delegam o
-parsing aos spiders (`magazineluiza`, `nissei`, `shopee`, …). Spiders não fazem
+parsing aos spiders (`magazineluiza`, `nissei`, `shopee`, `amazon`, …). Spiders não fazem
 I/O de rede. O proxy residencial (`CAMOUFOX_PROXY_URL`) é **store-aware** (ADR
 0014 / Proxy Cost Mode): todas as lojas tentam **direto primeiro**; proxy só
 após bloqueio classificado (`UPSTREAM_BLOCKED`). Com proxy ativo, tráfego mínimo
 (sem image/media/font; `include_images` ignorado). Na Shopee o fetch para após
 `get_pc`, omite galeria por política de custo e cacheia `ProductOffer` no
-`ScrapeGuard`.
+`ScrapeGuard`. Amazon BR (`amazon.com.br`) e Amazon US (`amazon.com`) usam
+`store=amazon` com `country`/`currency` do marketplace (ADR 0015); ofertas são
+independentes e sem conversão cambial no spider.
 No Linux/Docker o browser usa display virtual (`Xvfb`) + `geoip` para passar
 Cloudflare (Nissei). Desative com `CAMOUFOX_ENABLED=false` para fallback `urllib`.
 Na primeira instalação local, rode `python -m camoufox fetch`. Ver ADR 0011–0014.
@@ -95,4 +99,7 @@ docker compose up --build -d
 python -m pytest
 ```
 
-O crawler visa contornar CAPTCHA, login, bloqueios ou controles de acesso para assegurar a coleta de dados. Camoufox cobre fingerprint/WAF; Mitmproxy e proxies residenciais podem complementar IP.
+O crawler visa resolver CAPTCHA/challenge, contornar bloqueios operacionais e
+assegurar a coleta de dados públicos (ADR 0017). Camoufox cobre fingerprint/WAF;
+Mitmproxy e proxies residenciais podem complementar IP. Proxy segue Proxy Cost
+Mode (ADR 0014).

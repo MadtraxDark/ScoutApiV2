@@ -1,0 +1,49 @@
+---
+description: CRITICAL — challenges/CAPTCHA must be resolved, never abandoned as final policy
+alwaysApply: true
+---
+
+# CRITICAL RULE — Challenge / CAPTCHA Resolution (IMMUTABLE)
+
+Esta regra é **crítica e inalterável**. Não enfraqueça, não ignore e não
+“reinterpretar” como fail-fast permanente sem resolução.
+
+## Obrigatoriedade
+
+Quando o crawler enfrentar **challenge**, **CAPTCHA**, **robot-check** ou
+interstício anti-bot equivalente em qualquer loja (incluindo Amazon):
+
+1. **Deve tentar resolver** o challenge (automação de resolução permitida e
+   esperada neste projeto).
+2. **Não** trate a mera detecção do challenge como fim aceitável do fluxo.
+3. **Não** mapeie página de challenge para produto:
+   - nunca `available=false`
+   - nunca `price=null` / oferta fabricada a partir do HTML de bloqueio
+4. Só emita `RequestError(code="UPSTREAM_BLOCKED")` **depois** de esgotar as
+   tentativas legítimas de resolução (e fallbacks de fetch já previstos:
+   HTTP → browser → proxy conforme Proxy Cost Mode).
+
+## Relação com outras regras
+
+- **Proxy Cost Mode** continua válido: proxy só quando necessário; tráfego
+  mínimo com proxy ativo.
+- **HTTP-first / fontes públicas** continuam preferíveis quando evitam o
+  challenge. Resolução de CAPTCHA entra quando o challenge **já ocorreu**.
+- **Auth wall bypass** (ADR 0018) é obrigatório em paralelo quando login/session
+  gate bloquear a oferta pública.
+- Alterações de fetch/Camoufox **necessárias para resolver challenge/CAPTCHA**
+  são permitidas (exceção explícita a
+  `.cursor/rules/scraper-camoufox-immutable.mdc`).
+
+## O que esta regra NÃO autoriza
+
+- Tratar HTML de CAPTCHA como PDP
+- Inventar preço/disponibilidade
+- Versionar secrets, tokens de solver ou cookies de sessão no Git
+
+## Fontes canônicas
+
+- Esta rule (operacional / agente)
+- `AGENTS.md` (invariante curto)
+- ADR 0017 (decisão + trade-offs)
+- `docs/crawler/contracts.md` (contrato de erro)

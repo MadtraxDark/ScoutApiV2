@@ -13,6 +13,7 @@ from scout_api.modules.crawler.core.scrape_guard import ScrapeGuard
 from scout_api.modules.crawler.services.html_fetcher import (
     CamoufoxHtmlFetcher,
     UrllibHtmlFetcher,
+    is_akamai_sec_cpt_page,
     is_challenge_page,
     is_hard_block_page,
     proxy_settings_from_url,
@@ -33,6 +34,26 @@ def test_is_challenge_page_detects_cloudflare_and_akamai() -> None:
     assert not is_challenge_page(
         "<html><body><h1>Produto</h1><p>R$ 10,00</p></body></html>",
         title="Produto",
+    )
+    assert is_challenge_page(
+        '<html><form action="/errors/validateCaptcha">'
+        "<h4>Enter the characters you see below</h4></form></html>",
+        title="Amazon.com",
+    )
+    akamai_sec = (
+        "<!DOCTYPE html><html><head></head><body>"
+        '<script src="/ua_lYE/DKZaoN/8RdfYr/x?v=9d2316eb-63cf-59fa"></script>'
+        '<div id="sec-if-cpt-container" role="main">'
+        '<div class="behavioral-content">'
+        '<div id="sec-bc-text-container"></div>'
+        '<div id="sec-bc-tile-parent"></div>'
+        "</div></div></body></html>"
+    )
+    assert is_challenge_page(akamai_sec)
+    assert is_akamai_sec_cpt_page(akamai_sec)
+    # Large PDP mentioning akamai must not be treated as sec-cpt interstitial.
+    assert not is_akamai_sec_cpt_page(
+        "<html><body>" + ("produto " * 20_000) + "sec-if-cpt-container</body></html>"
     )
 
 
@@ -70,9 +91,26 @@ def test_locale_and_warmup_for_url() -> None:
     assert locale_for_url("https://nissei.com/py/x") == "es-PY"
     assert locale_for_url("https://www.magazineluiza.com.br/p/1") == "pt-BR"
     assert locale_for_url("https://shopee.com.br/i.1.2") == "pt-BR"
+    assert locale_for_url("https://www.amazon.com.br/dp/B09WNK39JN") == "pt-BR"
+    assert locale_for_url("https://www.amazon.com/dp/B09WNK39JN") == "en-US"
     assert locale_for_url("https://example.com/") is None
+    from scout_api.modules.crawler.services.html_fetcher import (
+        marketplace_referer_for_url,
+    )
+
+    assert (
+        marketplace_referer_for_url("https://www.amazon.com.br/dp/B09WNK39JN")
+        == "https://www.amazon.com.br/"
+    )
+    assert (
+        marketplace_referer_for_url("https://www.amazon.com/dp/B09WNK39JN")
+        == "https://www.amazon.com/"
+    )
+    assert marketplace_referer_for_url("https://www.kabum.com.br/p/1") is None
     assert warmup_url_for("https://nissei.com/py/produto") == "https://nissei.com/py/"
-    assert warmup_url_for("https://www.magazineluiza.com.br/p/1") is None
+    assert warmup_url_for("https://www.magazineluiza.com.br/p/1") == (
+        "https://www.magazineluiza.com.br/"
+    )
     assert (
         warmup_url_for("https://shopee.com.br/item-i.1.2") == "https://shopee.com.br/"
     )

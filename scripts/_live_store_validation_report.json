@@ -1,0 +1,351 @@
+{
+  "started_at": "2026-09-14T10:41:09.974575+00:00",
+  "finished_at": "2026-09-14T10:44:46.858739+00:00",
+  "api": "http://localhost:8000",
+  "results": [
+    {
+      "store_key": "kabum",
+      "ok": true,
+      "http_status": 200,
+      "issues": [],
+      "soft_gaps": [
+        "opcional vazio: sku",
+        "opcional vazio: gtin",
+        "opcional vazio: original_price"
+      ],
+      "fields": {
+        "store": "kabum",
+        "country": "BR",
+        "product_id": "999541",
+        "sku": null,
+        "gtin": null,
+        "title": "Notebook Lenovo Ideapad Slim 3i Intel Core 3 100u 8GB 256gb SSD  WINDOWS 11 15.3\" - 83nu0000br Luna Grey",
+        "brand": "Lenovo",
+        "model": "Ideapad Slim 3i Intel Core",
+        "variant": "color: Grey; storage: 256 GB; ram: 8 GB; screen_size: 15.3\"",
+        "seller": "Magalu",
+        "currency": "BRL",
+        "price": "3999.00",
+        "original_price": null,
+        "pix_price": "3599.10",
+        "installment_price": "399.90",
+        "installment_count": 10,
+        "availability": "available",
+        "available": true,
+        "images_count": 0,
+        "canonical_url": "https://www.kabum.com.br/produto/999541/notebook-lenovo-ideapad-slim-3i-intel-core-3-100u-8gb-256gb-ssd-windows-11-15-3-83nu0000br-luna-grey",
+        "metadata_keys": [
+          "cache_hit",
+          "served_from",
+          "source"
+        ],
+        "source": {
+          "price": "product-state",
+          "pix_price": "product-prices-state",
+          "original_price": "not-found",
+          "installment": "product-installment-state",
+          "availability": "product-availability-state",
+          "seller": "product-marketplace-state",
+          "title": "product-state",
+          "description": "product-state",
+          "specifications": "product-technical-information-state",
+          "brand": "structured-data",
+          "model": "product-title-fallback",
+          "gtin": "not-found",
+          "images": "product-gallery-state",
+          "color": "product-title-fallback",
+          "storage": "product-title-fallback",
+          "ram": "product-title-fallback",
+          "screen_size": "product-title-fallback",
+          "category": "notebook"
+        }
+      },
+      "elapsed_hint": null,
+      "elapsed_s": 0.0,
+      "url": "https://www.kabum.com.br/produto/999541/notebook-lenovo-ideapad-slim-3i-intel-core-3-100u-8gb-256gb-ssd-windows-11-15-3-83nu0000br-luna-grey"
+    },
+    {
+      "store_key": "magazineluiza",
+      "ok": false,
+      "http_status": 422,
+      "error": {
+        "code": "PARSE_ERROR",
+        "message": "Preço não encontrado",
+        "url": "https://www.magazineluiza.com.br/p/240590700/",
+        "retryable": false
+      },
+      "issues": [
+        "HTTP 422"
+      ],
+      "fields": {},
+      "elapsed_s": 15.6,
+      "url": "https://www.magazineluiza.com.br/p/240590700/"
+    },
+    {
+      "store_key": "shopee",
+      "ok": true,
+      "http_status": 200,
+      "issues": [],
+      "soft_gaps": [
+        "opcional vazio: gtin",
+        "opcional vazio: pix_price (BR)"
+      ],
+      "fields": {
+        "store": "shopee",
+        "country": "BR",
+        "product_id": "29277977480",
+        "sku": "237443748791",
+        "gtin": null,
+        "title": "Kingston HyperX Fury DDR4 PC RAM 4 Gb 8 16 DDR4 2133/2400/2666/3200 Mhz Memória De Mesa",
+        "brand": "Hyperx",
+        "model": "HyperX Fury",
+        "variant": "Modelo: 16GB DDR4 3600MHz",
+        "seller": "jovecome.br",
+        "currency": "BRL",
+        "price": "649.00",
+        "original_price": "1243.18",
+        "pix_price": null,
+        "installment_price": "17.85",
+        "installment_count": 12,
+        "availability": "available",
+        "available": true,
+        "images_count": 0,
+        "canonical_url": "https://shopee.com.br/Kingston-HyperX-Fury-DDR4-PC-RAM-4-Gb-8-16-DDR4-2133-2400-2666-3200-Mhz-Mem%C3%B3ria-De-Mesa-i.341936748.29277977480",
+        "metadata_keys": [
+          "display_model_id",
+          "item_id",
+          "model_id",
+          "model_selection_logic",
+          "shop_id",
+          "source"
+        ],
+        "source": {
+          "price": "selected-model",
+          "original_price": "selected-model-before-discount",
+          "discount": "structured",
+          "pix_price": "not-found-other-model",
+          "installment": "product-price-recommended-plan",
+          "availability": "selected-model-has-stock",
+          "seller": "shop-detailed",
+          "product_id": "item_id",
+          "sku": "model_id",
+          "title": "pdp-item",
+          "brand": "product-specifications",
+          "model": "product-title-fallback",
+          "variant": "tier-variations-or-model",
+          "specifications": "product-attributes",
+          "description": "pdp-item",
+          "ram": "product-specifications",
+          "vram": "product-specifications",
+          "capacity": "product-title-fallback",
+          "memory_type": "product-specifications",
+          "frequency": "product-specifications",
+          "category": "ram"
+        }
+      },
+      "elapsed_hint": null,
+      "elapsed_s": 15.0,
+      "url": "https://shopee.com.br/Kingston-HyperX-Fury-DDR4-PC-RAM-4-Gb-8-16-DDR4-2133-2400-2666-3200-Mhz-Mem%C3%B3ria-De-Mesa-i.341936748.29277977480"
+    },
+    {
+      "store_key": "amazon_br",
+      "ok": false,
+      "http_status": 422,
+      "error": {
+        "code": "PARSE_ERROR",
+        "message": "Preço da Buy Box Amazon não encontrado",
+        "url": "https://www.amazon.com.br/dp/B0FQHFY4RH",
+        "retryable": false
+      },
+      "issues": [
+        "HTTP 422"
+      ],
+      "fields": {},
+      "elapsed_s": 1.9,
+      "url": "https://www.amazon.com.br/dp/B0FQHFY4RH"
+    },
+    {
+      "store_key": "amazon_us",
+      "ok": true,
+      "http_status": 200,
+      "issues": [],
+      "soft_gaps": [
+        "opcional vazio: gtin",
+        "opcional vazio: original_price"
+      ],
+      "fields": {
+        "store": "amazon",
+        "country": "US",
+        "product_id": "B09V9Z1WLN",
+        "sku": "B09V9Z1WLN",
+        "gtin": null,
+        "title": "Samsung Galaxy S22 5G, US Version, 128GB, Pink Gold - Unlocked (Renewed)",
+        "brand": "Amazon Renewed Store",
+        "model": "Galaxy S22",
+        "variant": "color: Pink Gold; service provider: Unlocked; memory storage capacity: 128 GB; product grade: Renewed",
+        "seller": "BidAllies",
+        "currency": "USD",
+        "price": "202.15",
+        "original_price": null,
+        "pix_price": null,
+        "installment_price": null,
+        "installment_count": null,
+        "availability": "available",
+        "available": true,
+        "images_count": 0,
+        "canonical_url": "https://www.amazon.com/dp/B09V9Z1WLN",
+        "metadata_keys": [
+          "asin",
+          "attribute_sources",
+          "buy_box",
+          "marketplace",
+          "parent_asin",
+          "pricing",
+          "shipping_to_brazil",
+          "source",
+          "variant"
+        ],
+        "source": {
+          "price": "buybox-price",
+          "original_price": "not-found",
+          "pix_price": "not-applicable",
+          "installment": "not-applicable",
+          "availability": "availability-dom",
+          "seller": "buybox-merchant",
+          "asin": "url-or-dom",
+          "shipping_to_brazil": false,
+          "title": "product-title",
+          "brand": "structured-data",
+          "model": "product-title-fallback",
+          "specifications": "product-details",
+          "variant": "twister"
+        }
+      },
+      "elapsed_hint": null,
+      "elapsed_s": 3.7,
+      "url": "https://www.amazon.com/dp/B09V9Z1WLN"
+    },
+    {
+      "store_key": "bestbuy",
+      "ok": false,
+      "http_status": 422,
+      "error": {
+        "code": "PARSE_ERROR",
+        "message": "Best Buy redirecionou para SKU diferente do solicitado (pedido=6507473, página=10467861)",
+        "url": "https://www.bestbuy.com/site/apple-iphone-15-plus-128gb-unlocked-black/6507473.p?skuId=6507473",
+        "retryable": false
+      },
+      "issues": [
+        "HTTP 422"
+      ],
+      "fields": {},
+      "elapsed_s": 12.7,
+      "url": "https://www.bestbuy.com/site/apple-iphone-15-plus-128gb-unlocked-black/6507473.p?skuId=6507473"
+    },
+    {
+      "store_key": "nissei",
+      "ok": true,
+      "http_status": 200,
+      "issues": [],
+      "soft_gaps": [
+        "opcional vazio: seller",
+        "opcional vazio: gtin",
+        "opcional vazio: model",
+        "opcional vazio: variant",
+        "opcional vazio: original_price"
+      ],
+      "fields": {
+        "store": "nissei",
+        "country": "PY",
+        "product_id": "134445",
+        "sku": "134445",
+        "gtin": null,
+        "title": "Apple iPhone 16 Pro Max A3296 256 GB MYWV3BE/A - Negro Titanio",
+        "brand": "APPLE",
+        "model": null,
+        "variant": null,
+        "seller": null,
+        "currency": "PYG",
+        "price": "10985000",
+        "original_price": null,
+        "pix_price": null,
+        "installment_price": null,
+        "installment_count": null,
+        "availability": "out_of_stock",
+        "available": false,
+        "images_count": 0,
+        "canonical_url": "https://nissei.com/py/apple-iphone-16-pro-max-a3296-256-gb-mywv3be-a-black-titanium",
+        "metadata_keys": [
+          "source"
+        ],
+        "source": {
+          "price": "json-ld-or-magento",
+          "title": "json-ld-or-h1"
+        }
+      },
+      "elapsed_hint": null,
+      "elapsed_s": 20.6,
+      "url": "https://nissei.com/py/apple-iphone-16-pro-max-a3296-256-gb-mywv3be-a-black-titanium"
+    },
+    {
+      "store_key": "shoppingchina",
+      "ok": true,
+      "http_status": 200,
+      "issues": [],
+      "soft_gaps": [
+        "opcional vazio: original_price"
+      ],
+      "fields": {
+        "store": "shoppingchina",
+        "country": "PY",
+        "product_id": "883613",
+        "sku": "883613",
+        "gtin": "195949115981",
+        "title": "Celular Apple Iphone 15 128 Gb Black Sim",
+        "brand": "Apple",
+        "model": "Iphone 15",
+        "variant": "color: Black; storage: 128 GB",
+        "seller": "Shopping China",
+        "currency": "PYG",
+        "price": "4433000",
+        "original_price": null,
+        "pix_price": null,
+        "installment_price": null,
+        "installment_count": null,
+        "availability": "available",
+        "available": true,
+        "images_count": 0,
+        "canonical_url": "https://www.shoppingchina.com.py/producto/celular-apple-iphone-15-128gb-black-sim-883613",
+        "metadata_keys": [
+          "display_prices",
+          "internal_product_id",
+          "shipping_to_brazil",
+          "source",
+          "variant"
+        ],
+        "source": {
+          "price": "rendered-primary-price",
+          "availability": "json-ld-availability",
+          "seller": "storefront-direct",
+          "shipping_to_brazil": false,
+          "product_id": "json-ld-or-url",
+          "identity": "json-ld-or-html",
+          "specifications": "description-spec-lines",
+          "brand": "structured-data",
+          "model": "product-specifications",
+          "color": "product-specifications",
+          "storage": "product-title-fallback",
+          "category": "smartphone"
+        }
+      },
+      "elapsed_hint": null,
+      "elapsed_s": 7.4,
+      "url": "https://www.shoppingchina.com.py/producto/celular-apple-iphone-15-128gb-black-sim-883613"
+    }
+  ],
+  "summary": {
+    "total": 8,
+    "ok": 5,
+    "fail": 3
+  }
+}

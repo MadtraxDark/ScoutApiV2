@@ -16,7 +16,12 @@ from scrapy.http import HtmlResponse
 
 from ..core.exceptions import RequestError
 from ..core.proxy_policy import proxy_policy_for_url
-from .html_fetcher import HtmlFetcher, is_amazon_robot_check, is_challenge_page
+from .html_fetcher import (
+    HtmlFetcher,
+    is_amazon_robot_check,
+    is_auth_wall_page,
+    is_challenge_page,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +35,9 @@ _BUYBOX_SIGNAL_SELECTORS = (
     "#corePrice_feature_div .a-price .a-offscreen",
     "#desktop_buybox .a-price .a-offscreen",
     "#apex_desktop .apex-pricetopay-value .a-offscreen",
+    "#buybox .a-price .a-offscreen",
+    "#qualifiedBuybox .a-price .a-offscreen",
+    "#desktop_qualifiedBuyBox .a-price .a-offscreen",
 )
 
 _OOS_MARKERS = (
@@ -148,7 +156,11 @@ class AmazonHttpFirstHtmlFetcher:
             return self._browser.fetch(url)
 
         text = response.text or ""
-        if is_challenge_page(text) or is_amazon_robot_check(text):
+        if (
+            is_challenge_page(text)
+            or is_amazon_robot_check(text)
+            or is_auth_wall_page(text, url=str(response.url or url))
+        ):
             logger.info(
                 "amazon_http_challenge_fallback_browser",
                 extra={"url": url},
@@ -174,7 +186,9 @@ class AmazonHttpFirstHtmlFetcher:
                 return self._annotate_http(response, url=url)
             retry_text = retry.text or ""
             if not (
-                is_challenge_page(retry_text) or is_amazon_robot_check(retry_text)
+                is_challenge_page(retry_text)
+                or is_amazon_robot_check(retry_text)
+                or is_auth_wall_page(retry_text, url=str(retry.url or url))
             ) and looks_like_amazon_pdp(retry):
                 logger.info(
                     "amazon_http_empty_buybox_retry",

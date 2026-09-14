@@ -11,6 +11,7 @@ requires-python = ">=3.12"
 dependencies = [
     "camoufox[geoip]>=0.4.11,<1.0",
     "fastapi>=0.115,<1.0",
+    "pillow>=10.0.0,<12",
     "pydantic-settings>=2.6,<3.0",
     "scrapy>=2.11,<3.0",
     "uvicorn[standard]>=0.32,<1.0",
@@ -48,6 +49,10 @@ files = ["src"]
 
 [[tool.mypy.overrides]]
 module = ["camoufox", "camoufox.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["amazoncaptcha", "amazoncaptcha.*"]
 ignore_missing_imports = true
 
 [tool.coverage.run]

@@ -1,0 +1,67 @@
+# Shopping China
+
+## Markets / country
+
+- `store=shoppingchina`, `country=PY` (always Paraguay storefront identity)
+- Domains: `shoppingchina.com.py`, `shoppingchina.com.br`
+- Dual TLD, **one** spider / one country code
+
+## Identifiers
+
+- Product id from URL path (`…-(\d+)/`) and/or structured data
+- Optional internal id in metadata when distinct
+
+## Offer source
+
+- Prefer **visible primary price** on the requested page; JSON-LD as support
+
+## Details source
+
+- Specs lines / structured data; GTIN when present (e.g. flix EAN hooks)
+
+## Images source
+
+- Official product images when `include_images=true`
+
+## Pricing semantics
+
+- Primary `price` / `currency` follow the **requested host locale**:
+  - `.com.py` → typically PYG
+  - `.com.br` → typically BRL as advertised
+- USD tax-free (when shown) → `metadata.display_prices` only
+- **No FX conversion** in the spider
+- Never mix an amount from one currency with another currency code
+
+## Availability semantics
+
+- Availability = stock at the **Ciudad del Este** storefront
+- Always record `shipping_to_brazil: false` — BR shipping does **not** define stock
+- Price-first may mark available when BR locale hides cart but price is present
+
+## Seller / marketplace
+
+- Fixed seller `"Shopping China"` (direct storefront)
+
+## Fetch strategy
+
+- `prepare_fetch_url` keeps the requested host (no silent rewrite to `.py`)
+- Camoufox + Proxy Cost Mode
+
+## Known blocking
+
+- Standard challenge classification via fetcher
+
+## Important invariants
+
+- `country=PY` even on `.com.br` URLs
+- Shipping-to-Brazil never flips availability
+- Alternate currencies stay in metadata
+
+## Known limitations
+
+- Locale/host can change which price is primary; callers must not assume PYG
+  on `.com.br`
+
+## Tests / fixtures
+
+- `tests/fixtures/shoppingchina/`, `tests/unit/test_shoppingchina.py`

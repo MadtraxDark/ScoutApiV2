@@ -37,12 +37,13 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --create-home --home-dir /home/app --shell /usr/sbin/nologin app
 
-COPY pyproject.toml README.md ./
+COPY pyproject.toml README.md requirements-captcha.txt ./
 COPY src ./src
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --no-cache-dir . \
+    && pip install --no-cache-dir --no-deps -r requirements-captcha.txt \
     && mkdir -p /home/app/.cache/scout-api/camoufox-profiles/default \
     && chmod +x /docker-entrypoint.sh \
     && chown -R app:app /app /home/app

@@ -1,62 +1,166 @@
-# Amazon BR / US
+# Amazon (BR / US)
 
-Shared parsing core with thin regional spiders (`amazon_br`, `amazon_us`).
-Store key is always `amazon`; markets stay separate via `country` / `currency`.
+## Markets / country
 
-## Domains / markets
+- Public `store=amazon` for both markets
+- `amazon.com.br` → `country=BR`, `currency=BRL`
+- `amazon.com` → `country=US`, `currency=USD`
+- Catalog keys `amazon_br` / `amazon_us` with `StoreConfig.key="amazon"`
+- Architecture: [ADR 0015](../../adr/0015-amazon-multi-marketplace.md),
+  [ADR 0016](../../adr/0016-amazon-http-first-fetch.md)
 
-| Spider | Host | Country | Currency |
-|---|---|---|---|
-| `amazon_br` | `amazon.com.br` | BR | BRL |
-| `amazon_us` | `amazon.com` | US | USD |
+Offers are **independent**. Same ASIN/model ≠ same price/seller/availability.
+No FX conversion in spiders.
+
+## Identifiers
+
+- `product_id` = `sku` = **selected child ASIN**
+- Parent ASIN (when different) → `metadata.parent_asin`
+- GTIN/ISBN from detail tables / JSON-LD when present
+
+## Offer source
+
+- **Buy Box only** (`#ppd` / apex price selectors / JSON-LD offer fallback)
+- Never use related-product carousels as `price`
+
+## Details source
+
+- Title, byline/brand, detail tables, feature bullets
+- Attributes via `resolve_product_identity` after structured specs
+
+## Images source
+
+- Official variant gallery: `colorImages` `hiRes` (then landing image)
+- Exclude review/customer/recommendation imagery
+- Only when `include_images=true`
+
+## Variant model
+
+- Twister: `dimensions` order + `dimensionValuesDisplayData` for selected ASIN
+- Selected variant ASIN must align with price/seller/images
+
+## Pricing semantics
+
+### BR
+
+- `price` = Buy Box total in BRL
+- `original_price` = list/basis when greater
+- `pix_price` / installments only if explicitly shown (“no Pix”, “Nx de”,
+  “à vista no Pix / NuPay”); when the Buy Box total is labeled as Pix/NuPay
+  without a separate discounted amount, `pix_price` = Buy Box `price`
+- Coupons / Prime → `metadata.pricing` flags; never invent Pix
+
+### US
+
+- `price` = Buy Box total in USD
+- List/basis → `original_price`
+- Never use `/mo`, coupon amount, trade-in, or Subscribe & Save as `price`
+- Prime / coupon / Subscribe markers → `metadata.pricing` only
+- `pix_price` not applicable
+
+## Availability semantics
+
+- BR: selected offer stock on Amazon BR
+- US: selected offer stock on Amazon US (ADR 0013-style)
+- `shipping_to_brazil: false` on US metadata — BR delivery does not define US stock
+- No Buy Box price + clear OOS → `MissingPriceError` (fail-closed; schema needs price)
+
+## Seller / marketplace
+
+- Buy Box merchant + fulfiller (`metadata.fulfilled_by`)
+- Do not assume seller is Amazon
 
 ## Fetch strategy
 
-HTTP-first progressive fetch (ADR 0016):
+Progressive (ADR 0016):
 
-1. **HTTP** (`urllib`) with marketplace `Accept-Language` / Referer
-2. Soft HTTP retry (~1.25s) when Buy Box widgets are missing without clear OOS
-3. **Browser** (Camoufox) on HTTP error, challenge/robot-check, or non-PDP HTML
-4. **Proxy** only after classified `UPSTREAM_BLOCKED` (Proxy Cost Mode FALLBACK)
+1. **HTTP** (`UrllibHtmlFetcher`) with locale `Accept-Language`, cookie jar,
+   canonical `/dp/{ASIN}` URL — accepted whenever the body looks like a PDP
+2. **Browser** (Camoufox direct) when HTTP errors, returns challenge, or is
+   not a recognizable PDP
+3. **Proxy** only after classified `UPSTREAM_BLOCKED` (Proxy Cost Mode FALLBACK)
 
-Canonical fetch URL: `https://www.{host}/dp/{ASIN}` via `prepare_fetch_url`.
+Missing Buy Box on an otherwise valid PDP → `MissingPriceError` (no browser
+escalation solely for empty widgets; AOD / “outras ofertas” never becomes
+`price`).
 
-## Price / availability semantics
+Shared parser + `AMAZON_BR` / `AMAZON_US` configs; thin regional spiders.
+Locale hints: `pt-BR` / `en-US`.
+No hardcoded ZIP / silent address spoofing.
 
-- `price` = Buy Box / primary offer only (never AOD / “outras ofertas”)
-- Conditional pricing (Pix, Prime, Subscribe & Save, coupons, installments)
-  stays in metadata — never promoted to `price`
-- US availability is US-market stock, not shipping to Brazil
-- Empty Buy Box without clear OOS → `MissingPriceError` (fail-closed)
+### Evidence matrix (public page sources)
+
+| Campo | HTTP | JSON-LD | Embedded state | Browser | API oficial* |
+|---|---|---|---|---|---|
+| ASIN | sim | às vezes | twister / input | sim | sim |
+| title | sim | sim | — | sim | sim |
+| price (Buy Box) | sim (quando widget presente) | às vezes | raro no HTML estático | sim (hidratação) | sim |
+| original_price | sim (basis/list) | raro | — | sim | parcial |
+| seller | sim (merchant feature) | raro | — | sim | offers |
+| availability | sim (#availability) | offers | — | sim | sim |
+| variant | twister JSON embutido | — | `dimensionValuesDisplayData` | sim | sim |
+| images | `colorImages` / landing | image | `colorImages` | só se HTTP incompleto | sim |
+| specifications | tabelas detalhe | parcial | — | sim | parcial |
+
+\*Creators API (ex-PA-API): Associates + elegibilidade; **não integrada** sem aprovação.
+
+#### amazon.com (US)
+
+HTTP direto costuma bastar para Offer (ASIN, Buy Box, seller, availability,
+variante). Proxy **não** é requisito estrutural.
+
+#### amazon.com.br (BR)
+
+HTTP-first is the production path. Live Buy Box captures (2026-09-12):
+`B0GY5SB1P3`, `B0GN4S2ZSK`, `B0GXLWFMQJ` (marketplace sellers). Some PDPs
+intermittently omit Buy Box widgets on the first HTML hit — fetcher retries
+HTTP once (~1.25s) before fail-closed `MissingPriceError`. Parser also
+covers `#buybox` / `#qualifiedBuybox` price widgets observed on live BR PDPs.
+AOD / “outras ofertas” never becomes `price`. HTTP 500 → browser fallback;
+proxy only after classified `UPSTREAM_BLOCKED`.
 
 ## Known blocking behavior
 
-- Robot check / `validateCaptcha` → `UPSTREAM_BLOCKED` (retryable; browser/proxy
-  fallback per Proxy Cost Mode)
-- Spiders refuse to parse challenge HTML as a product
-- Hard-block may require proxy after classified block
+- Robot check / `validateCaptcha` / “not a robot” → **must be resolved** in
+  the fetch layer (ADR 0017) via `ChallengeResolver` + offline
+  `amazoncaptcha` for classic Amazon image captchas (no API key)
+- Login / `ap/signin` → **must be resolved** in the fetch layer (ADR 0018):
+  seeded Camoufox profile and/or `AMAZON_AUTH_EMAIL` /
+  `AMAZON_AUTH_PASSWORD` (operator env only); then resume PDP URL
+- Cloudflare JS challenges: soft wait + Turnstile click attempt
+- Hard-block (IP ban) is not image-solvable → `UPSTREAM_BLOCKED` (proxy fallback)
+- Spiders still refuse to parse challenge/login HTML as a product
+- `UPSTREAM_BLOCKED` only after resolution attempts are exhausted
+- Empty Buy Box without clear OOS → `MissingPriceError` (fail-closed), not `available=false`
 
 ## Important invariants
 
 - Buy Box offer is the commercial truth for the scrape
 - BR and US results must remain separate objects
 - Conditional pricing stays conditional in metadata
+- Canonical fetch URL is `/dp/{ASIN}` (tracking stripped)
 
 ## Known limitations
 
 - HTTP-first covers `/crawl/offer` when the public PDP includes Buy Box
+- Challenge + auth-wall resolution are **required by policy** (ADR 0017/0018);
+  Amazon image captchas use free `amazoncaptcha`; login needs session seed
+  and/or operator credentials via env
 - BR HTML may omit Buy Box widgets intermittently (soft HTTP retry mitigates)
 - Some ASINs return HTTP 500 for non-existent/blocked SKUs
+- Markup drift on price/seller widgets — fixtures + selector fallbacks
 - Official catalog API not used (eligibility / credentials)
 
 ## Live validation references
 
 - US: `B09V9Z1WLN` — HTTP-first offer (~3s, no browser/proxy)
-- BR Buy Box captures: `B0GY5SB1P3`, `B0GN4S2ZSK`, `B0GXLWFMQJ`
+- BR: `B0GY5SB1P3`, `B0GN4S2ZSK` — fixtures `br_live_buybox_*.html` from live HTML;
+  também validados via `OfferScrapeService` em `B0GN515WT6`, `B0H2CXMFLX`
+- BR regression without Buy Box: `B0GVTB7BGQ` → `MissingPriceError` (AOD-only)
 
-## Related
+## Tests / fixtures
 
-- ADR 0015 (multi-marketplace)
-- ADR 0016 (HTTP-first)
-- Fixtures: `tests/fixtures/amazon/`
-- Tests: `tests/unit/test_amazon_*.py`
+- `tests/fixtures/amazon/` (incl. `br_live_buybox_1.html`, `br_live_buybox_2.html`,
+  `br_qualified_buybox_avista_pix.html`)
+- `tests/unit/test_amazon_common.py`, `test_amazon_br.py`, `test_amazon_us.py`
+- `tests/unit/test_amazon_http_first.py` (progressive fetch / fallbacks)

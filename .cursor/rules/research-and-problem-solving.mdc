@@ -1,0 +1,171 @@
+---
+description: CRITICAL — research before giving up or adopting paid tools
+alwaysApply: true
+---
+
+# CRITICAL RULE — Research before giving up
+
+Antes de dizer que algo **não tem solução**, que **não dá para fazer**, ou que
+**precisamos de ferramenta/serviço pago**, investigue documentação oficial,
+soluções nativas, GitHub/open source, Stack Overflow e experiências da
+comunidade; teste alternativas viáveis e **só então** registre um bloqueio.
+
+Esta regra é **crítica e permanente**. Complementa Proxy Cost Mode e o sistema
+de pendências: a próxima sessão deve herdar **o que já foi pesquisado e
+testado**, não só o sintoma.
+
+## Quando acionar
+
+Sempre que aparecer: bloqueio, limitação técnica, erro difícil, comportamento
+inesperado, dependência “obrigatória”, solução aparentemente inexistente,
+ferramenta externa, serviço pago aparentemente necessário, problema de
+scraping/integração, biblioteca insuficiente, ou abordagem que não funciona.
+
+**Não aceite:** “não encontrei no código atual” = “não existe solução”.
+
+## Fluxo obrigatório
+
+```text
+problema
+→ reproduzir / causa raiz (local primeiro)
+→ documentação oficial
+→ soluções nativas da tecnologia
+→ open source maduro / GitHub (issues, PRs, forks)
+→ Stack Overflow
+→ fóruns técnicos / Reddit / comunidade (evidência complementar)
+→ serviços externos gratuitos
+→ serviços pagos somente se necessário e autorizados
+→ testar alternativas viáveis
+→ implementar ou, se ainda bloqueado, registrar pendência com a pesquisa
+```
+
+Pare quando houver evidência suficiente para uma decisão responsável.
+Objetivo: evitar desistência prematura — **não** pesquisa infinita.
+
+## Prioridade de soluções
+
+1. Capacidades já existentes no ScoutApiV2
+2. Recurso nativo / stdlib / documentação oficial
+3. Open source mantido (self-hosted quando fizer sentido)
+4. Alternativa gratuita
+5. Serviço externo pago (só com justificativa + autorização explícita)
+
+Não escolha o gratuito **só** por ser gratuito. Avalie também: confiabilidade,
+manutenção, segurança, licença, compatibilidade, complexidade operacional,
+performance e qualidade dos dados.
+
+## Serviços pagos
+
+Pagos **não são proibidos**, mas antes de propor/integrar responda:
+
+- Existe solução nativa?
+- Existe biblioteca / projeto open source mantido?
+- Existe abordagem HTTP/API ou fonte de dados diferente?
+- É possível self-host?
+- Outros desenvolvedores resolveram sem esse serviço?
+
+Se a opção paga for claramente superior ou necessária: **documente o motivo**.
+Não adicione vendor, assinatura ou serviço pago **sem autorização explícita**
+do usuário. Alinha-se a Proxy Cost Mode (proxy pago só como fallback).
+
+## Causa raiz antes de copiar a internet
+
+1. Reproduza o problema
+2. Identifique a camada (fetch, parse, config, rede, …)
+3. Entenda a causa provável
+4. Pesquise soluções **para essa causa** — não só o sintoma
+
+## Fontes e validação
+
+Fontes úteis: docs oficiais, GitHub (+ Issues/Discussions/PRs/forks), Stack
+Overflow, fóruns, Reddit, projetos OSS semelhantes, artigos técnicos sólidos.
+
+Relatos de fórum/Reddit são **complementares**. Corrobore com outra fonte ou
+teste real antes de adotar.
+
+No GitHub, priorize: atividade/manutenção, issues/PRs, qualidade, licença,
+dependências, segurança, compatibilidade com nossa stack. Estrelas = sinal
+secundário. Não copie código cegamente — adapte a abordagem ao ScoutApiV2.
+
+## Precedência arquitetural
+
+```text
+tarefa explícita → AGENTS.md → ADRs → .cursor/rules/ → arquitetura/código
+→ padrões do repo → soluções externas → genéricos
+```
+
+Um repositório externo **não** redesenha a arquitetura do ScoutApiV2.
+
+## Dependências e licenças
+
+Antes de nova dependência: stdlib? já temos equivalente? mantida? supply-chain?
+benefício > custo?
+
+Antes de incorporar OSS: licença, compatibilidade, atribuição, reuso legítimo.
+
+## Segurança (escopo do crawler vs abuso)
+
+Pesquisar a comunidade **não** autoriza:
+
+- roubo ou reuso de cookies/credentials de **terceiros**
+- ataque à autenticação da **API ScoutApiV2** ou de sistemas **fora** das
+  lojas-alvo do crawl
+- exposição / commit de secrets
+- execução de scripts/binários desconhecidos sem revisão
+- credential stuffing em contas alheias ou técnicas claramente abusivas fora
+  do escopo de coleta
+
+**Autorizado e obrigatório no projeto (não são “abuso” nesta política):**
+
+- Resolução de challenge/CAPTCHA/robot-check (ADR 0017 +
+  `captcha-challenge-resolution.mdc`)
+- **Auth bypass** de login wall / soft-auth / session-gate nas lojas-alvo
+  (ADR 0018 + `auth-wall-resolution.mdc`) — sessão própria, warmup, login com
+  credenciais do operador via env
+
+Não interprete esta seção como fail-fast sem resolver CAPTCHA ou auth wall.
+
+Se a “solução” exigir roubo de conta de terceiro ou atacar sistemas fora do
+crawl: descarte, registre limitação e busque alternativa no escopo autorizado.
+
+## Declarar BLOCKED
+
+Só declare bloqueio técnico depois de informar:
+
+1. causa do bloqueio
+2. o que foi testado
+3. documentação consultada
+4. opções open source / gratuitas avaliadas
+5. abordagens da comunidade consideradas
+6. por que nenhuma opção segura/viável resolveu
+7. próximo passo necessário
+
+Se ainda houver alternativa razoável **não testada**, a investigação não
+terminou.
+
+## Pendências
+
+Antes de registrar `BLOCKED` / `RESEARCH` em `docs/pending/`, execute a
+investigação acima. A pendência deve preservar a pesquisa (ver template):
+problema, causa, fontes, testado, descartado, motivo, referências, condição
+para continuar.
+
+Ao resolver: remover do índice ativo + limpar TODOs (ver `pending-work.mdc`).
+
+## Documentação
+
+- Decisão / descoberta **duradoura** → ADR ou doc canônico
+  (`documentation-governance.mdc`)
+- Investigação ainda aberta → `docs/pending/`
+- Não documente pesquisa trivial; não duplique esta regra inteira em vários
+  lugares — aponte para este arquivo
+
+## Relação com outras regras críticas
+
+| Regra | Relação |
+|---|---|
+| Proxy Cost Mode | Preferir caminhos sem proxy pago; pesquisa antes de “só com proxy pago” |
+| CAPTCHA resolution | Resolver challenge é obrigatório; pesquisa ajuda a achar solvers OSS |
+| Auth wall bypass | Login/session gate **deve** ser contornado; pesquisa de sessão/OSS ok |
+| Scraper/Camoufox imutáveis | Pesquisa não autoriza mudar fetch sem exceção explícita |
+| Skills governance | Skills não substituem esta investigação nem ADRs |

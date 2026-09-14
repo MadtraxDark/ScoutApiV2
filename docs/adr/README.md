@@ -1,17 +1,47 @@
 # Architecture Decision Records
 
-ADRs registram decis+¡es arquiteturais relevantes, seu contexto e seus trade-offs. Use a numera+∫+˙o sequencial (`0001-...`) e o template em [`template.md`](template.md).
+ADRs registram decis√µes arquiteturais relevantes, seu contexto e seus trade-offs.
+Use numera√ß√£o sequencial (`0001-...`) e o template em [`template.md`](template.md).
 
-Uma mudan+∫a que contradiga um ADR aceito deve ser explicitamente registrada em um novo ADR.
+Uma mudan√ßa que contradiga um ADR **Accepted** deve ser registrada em um **novo**
+ADR (supersede). N√£o reescreva silenciosamente a decis√£o anterior.
 
-## +Ïndice (crawler)
+√çndice geral do projeto: [`docs/README.md`](../README.md).
+Pol√≠tica de quando criar/atualizar docs:
+[`.cursor/rules/documentation-governance.mdc`](../../.cursor/rules/documentation-governance.mdc).
 
-- [0008](0008-price-crawler-architecture.md) ‘«ˆ arquitetura modular do crawler
-- [0009](0009-camoufox-html-fetch.md) ‘«ˆ Camoufox como fetcher HTML
-- [0010](0010-camoufox-cloudflare-strategy.md) ‘«ˆ estrat+Ægia Cloudflare + ScrapeGuard
-- [0011](0011-offer-vs-product-details.md) ‘«ˆ separa+∫+˙o Product Offer vs Product Details
-- [0012](0012-optional-image-extraction.md) ‘«ˆ extra+∫+˙o opcional de imagens (`include_images`)
-- [0013](0013-bestbuy-availability-semantics.md) ‘«ˆ Best Buy: oferta/pre+∫o US vs shipping
-- [0014](0014-cost-aware-proxy-routing.md) ‘«ˆ proxy store-aware + Shopee minimal fetch
-- [0015](0015-amazon-multi-marketplace.md) ó Amazon BR/US shared core + adapters
-- [0016](0016-amazon-http-first-fetch.md) ó Amazon HTTP-first progressive fetch
+## √çndice ‚Äî plataforma
+
+| ADR | T√≠tulo | Status |
+|---|---|---|
+| [0001](0001-use-modular-monolith.md) | Modular monolith | Accepted |
+| [0002](0002-use-src-layout.md) | `src/` layout | Accepted |
+| [0003](0003-organize-code-by-feature.md) | Package by feature | Accepted |
+| [0004](0004-separate-tests-from-source.md) | Tests fora de `src` | Accepted |
+| [0005](0005-dependency-direction.md) | Dependency direction | Accepted |
+| [0006](0006-containerize-api-with-docker.md) | Docker oficial | Accepted |
+| [0007](0007-environment-configuration.md) | Env / pydantic-settings | Accepted |
+
+## √çndice ‚Äî crawler
+
+| ADR | T√≠tulo | Status |
+|---|---|---|
+| [0008](0008-price-crawler-architecture.md) | Arquitetura modular do crawler | Accepted |
+| [0009](0009-camoufox-html-fetch.md) | Camoufox como fetcher HTML | Accepted |
+| [0010](0010-camoufox-cloudflare-strategy.md) | Cloudflare + ScrapeGuard | Accepted |
+| [0011](0011-offer-vs-product-details.md) | Offer vs Product Details | Accepted |
+| [0012](0012-optional-image-extraction.md) | Extra√ß√£o opcional de imagens | Accepted |
+| [0013](0013-bestbuy-availability-semantics.md) | Best Buy: pre√ßo US vs shipping | Accepted |
+| [0014](0014-cost-aware-proxy-routing.md) | Proxy Cost Mode / Shopee minimal fetch | Accepted |
+| [0015](0015-amazon-multi-marketplace.md) | Amazon BR/US shared core + adapters | Accepted |
+| [0016](0016-amazon-http-first-fetch.md) | Amazon HTTP-first progressive fetch | Accepted |
+| [0017](0017-captcha-challenge-resolution.md) | Resolu√ß√£o obrigat√≥ria de challenge/CAPTCHA | Accepted |
+| [0018](0018-auth-wall-bypass.md) | Auth bypass obrigat√≥rio (login/session wall) | Accepted |
+
+## Quando criar ADR
+
+Crie ADR se a decis√£o afeta arquitetura, boundaries, invariantes duradouros,
+trade-offs relevantes, m√∫ltiplos m√≥dulos, ou alternativas importantes rejeitadas.
+
+N√£o crie ADR para selector quebrado, typo ou refactor local sem mudan√ßa sem√¢ntica.
+Comportamento operacional por loja ‚Üí `docs/crawler/stores/` (n√£o ADR, salvo trade-off arquitetural).
