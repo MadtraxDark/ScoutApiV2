@@ -8,6 +8,7 @@ from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from scout_api.modules.crawler.models.product import ProductOffer, ProductPriceItem
@@ -41,7 +42,10 @@ class MatchingRepository:
                 ProductIdentifier.type == "gtin",
                 ProductIdentifier.value_normalized == gtin,
             )
-            .options(selectinload(CanonicalProduct.listings))
+            .options(
+                selectinload(CanonicalProduct.identifiers),
+                selectinload(CanonicalProduct.listings),
+            )
         )
         return self._session.scalars(stmt).first()
 
@@ -50,9 +54,10 @@ class MatchingRepository:
             select(CanonicalProduct)
             .where(CanonicalProduct.id == canonical_id)
             .options(
+                selectinload(CanonicalProduct.identifiers),
                 selectinload(CanonicalProduct.listings).selectinload(
                     StoreListing.snapshots
-                )
+                ),
             )
         )
         return self._session.scalars(stmt).first()
@@ -74,6 +79,61 @@ class MatchingRepository:
         )
         return self._session.scalars(stmt).first()
 
+    def find_listing_by_store_product_id(
+        self,
+        store: str,
+        product_id: str,
+        *,
+        country: str | None = None,
+    ) -> StoreListing | None:
+        stmt = select(StoreListing).where(
+            StoreListing.store == store,
+            StoreListing.product_id == product_id,
+        )
+        if country is not None:
+            stmt = stmt.where(StoreListing.country == country)
+        return self._session.scalars(stmt).first()
+
+    def find_listing_by_store_sku(
+        self, store: str, country: str, sku: str
+    ) -> StoreListing | None:
+        normalized = sku.strip()
+        if not normalized:
+            return None
+        stmt = select(StoreListing).where(
+            StoreListing.store == store,
+            StoreListing.country == country,
+            StoreListing.sku == normalized,
+        )
+        return self._session.scalars(stmt).first()
+
+    def find_listing_by_store_identity(
+        self,
+        *,
+        store: str,
+        country: str,
+        product_id: str | None = None,
+        sku: str | None = None,
+        canonical_url: str | None = None,
+    ) -> StoreListing | None:
+        """Resolve listing by trusted store keys (never title).
+
+        Priority: canonical_url → store+country+product_id → store+country+sku.
+        """
+        if canonical_url:
+            found = self.find_listing_by_url(store, canonical_url)
+            if found is not None:
+                return found
+        if product_id:
+            found = self.find_listing_by_store_product_id(
+                store, product_id, country=country
+            )
+            if found is not None:
+                return found
+        if sku and sku.strip():
+            return self.find_listing_by_store_sku(store, country, sku)
+        return None
+
     def list_listings_for_canonical(
         self, canonical_id: uuid.UUID
     ) -> list[StoreListing]:
@@ -87,6 +147,112 @@ class MatchingRepository:
             return []
         stmt = select(StoreListing).where(StoreListing.id.in_(listing_ids))
         return list(self._session.scalars(stmt).all())
+
+    def get_or_create_canonical(
+        self,
+        *,
+        title: str,
+        brand: str | None = None,
+        model: str | None = None,
+        variant_key: str | None = None,
+        attributes: dict[str, Any] | None = None,
+        gtin: str | None = None,
+        owner_user_id: uuid.UUID | None = None,
+    ) -> tuple[CanonicalProduct, bool]:
+        """Return existing canonical by GTIN or create a new one.
+
+        Never silently overwrites fields of an existing product.
+        Returns ``(product, created)``. Concurrent GTIN inserts reuse the row.
+        """
+        if gtin:
+            existing = self.find_canonical_by_gtin(gtin)
+            if existing is not None:
+                return existing, False
+        product = CanonicalProduct(
+            title=title[:512],
+            brand=brand,
+            model=model,
+            variant_key=variant_key,
+            attributes=attributes or {},
+            owner_user_id=owner_user_id,
+        )
+        try:
+            with self._session.begin_nested():
+                self._session.add(product)
+                self._session.flush()
+                if gtin:
+                    self._session.add(
+                        ProductIdentifier(
+                            canonical_product_id=product.id,
+                            type="gtin",
+                            value_normalized=gtin,
+                        )
+                    )
+                    self._session.flush()
+            return product, True
+        except IntegrityError:
+            if gtin:
+                existing = self.find_canonical_by_gtin(gtin)
+                if existing is not None:
+                    return existing, False
+            raise
+
+    def get_or_create_listing(
+        self,
+        *,
+        canonical: CanonicalProduct,
+        store: str,
+        country: str,
+        product_id: str,
+        url: str,
+        canonical_url: str,
+        sku: str | None = None,
+        gtin: str | None = None,
+        title: str | None = None,
+        match_decision: str = "auto_match",
+        confidence: Decimal = Decimal("1.0000"),
+        status: str = "active",
+    ) -> tuple[StoreListing, bool]:
+        """Return listing by store identity keys or create one (no overwrite)."""
+        existing = self.find_listing_by_store_identity(
+            store=store,
+            country=country,
+            product_id=product_id,
+            sku=sku,
+            canonical_url=canonical_url,
+        )
+        if existing is not None:
+            return existing, False
+        listing = StoreListing(
+            canonical_product_id=canonical.id,
+            store=store,
+            country=country,
+            product_id=product_id,
+            sku=sku.strip() if sku and sku.strip() else None,
+            gtin=gtin,
+            url=url,
+            canonical_url=canonical_url,
+            match_decision=match_decision,
+            confidence=confidence,
+            status=status,
+            title=title[:512] if title else None,
+        )
+        try:
+            with self._session.begin_nested():
+                self._session.add(listing)
+                self._session.flush()
+            return listing, True
+        except IntegrityError:
+            existing = self.find_listing_by_store_identity(
+                store=store,
+                country=country,
+                product_id=product_id,
+                sku=sku,
+                canonical_url=canonical_url,
+            )
+            if existing is not None:
+                return existing, False
+            raise
 
     def upsert_canonical_from_identity(
         self,
@@ -159,19 +325,29 @@ class MatchingRepository:
         ).first()
         if existing is not None and existing.value_normalized != gtin:
             return False
-        self._session.add(
-            ProductIdentifier(
-                canonical_product_id=canonical.id,
-                type="gtin",
-                value_normalized=gtin,
-            )
-        )
-        attrs = dict(canonical.attributes or {})
-        attrs["gtin_source"] = source
-        canonical.attributes = attrs
-        canonical.updated_at = _utcnow()
-        self._session.flush()
-        return True
+        try:
+            with self._session.begin_nested():
+                self._session.add(
+                    ProductIdentifier(
+                        canonical_product_id=canonical.id,
+                        type="gtin",
+                        value_normalized=gtin,
+                    )
+                )
+                attrs = dict(canonical.attributes or {})
+                attrs["gtin_source"] = source
+                canonical.attributes = attrs
+                canonical.updated_at = _utcnow()
+                self._session.flush()
+            return True
+        except IntegrityError:
+            # Another transaction attached the same GTIN concurrently.
+            if self.has_gtin(canonical.id, gtin):
+                return False
+            other = self.find_canonical_by_gtin(gtin)
+            if other is not None and other.id != canonical.id:
+                return False
+            raise
 
     def upsert_listing(
         self,
@@ -182,14 +358,20 @@ class MatchingRepository:
         confidence: Decimal,
         status: str = "active",
     ) -> StoreListing:
-        listing = self.find_listing_by_url(item.store, item.canonical_url)
+        listing = self.find_listing_by_store_identity(
+            store=item.store,
+            country=item.country,
+            product_id=item.product_id,
+            sku=item.sku,
+            canonical_url=item.canonical_url,
+        )
         if listing is None:
             listing = StoreListing(
                 canonical_product_id=canonical.id,
                 store=item.store,
                 country=item.country,
                 product_id=item.product_id,
-                sku=item.sku,
+                sku=item.sku.strip() if item.sku and item.sku.strip() else None,
                 gtin=item.gtin,
                 url=item.url,
                 canonical_url=item.canonical_url,
@@ -198,19 +380,36 @@ class MatchingRepository:
                 status=status,
                 title=item.title[:512] if item.title else None,
             )
-            self._session.add(listing)
+            try:
+                with self._session.begin_nested():
+                    self._session.add(listing)
+                    self._session.flush()
+            except IntegrityError:
+                existing = self.find_listing_by_store_identity(
+                    store=item.store,
+                    country=item.country,
+                    product_id=item.product_id,
+                    sku=item.sku,
+                    canonical_url=item.canonical_url,
+                )
+                if existing is None:
+                    raise
+                listing = existing
         else:
             listing.canonical_product_id = canonical.id
             listing.product_id = item.product_id
-            listing.sku = item.sku
+            listing.sku = (
+                item.sku.strip() if item.sku and item.sku.strip() else listing.sku
+            )
             listing.gtin = item.gtin
             listing.url = item.url
+            listing.canonical_url = item.canonical_url
             listing.match_decision = decision
             listing.confidence = confidence
             listing.status = status
             listing.title = item.title[:512] if item.title else listing.title
             listing.updated_at = _utcnow()
-        self._session.flush()
+            self._session.flush()
         return listing
 
     def latest_snapshot(self, listing_id: uuid.UUID) -> OfferSnapshot | None:

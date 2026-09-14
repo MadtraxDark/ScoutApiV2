@@ -1,14 +1,46 @@
 ---
-description: Revisão de segurança para API e crawler
-alwaysApply: false
-globs: ["src/scout_api/**/*.py", "tests/**/*.py", "Dockerfile", "compose.yaml"]
+description: Política de segurança da API ScoutApiV2 (deny-by-default)
+alwaysApply: true
 ---
 
-# Security
+# Security — ScoutApiV2
 
-- Use `api-security-review` quando a mudança tocar **input externo, URLs/redirects, SSRF, secrets, limites, auth futura, OpenAPI ou exposição em erros/logs** — não em todo diff de `src/`.
-- Foque no risco real do ScoutApiV2 (crawl-by-URL, proxy credentials, vazamento em detail/logs); não invente Gateway/JWT/OAuth só por checklist.
-- Valide URLs e redirects com as abstrações existentes; não exponha rede interna ou detalhes sensíveis em erros.
-- Não registre credentials, tokens ou cookies; não relaxe TLS e não use secrets hardcoded.
-- Testes ativos e exploração apenas em ambientes/alvos autorizados; não execute scanners da skill contra marketplaces ou terceiros.
-- Não faça mudanças preventivas de arquitetura sem evidência concreta.
+Política permanente. Detalhes e fluxos: `docs/security/api-auth.md` + ADR 0023.
+
+## Invariantes
+
+1. Endpoints são **privados por padrão** (DENY BY DEFAULT).
+2. Rotas públicas exigem **allowlist explícita** (hoje: `/health` + `/auth/*` de login/callback/refresh/logout).
+3. Secrets **nunca** atravessam a API pública (JSON, OpenAPI, erros, URLs, fixtures, Git).
+4. Dados pessoais seguem **minimização estrita** (`PublicUser` = `id` + `display_name`).
+5. Backend **nunca** envia credenciais privilegiadas ao frontend (`service_role`, DB, proxy, JWT secret).
+6. Autenticação ≠ autorização — validar identidade **e** permissão/ownership.
+7. Ownership deriva do JWT `sub` autenticado — **nunca** de `user_id` no body.
+8. Schemas públicos usam **whitelist** de campos (não `exclude={"password"}`).
+9. Endpoints expostos têm **rate limiting** (default / auth / crawler).
+10. Endpoints caros (`/crawl*`, `/match`, `/offers/refresh`) usam limite **mais restritivo**.
+11. Logs nunca contêm secrets (`core/log_redaction.py`).
+12. Novo endpoint exige **revisão de segurança** antes de Done.
+
+## Auth stack
+
+- Identidade: **Supabase Auth** (Google via API + PKCE).
+- Access token: `Authorization: Bearer` validado com JWKS (ES256/RS256) ou HS256 só teste/legado.
+- Refresh: cookie HttpOnly `Secure` SameSite=Lax path `/auth`.
+- Dependências: `require_authenticated_user`, `require_permission`, `require_admin`.
+- `AUTH_ENABLED=false` **proibido** em `ENVIRONMENT=production`.
+
+## Crawler
+
+- API rate limit ≠ throttling por domínio de loja.
+- URLs de crawl passam pelo registry de `allowed_domains` (anti-SSRF de lojas não suportadas).
+- Não parsear HTML de challenge/login como produto.
+
+## CORS
+
+- Lista explícita em `CORS_ALLOWED_ORIGINS`.
+- Nunca `allow_origins=["*"]` com credentials.
+
+## Ao tocar auth/routers/schemas
+
+Leia `docs/security/api-auth.md` e rode `tests/unit/test_security.py`.

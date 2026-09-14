@@ -1,0 +1,27 @@
+---
+description: Persistência PostgreSQL/Supabase via SQLAlchemy + Alembic
+alwaysApply: false
+globs:
+  - "src/scout_api/core/database.py"
+  - "src/scout_api/core/db_errors.py"
+  - "src/scout_api/core/config.py"
+  - "src/scout_api/modules/**/models.py"
+  - "src/scout_api/modules/**/repository.py"
+  - "alembic/**"
+  - "docs/persistence/**"
+  - ".env.example"
+---
+
+# Persistência — Supabase / PostgreSQL
+
+- PostgreSQL é a **fonte de verdade**. Redis é só cache/coordenação.
+- Backend conecta **somente** via `DATABASE_URL` + SQLAlchemy/`psycopg`.
+  **Proibido** Supabase Data API / PostgREST para operações da API.
+- Frontend **não** acessa o banco; regras e autorização ficam na API.
+- Schema só via Alembic. Preferir URI direct/session (`:5432`) para
+  migrations; nunca `alembic` em transaction pooler (`:6543`).
+- SQLAlchemy fica em repositories; services não embutem SQL cru.
+- Ao mudar models/pool/SSL/health: seguir
+  `.agents/skills/supabase-postgres/SKILL.md` e
+  `docs/persistence/supabase-postgres.md` (ADR 0021).
+- Nunca versionar secrets, connection strings com senha, ou service role keys.

@@ -53,6 +53,7 @@ Revisão registrada em 12/09/2026.
 | `docker` | `mindrally/skills` | `skills-lock.json` | Dockerfile, Compose, runtime container | MUITO ÚTIL |
 | `dockerfile-optimise` | `pproenca/dot-skills` | `skills-lock.json` | otimização explícita de Dockerfile | ÚTIL EM CASOS ESPECÍFICOS |
 | `browser-use` | `browser-use/plugins` @ `4749bcb` (`cursor/skills/browser-use`) | `skills-lock.json` | validação UI / navegação **do agente** (Chrome CDP ou cloud sob pedido); **não** substitui Camoufox/fetch do crawler | ÚTIL EM CASOS ESPECÍFICOS |
+| `supabase-postgres` | projeto (ScoutApiV2) | n/a (first-party) | `DATABASE_URL`, SQLAlchemy, Alembic, repositories, health/pool/SSL Supabase; **sem** Data API | MUITO ÚTIL |
 
 ### Codex (user), auditadas
 
@@ -97,6 +98,7 @@ Revisão registrada em 12/09/2026.
 | Security (URL, secrets, limites) | `api-security-review` | scrapy, find-skills |
 | CI | `github-actions-templates` | fastapi, scrapy |
 | Docker / Compose | `docker`; `dockerfile-optimise` só se otimizar imagem | scrapy |
+| Persistência / Supabase / migrations | `supabase-postgres` | Data API, supabase-py, SQL em services |
 | Refactor arquitetural | code-review + skill da área | find-skills |
 | Code review | `code-review-excellence` se risco | empilhar várias skills sem benefício |
 | Nova skill de terceiro | `skill-scanner` → registro; `find-skills` só para busca | install sem scan |
@@ -131,6 +133,7 @@ Python **3.12**; actions pinadas; sem matrix Node/K8s/Slack por template.
 - Scrapy Splash / Playwright / Scrapy-Redis / fake-UA / proxy rotation
 - Migração do fetch Camoufox (incl. trocar por Browser Use Cloud/CLI no crawler)
 - SQLModel / ORM / repository “preventivo”
+- Supabase Data API / PostgREST / acesso frontend ao Postgres
 - Frontend embutido no FastAPI / SSE
 - Alpine ou distroless sem prova de que Camoufox continua funcional
 - API Gateway, JWT/OAuth ou WAF só por checklist

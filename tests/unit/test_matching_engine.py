@@ -7,8 +7,8 @@ from decimal import Decimal
 from scout_api.modules.matching.engine import MatchingEngine
 from scout_api.modules.matching.identity import (
     ProductIdentity,
-    normalize_gtin,
     looks_like_accessory,
+    normalize_gtin,
 )
 
 
@@ -117,7 +117,9 @@ def test_luna_grey_synonym_and_ideapad_model_compat() -> None:
     assert not models_compatible(
         "ideapadslim3iintelcore",
         "ideapadslim3i",
-        left_title="Notebook Lenovo Ideapad Slim 3i Intel Core 3 100u 8GB 256gb Luna Grey",
+        left_title=(
+            "Notebook Lenovo Ideapad Slim 3i Intel Core 3 100u 8GB 256gb Luna Grey"
+        ),
         right_title=(
             "Lenovo - IdeaPad Slim 3i 15.6 Full HD Laptop - Intel Core i5-1335U "
             "16GB Memory - 256GB Storage - Arctic Grey"
@@ -129,14 +131,18 @@ def test_luna_grey_synonym_and_ideapad_model_compat() -> None:
         _identity(
             brand="lenovo",
             model="ideapadslim3iintelcore",
-            title="Notebook Lenovo Ideapad Slim 3i Intel Core 3 100u 8GB 256gb Luna Grey",
+            title=(
+                "Notebook Lenovo Ideapad Slim 3i Intel Core 3 100u 8GB 256gb Luna Grey"
+            ),
             title_normalized="notebook lenovo ideapad slim 3i 8gb 256gb luna grey",
             variant_attrs={"color": "grey", "storage": "256gb", "ram": "8gb"},
         ),
         _identity(
             brand="lenovo",
             model="ideapadslim3",
-            title="Notebook Lenovo IdeaPad Slim 3 Luna Grey - Intel Core 3 100U, 8G 256GB",
+            title=(
+                "Notebook Lenovo IdeaPad Slim 3 Luna Grey - Intel Core 3 100U, 8G 256GB"
+            ),
             title_normalized=(
                 "notebook lenovo ideapad slim 3 luna grey core 3 100u 8g 256gb"
             ),
@@ -152,7 +158,9 @@ def test_luna_grey_synonym_and_ideapad_model_compat() -> None:
         _identity(
             brand="lenovo",
             model="ideapadslim3iintelcore",
-            title="Notebook Lenovo Ideapad Slim 3i Intel Core 3 100u 8GB 256gb Luna Grey",
+            title=(
+                "Notebook Lenovo Ideapad Slim 3i Intel Core 3 100u 8GB 256gb Luna Grey"
+            ),
             title_normalized="notebook lenovo ideapad slim 3i intel core 3 100u",
             variant_attrs={"color": "grey", "storage": "256gb", "ram": "8gb"},
         ),
@@ -193,7 +201,6 @@ def test_identity_refines_ram_as_storage_and_sku_model() -> None:
     identity = identity_from_price_item(item)
     assert identity.variant_attrs.get("storage") == "256gb"
     assert identity.model == "ideapadslim3i"
-
 
 
 def test_accessory_title_rejects() -> None:

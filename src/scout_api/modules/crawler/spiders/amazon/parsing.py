@@ -132,9 +132,7 @@ def extract_amazon_offer(
         response, marketplace, price=price
     )
     seller, seller_source, fulfilled_by = extract_seller(response, marketplace)
-    pix_price, pix_source = extract_pix_price(
-        response, marketplace, buybox_price=price
-    )
+    pix_price, pix_source = extract_pix_price(response, marketplace, buybox_price=price)
     installment_price, installment_count, installment_source = extract_installment(
         response, marketplace
     )

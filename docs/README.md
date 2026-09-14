@@ -27,13 +27,8 @@ Governança de documentação: [`.cursor/rules/documentation-governance.mdc`](..
 | Auth bypass / login wall (obrigatório) | [`.cursor/rules/auth-wall-resolution.mdc`](../.cursor/rules/auth-wall-resolution.mdc) + [ADR 0018](adr/0018-auth-wall-bypass.md) |
 | Pesquisa antes de bloquear / paid | [`.cursor/rules/research-and-problem-solving.mdc`](../.cursor/rules/research-and-problem-solving.mdc) |
 | Fetch / Camoufox imutáveis | [`.cursor/rules/scraper-camoufox-immutable.mdc`](../.cursor/rules/scraper-camoufox-immutable.mdc) |
-| Segurança (URLs, secrets, logs) | [`.cursor/rules/security.mdc`](../.cursor/rules/security.mdc) |
-| Testes | [`.cursor/rules/testing.mdc`](../.cursor/rules/testing.mdc) |
-| Skills | [`skills/README.md`](skills/README.md) |
-| Pendências / trabalho incompleto | [`pending/README.md`](pending/README.md) |
-| Idioma do agente (pt-BR) | [`.cursor/rules/language-pt-BR.mdc`](../.cursor/rules/language-pt-BR.mdc) |
-| Conclusão de tarefa | [`.cursor/rules/task-completion.mdc`](../.cursor/rules/task-completion.mdc) |
-| Operação / endpoints | [`README.md`](../README.md) |
+| Segurança da API (auth/CORS/rate limit) | [`security/api-auth.md`](security/api-auth.md) + [ADR 0023](adr/0023-api-auth-supabase-deny-by-default.md) + [`.cursor/rules/security.mdc`](../.cursor/rules/security.mdc) |
+| Persistência PostgreSQL / Supabase | [`persistence/supabase-postgres.md`](persistence/supabase-postgres.md) + [ADR 0021](adr/0021-supabase-postgres-sqlalchemy.md) |
 
 ## Crawler — playbooks por loja
 

@@ -9,6 +9,18 @@
 - Docker é a forma oficial de execução; mantenha `Dockerfile` e `compose.yaml` funcionais.
 - Configurações usam variáveis de ambiente centralizadas em `core/config.py` com `pydantic-settings`.
 - Nunca versione `.env` ou secrets; mantenha `.env.example`, Compose, README e configuração sincronizados.
+- **Segurança da API (crítico):** endpoints privados por padrão (DENY BY DEFAULT);
+  allowlist pública explícita; secrets e credenciais privilegiadas nunca
+  atravessam a API; dados pessoais com minimização (`PublicUser`); auth
+  (Supabase JWT) separada de autorização/ownership; rate limiting nos
+  endpoints (crawler mais restrito); logs/erros sanitizados. Ver
+  `.cursor/rules/security.mdc`, `docs/security/api-auth.md` e ADR 0023.
+- **Persistência (PostgreSQL / Supabase):** a API é o único componente que
+  acessa o banco. Conexão direta via `DATABASE_URL` + SQLAlchemy/`psycopg`
+  (nunca Supabase Data API no backend; nunca acesso do frontend ao Postgres).
+  Schema só via Alembic. Redis, se usado, é cache/coordenação — não SoT.
+  Ver ADR 0021, `docs/persistence/supabase-postgres.md`,
+  `.cursor/rules/persistence-supabase.mdc` e skill `supabase-postgres`.
 - O crawler coleta preços apesar de WAF/anti-bot usando fetch/browser/proxy **já
   previstos** (Camoufox, Proxy Cost Mode), **resolução de challenge/CAPTCHA** e
   **auth bypass** (login/session wall). Challenge/CAPTCHA/robot-check **e**

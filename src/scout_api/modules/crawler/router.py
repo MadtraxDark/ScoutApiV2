@@ -2,13 +2,22 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from scout_api.modules.auth.deps import enforce_rate_limit, require_permission
+
 from .core.exceptions import ParseError, RequestError
 from .models.product import ProductOffer, ProductPriceItem
 from .schemas import CrawlErrorResponse, CrawlRequest
 from .services.offer_scrape_service import OfferScrapeService
 from .services.product_scrape_service import ProductScrapeService
 
-router = APIRouter(prefix="/crawl", tags=["crawler"])
+router = APIRouter(
+    prefix="/crawl",
+    tags=["crawler"],
+    dependencies=[
+        Depends(require_permission("crawl")),
+        Depends(enforce_rate_limit("crawler")),
+    ],
+)
 
 
 def get_product_scrape_service() -> ProductScrapeService:
@@ -24,6 +33,7 @@ def get_offer_scrape_service() -> OfferScrapeService:
     response_model=ProductPriceItem,
     responses={
         401: {"model": CrawlErrorResponse},
+        403: {"model": CrawlErrorResponse},
         422: {"model": CrawlErrorResponse},
         429: {"model": CrawlErrorResponse},
         502: {"model": CrawlErrorResponse},
@@ -65,6 +75,7 @@ def crawl_product(
     response_model=ProductOffer,
     responses={
         401: {"model": CrawlErrorResponse},
+        403: {"model": CrawlErrorResponse},
         422: {"model": CrawlErrorResponse},
         429: {"model": CrawlErrorResponse},
         502: {"model": CrawlErrorResponse},

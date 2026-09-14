@@ -131,10 +131,7 @@ def test_out_of_stock_model() -> None:
 
 
 def test_traffic_verify_raises_auth_required() -> None:
-    html = (
-        "<html><head><title>Shopee</title></head>"
-        "<body>verify/traffic</body></html>"
-    )
+    html = "<html><head><title>Shopee</title></head><body>verify/traffic</body></html>"
     response = HtmlResponse(
         "https://shopee.com.br/verify/traffic?anti_bot_tracking_id=x",
         body=html.encode("utf-8"),

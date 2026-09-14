@@ -16,6 +16,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import JSON, Uuid
@@ -32,6 +33,10 @@ class CanonicalProduct(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(
         Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    # Authenticated creator (JWT sub). NULL = system/legacy shared catalog row.
+    owner_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), nullable=True, index=True
     )
     title: Mapped[str] = mapped_column(String(512), nullable=False)
     brand: Mapped[str | None] = mapped_column(String(128), nullable=True)
@@ -87,6 +92,21 @@ class StoreListing(Base):
     __tablename__ = "store_listings"
     __table_args__ = (
         UniqueConstraint("store", "canonical_url", name="uq_store_listings_store_url"),
+        UniqueConstraint(
+            "store",
+            "country",
+            "product_id",
+            name="uq_store_listings_store_country_product_id",
+        ),
+        Index(
+            "uq_store_listings_store_country_sku",
+            "store",
+            "country",
+            "sku",
+            unique=True,
+            postgresql_where=text("sku IS NOT NULL AND btrim(sku) <> ''"),
+            sqlite_where=text("sku IS NOT NULL AND trim(sku) != ''"),
+        ),
         Index("ix_store_listings_canonical_product", "canonical_product_id"),
         Index("ix_store_listings_gtin", "gtin"),
     )

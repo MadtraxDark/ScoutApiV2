@@ -13,7 +13,32 @@ class Settings(BaseSettings):
     redis_url: str | None = None
     redis_connect_timeout_seconds: float = 0.3
     redis_socket_timeout_seconds: float = 0.5
+    # PostgreSQL / Supabase (SQLAlchemy + psycopg). Never use Supabase Data API.
     database_url: str | None = None
+    database_pool_size: int = 5
+    database_max_overflow: int = 10
+    database_pool_timeout_seconds: int = 30
+    database_pool_recycle_seconds: int = 1800
+    database_connect_timeout_seconds: int = 10
+    database_statement_timeout_ms: int = 30_000
+    database_sslmode: str | None = None
+    database_application_name: str = "scout-api-v2"
+    # --- API security (Supabase Auth). Never expose service_role to clients. ---
+    auth_enabled: bool = True
+    supabase_url: str | None = None
+    supabase_anon_key: str | None = None
+    # HS256 legacy/test only. Prefer JWKS (ES256/RS256) via supabase_url.
+    supabase_jwt_secret: str | None = None
+    supabase_jwt_audience: str = "authenticated"
+    auth_google_redirect_url: str | None = None
+    auth_frontend_success_url: str | None = None
+    auth_admin_user_ids: str = ""
+    cors_allowed_origins: str = ""
+    trusted_proxy_ips: str = ""
+    rate_limit_enabled: bool = True
+    rate_limit_default_per_minute: int = 120
+    rate_limit_auth_per_minute: int = 20
+    rate_limit_crawler_per_minute: int = 10
     scraper_user_agent: str = "ScoutApiV2/0.1 (+price-monitoring)"
     scraper_log_level: str = "INFO"
     scraper_default_concurrency: int = 2

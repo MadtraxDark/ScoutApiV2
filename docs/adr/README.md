@@ -21,6 +21,8 @@ Política de quando criar/atualizar docs:
 | [0005](0005-dependency-direction.md) | Dependency direction | Accepted |
 | [0006](0006-containerize-api-with-docker.md) | Docker oficial | Accepted |
 | [0007](0007-environment-configuration.md) | Env / pydantic-settings | Accepted |
+| [0021](0021-supabase-postgres-sqlalchemy.md) | PostgreSQL no Supabase via SQLAlchemy (sem Data API) | Accepted |
+| [0023](0023-api-auth-supabase-deny-by-default.md) | Auth API Supabase JWT + deny-by-default + rate limit | Accepted |
 
 ## Índice — crawler
 

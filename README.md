@@ -16,7 +16,11 @@ Copie `.env.example` para `.env` e ajuste os valores conforme o ambiente. O `.en
 
 ## Docker
 
-Execute `docker compose up --build`. A API ficará disponível em `http://localhost:8000`; `GET /health` verifica a disponibilidade.
+Execute `docker compose up --build`. A API ficará disponível em `http://localhost:8000`; `GET /health` verifica a disponibilidade (`status` + `database`).
+
+Para apontar ao Postgres do Supabase em vez do serviço Compose, defina
+`DATABASE_URL` no `.env` (SSL/`sslmode=require`) e rode `alembic upgrade head`.
+Detalhes: [`docs/persistence/supabase-postgres.md`](docs/persistence/supabase-postgres.md).
 
 O perfil Camoufox é um bind mount em `./data/camoufox-profiles` (compartilhado com o seed local). Para aquecer a sessão Shopee/WAF com janela:
 
@@ -65,6 +69,10 @@ e circuit breaker. Cache, single-flight e cooldown do `ScrapeGuard` usam Redis
 quando `REDIS_URL` está definido (L1 memória + L2 Redis, fail-open; ADR 0020).
 PostgreSQL permanece a fonte de verdade de matching e histórico.
 
+**Autenticação:** rotas de negócio exigem `Authorization: Bearer` (Supabase
+Auth / Google). Públicos: `GET /health` e `/auth/*` de sessão. Detalhes:
+[`docs/security/api-auth.md`](docs/security/api-auth.md) e ADR 0023.
+
 - `POST /crawl` — scraping completo (oferta + detalhes) via `ProductScrapeService`.
   Use `include_images=true` para incluir a galeria (`extract_images`); o padrão é
   `false` (sem parsing de imagens). Ver ADR 0012.
@@ -75,12 +83,19 @@ PostgreSQL permanece a fonte de verdade de matching e histórico.
   Best Buy, Nissei, Shopping China), score precision-first (GTIN → marca+modelo
   → título auxiliar) e persistência opcional no PostgreSQL (ADR 0019). Use
   `persist=false` sem `DATABASE_URL`.
+- `POST /products` — cadastro/localização de produto canônico (get-or-create
+  sem overwrite; dedup por GTIN ou store+canonical_url). `GET /products/{id}`
+  consulta o registro e listings.
 - `POST /offers/refresh` — reconsulta listings persistidos e registra eventos
   (`price_changed`, `seller_changed`, `offer_removed`, …) sem sobrescrever
   histórico (ADR 0019). Requer `DATABASE_URL`.
 
-PostgreSQL: serviço `postgres` no Compose; configure `DATABASE_URL` (ver
-`.env.example`). Migrações: `alembic upgrade head`.
+PostgreSQL: fonte de verdade (Compose local **ou** Supabase hospedado).
+Configure `DATABASE_URL` com driver `postgresql+psycopg` (ver `.env.example` e
+[`docs/persistence/supabase-postgres.md`](docs/persistence/supabase-postgres.md)).
+Migrations: `alembic upgrade head` (use URI direct/session `:5432`, não
+transaction pooler `:6543`). A API não usa a Supabase Data API; o frontend não
+acessa o banco.
 
 Redis: serviço `redis` no Compose (cache/coordenação, não persistente). Opcional
 fora do Compose — sem `REDIS_URL` a API usa só memória local.

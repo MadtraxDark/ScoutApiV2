@@ -527,9 +527,7 @@ class BestBuySpider(BaseStoreSpider):
         )
         if not requested:
             return
-        actual = cls._string(
-            cls._first_value(product, "sku", "skuId", "productSku")
-        )
+        actual = cls._string(cls._first_value(product, "sku", "skuId", "productSku"))
         if actual and actual != requested:
             raise ParseError(
                 "Best Buy redirecionou para SKU diferente do solicitado "

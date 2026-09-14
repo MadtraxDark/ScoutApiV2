@@ -76,9 +76,7 @@ def test_bestbuy_sku_mismatch_after_redirect_fails_closed() -> None:
         html.url,
         body=html.body,
         encoding="utf-8",
-        request=Request(
-            "https://www.bestbuy.com/site/other/9999999.p?skuId=9999999"
-        ),
+        request=Request("https://www.bestbuy.com/site/other/9999999.p?skuId=9999999"),
     )
     try:
         BestBuySpider().extract_offer(mismatched)
@@ -215,8 +213,7 @@ def test_bestbuy_unlocked_is_not_carrier_locked() -> None:
 def test_bestbuy_apollo_ssr_customer_price() -> None:
     """Modern PDP embeds price in ApolloSSRDataTransport pushes, not bare JSON."""
     url = (
-        "https://www.bestbuy.com/product/"
-        "apple-iphone-15-128gb-unlocked-blue/JJGCQX68JS"
+        "https://www.bestbuy.com/product/apple-iphone-15-128gb-unlocked-blue/JJGCQX68JS"
     )
     response = HtmlResponse(
         url,
