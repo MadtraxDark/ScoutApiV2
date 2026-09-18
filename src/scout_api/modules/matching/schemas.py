@@ -64,12 +64,31 @@ class MatchReason(BaseModel):
 
 
 class MatchRequest(BaseModel):
-    reference_url: HttpUrl
-    stores: list[str] | None = None
-    include_review: bool = False
-    persist: bool = True
-    include_images: bool = False
-    max_candidates_per_store: int = Field(default=5, ge=1, le=10)
+    reference_url: HttpUrl = Field(
+        description="URL do produto de referência usado como base do matching."
+    )
+    stores: list[str] | None = Field(
+        default=None,
+        description="Lista de lojas a consultar; se omitida, usa o conjunto padrão.",
+    )
+    include_review: bool = Field(
+        default=False,
+        description="Quando true, inclui candidatas classificadas como review.",
+    )
+    persist: bool = Field(
+        default=True,
+        description="Quando true, persiste produto canônico e listings no banco.",
+    )
+    include_images: bool = Field(
+        default=False,
+        description="Quando true, inclui galeria de imagens no scraping de referência.",
+    )
+    max_candidates_per_store: int = Field(
+        default=5,
+        ge=1,
+        le=10,
+        description="Máximo de candidatos avaliados por loja.",
+    )
 
 
 class MatchHit(BaseModel):
@@ -101,10 +120,22 @@ class MatchResponse(BaseModel):
 
 
 class OfferRefreshRequest(BaseModel):
-    canonical_product_id: UUID | None = None
-    listing_ids: list[UUID] | None = None
-    urls: list[HttpUrl] | None = None
-    include_details: bool = False
+    canonical_product_id: UUID | None = Field(
+        default=None,
+        description="Produto canônico cujas ofertas devem ser atualizadas.",
+    )
+    listing_ids: list[UUID] | None = Field(
+        default=None,
+        description="Listings específicos a atualizar.",
+    )
+    urls: list[HttpUrl] | None = Field(
+        default=None,
+        description="URLs avulsas de oferta a atualizar.",
+    )
+    include_details: bool = Field(
+        default=False,
+        description="Quando true, inclui snapshots e eventos detalhados na resposta.",
+    )
 
 
 class OfferSnapshotView(BaseModel):
@@ -141,34 +172,57 @@ class OfferRefreshResponse(BaseModel):
 
 
 class ProductRegisterRequest(BaseModel):
-    """Register a catalog product (identity) and optionally one store listing.
+    """Cadastro de produto canônico, com listing de loja opcional.
 
-    Dedup keys (never title alone):
-    1. GTIN/EAN/UPC in ``product_identifiers``
-    2. store + country + product_id
-    3. store + country + sku (when SKU presente)
-    4. store + canonical_url
-
-    Existing products/listings are reused without silent overwrite.
-    Ownership always comes from the authenticated JWT ``sub`` — never from body.
+    Deduplica por GTIN, identificadores de loja, SKU ou URL canônica.
+    Produtos/listings existentes são reutilizados sem sobrescrita silenciosa.
     """
 
     model_config = {"extra": "forbid"}
 
-    title: str = Field(min_length=1, max_length=512)
-    brand: str | None = Field(default=None, max_length=128)
-    model: str | None = Field(default=None, max_length=128)
-    variant: str | None = Field(default=None, max_length=256)
-    variant_key: str | None = Field(default=None, max_length=256)
-    gtin: str | None = Field(default=None, max_length=32)
-    attributes: dict[str, Any] | None = None
-    # Optional store listing attachment (offer identity, not price history).
-    store: str | None = Field(default=None, max_length=64)
-    country: str | None = Field(default=None, max_length=8)
-    product_id: str | None = Field(default=None, max_length=128)
-    sku: str | None = Field(default=None, max_length=128)
-    url: HttpUrl | None = None
-    canonical_url: HttpUrl | None = None
+    title: str = Field(
+        min_length=1,
+        max_length=512,
+        description="Título do produto canônico.",
+    )
+    brand: str | None = Field(default=None, max_length=128, description="Marca.")
+    model: str | None = Field(default=None, max_length=128, description="Modelo.")
+    variant: str | None = Field(
+        default=None,
+        max_length=256,
+        description="Variante legível (cor, capacidade, etc.).",
+    )
+    variant_key: str | None = Field(
+        default=None,
+        max_length=256,
+        description="Chave normalizada da variante para deduplicação.",
+    )
+    gtin: str | None = Field(
+        default=None, max_length=32, description="GTIN/EAN/UPC quando conhecido."
+    )
+    attributes: dict[str, Any] | None = Field(
+        default=None, description="Atributos adicionais do produto."
+    )
+    store: str | None = Field(
+        default=None, max_length=64, description="Loja do listing opcional."
+    )
+    country: str | None = Field(
+        default=None, max_length=8, description="País do listing (código curto)."
+    )
+    product_id: str | None = Field(
+        default=None,
+        max_length=128,
+        description="Identificador do produto na loja.",
+    )
+    sku: str | None = Field(
+        default=None, max_length=128, description="SKU na loja, quando disponível."
+    )
+    url: HttpUrl | None = Field(
+        default=None, description="URL da página do produto na loja."
+    )
+    canonical_url: HttpUrl | None = Field(
+        default=None, description="URL canônica do listing na loja."
+    )
 
 
 class ProductListingView(BaseModel):

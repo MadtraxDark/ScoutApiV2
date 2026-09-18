@@ -12,7 +12,7 @@ from .services.product_scrape_service import ProductScrapeService
 
 router = APIRouter(
     prefix="/crawl",
-    tags=["crawler"],
+    tags=["Crawler"],
     dependencies=[
         Depends(require_permission("crawl")),
         Depends(enforce_rate_limit("crawler")),
@@ -32,13 +32,27 @@ def get_offer_scrape_service() -> OfferScrapeService:
     "",
     response_model=ProductPriceItem,
     responses={
-        401: {"model": CrawlErrorResponse},
-        403: {"model": CrawlErrorResponse},
-        422: {"model": CrawlErrorResponse},
-        429: {"model": CrawlErrorResponse},
-        502: {"model": CrawlErrorResponse},
+        401: {"model": CrawlErrorResponse, "description": "Não autenticado."},
+        403: {"model": CrawlErrorResponse, "description": "Sem permissão de crawl."},
+        422: {
+            "model": CrawlErrorResponse,
+            "description": "URL inválida ou falha ao interpretar a página.",
+        },
+        429: {
+            "model": CrawlErrorResponse,
+            "description": "Limite de requisições excedido.",
+        },
+        502: {
+            "model": CrawlErrorResponse,
+            "description": "Bloqueio ou falha ao acessar a loja de origem.",
+        },
     },
     status_code=status.HTTP_200_OK,
+    summary="Executar scraping completo",
+    description=(
+        "Coleta título, atributos, preço e demais dados do produto na URL informada. "
+        "Com include_images=true, também extrai a galeria de imagens quando disponível."
+    ),
 )
 def crawl_product(
     payload: CrawlRequest,
@@ -74,13 +88,27 @@ def crawl_product(
     "/offer",
     response_model=ProductOffer,
     responses={
-        401: {"model": CrawlErrorResponse},
-        403: {"model": CrawlErrorResponse},
-        422: {"model": CrawlErrorResponse},
-        429: {"model": CrawlErrorResponse},
-        502: {"model": CrawlErrorResponse},
+        401: {"model": CrawlErrorResponse, "description": "Não autenticado."},
+        403: {"model": CrawlErrorResponse, "description": "Sem permissão de crawl."},
+        422: {
+            "model": CrawlErrorResponse,
+            "description": "URL inválida ou falha ao interpretar a oferta.",
+        },
+        429: {
+            "model": CrawlErrorResponse,
+            "description": "Limite de requisições excedido.",
+        },
+        502: {
+            "model": CrawlErrorResponse,
+            "description": "Bloqueio ou falha ao acessar a loja de origem.",
+        },
     },
     status_code=status.HTTP_200_OK,
+    summary="Buscar oferta de produto",
+    description=(
+        "Obtém preço, disponibilidade, vendedor "
+        "e demais dados comerciais da URL informada."
+    ),
 )
 def crawl_offer(
     payload: CrawlRequest,

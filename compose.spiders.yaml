@@ -3,6 +3,10 @@ services:
     environment:
       PYTHONPATH: /app/src
     volumes:
+      # Keep crawler packages in sync with the host. Mounting only spiders/
+      # + services/ caused ImportError when core/ (e.g. exceptions) changed
+      # but the image was stale.
+      - ./src/scout_api/modules/crawler/core:/app/src/scout_api/modules/crawler/core:ro
       - ./src/scout_api/modules/crawler/spiders:/app/src/scout_api/modules/crawler/spiders:ro
       - ./src/scout_api/modules/crawler/services:/app/src/scout_api/modules/crawler/services:ro
     command:
@@ -13,6 +17,8 @@ services:
       - --port
       - "8000"
       - --reload
+      - --reload-dir
+      - /app/src/scout_api/modules/crawler/core
       - --reload-dir
       - /app/src/scout_api/modules/crawler/spiders
       - --reload-dir

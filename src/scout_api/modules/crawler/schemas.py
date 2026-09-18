@@ -2,10 +2,13 @@ from pydantic import BaseModel, Field, HttpUrl
 
 
 class CrawlRequest(BaseModel):
-    url: HttpUrl
+    url: HttpUrl = Field(description="URL pública do produto ou da oferta na loja.")
     include_images: bool = Field(
         default=False,
-        description="When true, extract and normalize the product image gallery.",
+        description=(
+            "Quando true, extrai e normaliza a galeria de imagens do produto "
+            "(ignorado no scraping só de oferta)."
+        ),
     )
 
 

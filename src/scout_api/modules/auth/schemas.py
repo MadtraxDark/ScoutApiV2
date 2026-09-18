@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class UserRole(StrEnum):
@@ -39,14 +39,14 @@ class AuthenticatedPrincipal:
 
 
 class PublicUser(BaseModel):
-    """Minimal user payload allowed across the public API boundary."""
+    """Dados mínimos do usuário expostos pela API pública."""
 
     id: UUID
     display_name: str | None = None
 
 
 class AuthSessionResponse(BaseModel):
-    """Access token for API calls; refresh stays HttpOnly cookie when set by API."""
+    """Sessão autenticada: access token para a API e dados públicos do usuário."""
 
     access_token: str
     token_type: str = "bearer"
@@ -55,7 +55,9 @@ class AuthSessionResponse(BaseModel):
 
 
 class GoogleAuthStartResponse(BaseModel):
-    authorization_url: str
+    authorization_url: str = Field(
+        description="URL para redirecionar o usuário ao login Google."
+    )
 
 
 class AuthErrorDetail(BaseModel):

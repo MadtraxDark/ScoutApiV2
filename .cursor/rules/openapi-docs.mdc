@@ -1,0 +1,34 @@
+---
+description: Documentação OpenAPI (/docs) em pt-BR — summary vs description
+globs:
+  - src/scout_api/main.py
+  - src/scout_api/api/**/*.py
+  - src/scout_api/modules/**/router.py
+  - src/scout_api/modules/**/schemas.py
+alwaysApply: false
+---
+
+# OpenAPI /docs
+
+Documentação exibida em `/docs` deve estar em **português-BR**, curta e fiel ao comportamento real.
+
+## Regra permanente
+
+- **`summary`**: o que a operação é (curto, orientado à ação).
+- **`description`**: no máximo 1–2 frases sobre o que ela realmente faz.
+
+Exemplos: `Cadastrar produto`, `Buscar oferta de produto`, `Executar scraping completo`.
+
+## Ao criar ou alterar endpoints
+
+1. Preencha `summary`, `description` e `tags` (tags em pt-BR).
+2. Descreva parâmetros/respostas importantes só quando agregar valor.
+3. Não invente comportamento que o código não implementa.
+4. Não altere paths ou contratos só para melhorar a doc.
+5. Vocabulário consistente: produto, oferta, scraping, imagens, usuário, autenticação.
+
+## Proibido em `/docs`
+
+Textos genéricos (“Retorna dados”, “Realiza operação”) e exposição de implementação interna, tokens, secrets, credenciais, detalhes sensíveis de segurança ou nomes de tabela sem necessidade.
+
+Nomes técnicos do contrato (`product_id`, `include_images`, `URL`, `JWT`) podem permanecer em inglês.

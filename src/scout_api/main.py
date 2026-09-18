@@ -36,6 +36,32 @@ app = FastAPI(
     docs_url=_docs_url,
     redoc_url=_redoc_url,
     openapi_url=_openapi_url,
+    openapi_tags=[
+        {
+            "name": "Saúde da API",
+            "description": "Verificação de disponibilidade da API.",
+        },
+        {
+            "name": "Autenticação",
+            "description": "Login Google, sessão e usuário autenticado.",
+        },
+        {
+            "name": "Crawler",
+            "description": "Scraping de produto e oferta a partir de URL.",
+        },
+        {
+            "name": "Produtos",
+            "description": "Cadastro e consulta de produtos canônicos.",
+        },
+        {
+            "name": "Correspondência",
+            "description": "Matching de produto entre lojas suportadas.",
+        },
+        {
+            "name": "Ofertas",
+            "description": "Atualização de preço e disponibilidade de ofertas.",
+        },
+    ],
 )
 
 origins = [

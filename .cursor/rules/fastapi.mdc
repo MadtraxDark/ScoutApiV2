@@ -12,3 +12,4 @@ globs: ["src/scout_api/api/**/*.py", "src/scout_api/modules/**/router.py", "src/
 - Reutilize DI, schemas e contratos existentes; não crie abstrações ou versões paralelas de endpoints.
 - Preserve a direção `HTTP/router -> service -> repository -> database` e os ADRs aceitos.
 - Ignore recomendações da skill fora do escopo (frontend embutido, SSE, SQLModel, `ty` no lugar de mypy) salvo pedido explícito.
+- Documentação OpenAPI (`summary` / `description` / tags): ver `openapi-docs.mdc`.

@@ -6,7 +6,7 @@ from collections.abc import Generator
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Path, status
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -33,7 +33,6 @@ from scout_api.modules.matching.schemas import (
 )
 
 router = APIRouter(
-    tags=["matching"],
     dependencies=[Depends(enforce_rate_limit("default"))],
 )
 
@@ -85,15 +84,32 @@ def get_registration_service(
 @router.post(
     "/products",
     response_model=ProductRegisterResponse,
+    tags=["Produtos"],
     responses={
-        401: {"model": CrawlErrorResponse},
-        403: {"model": CrawlErrorResponse},
-        409: {"model": CrawlErrorResponse},
-        422: {"model": CrawlErrorResponse},
-        503: {"model": CrawlErrorResponse},
+        401: {"model": CrawlErrorResponse, "description": "Não autenticado."},
+        403: {"model": CrawlErrorResponse, "description": "Sem permissão de escrita."},
+        409: {
+            "model": CrawlErrorResponse,
+            "description": "Conflito de integridade ao persistir o produto.",
+        },
+        422: {
+            "model": CrawlErrorResponse,
+            "description": "Dados de cadastro inválidos.",
+        },
+        503: {
+            "model": CrawlErrorResponse,
+            "description": "Banco de dados indisponível ou não configurado.",
+        },
     },
     status_code=status.HTTP_200_OK,
     dependencies=[Depends(require_permission("products:write"))],
+    summary="Cadastrar produto",
+    description=(
+        "Cadastra um produto canônico ou reutiliza um já existente "
+        "sem sobrescrita silenciosa. "
+        "Pode anexar um listing de loja quando store "
+        "e identificadores forem informados."
+    ),
 )
 def register_product(
     payload: ProductRegisterRequest,
@@ -102,7 +118,6 @@ def register_product(
         AuthenticatedPrincipal, Depends(require_permission("products:write"))
     ],
 ) -> ProductRegisterResponse:
-    """Cadastra ou localiza produto canônico (sem overwrite silencioso)."""
     try:
         return service.register(payload, owner=principal)
     except RequestError as exc:
@@ -121,17 +136,26 @@ def register_product(
 @router.get(
     "/products/{product_id}",
     response_model=ProductView,
+    tags=["Produtos"],
     responses={
-        401: {"model": CrawlErrorResponse},
-        403: {"model": CrawlErrorResponse},
-        404: {"model": CrawlErrorResponse},
-        503: {"model": CrawlErrorResponse},
+        401: {"model": CrawlErrorResponse, "description": "Não autenticado."},
+        403: {"model": CrawlErrorResponse, "description": "Sem permissão de leitura."},
+        404: {"model": CrawlErrorResponse, "description": "Produto não encontrado."},
+        503: {
+            "model": CrawlErrorResponse,
+            "description": "Banco de dados indisponível ou não configurado.",
+        },
     },
     status_code=status.HTTP_200_OK,
     dependencies=[Depends(require_permission("products:read"))],
+    summary="Consultar produto",
+    description=(
+        "Retorna o produto canônico e seus listings vinculados, "
+        "respeitando a visibilidade do usuário autenticado."
+    ),
 )
 def get_product(
-    product_id: UUID,
+    product_id: Annotated[UUID, Path(description="Identificador do produto canônico.")],
     service: Annotated[ProductRegistrationService, Depends(get_registration_service)],
     principal: Annotated[
         AuthenticatedPrincipal, Depends(require_permission("products:read"))
@@ -153,19 +177,39 @@ def get_product(
 @router.post(
     "/match",
     response_model=MatchResponse,
+    tags=["Correspondência"],
     responses={
-        401: {"model": CrawlErrorResponse},
-        403: {"model": CrawlErrorResponse},
-        422: {"model": CrawlErrorResponse},
-        429: {"model": CrawlErrorResponse},
-        502: {"model": CrawlErrorResponse},
-        503: {"model": CrawlErrorResponse},
+        401: {"model": CrawlErrorResponse, "description": "Não autenticado."},
+        403: {"model": CrawlErrorResponse, "description": "Sem permissão de matching."},
+        422: {
+            "model": CrawlErrorResponse,
+            "description": "URL inválida, loja sem suporte ou falha de parsing.",
+        },
+        429: {
+            "model": CrawlErrorResponse,
+            "description": "Limite de requisições excedido.",
+        },
+        502: {
+            "model": CrawlErrorResponse,
+            "description": "Bloqueio ou falha ao acessar loja de origem.",
+        },
+        503: {
+            "model": CrawlErrorResponse,
+            "description": "Banco indisponível quando persist=true.",
+        },
     },
     status_code=status.HTTP_200_OK,
     dependencies=[
         Depends(require_permission("match")),
         Depends(enforce_rate_limit("crawler")),
     ],
+    summary="Corresponder produto entre lojas",
+    description=(
+        "A partir da URL de referência, busca candidatos nas lojas informadas "
+        "(ou no conjunto padrão) e classifica cada hit "
+        "como auto_match, review ou reject. "
+        "Com persist=true, grava o produto canônico e os listings no banco."
+    ),
 )
 def match_product(
     payload: MatchRequest,
@@ -214,19 +258,37 @@ def match_product(
 @router.post(
     "/offers/refresh",
     response_model=OfferRefreshResponse,
+    tags=["Ofertas"],
     responses={
-        401: {"model": CrawlErrorResponse},
-        403: {"model": CrawlErrorResponse},
-        422: {"model": CrawlErrorResponse},
-        429: {"model": CrawlErrorResponse},
-        502: {"model": CrawlErrorResponse},
-        503: {"model": CrawlErrorResponse},
+        401: {"model": CrawlErrorResponse, "description": "Não autenticado."},
+        403: {"model": CrawlErrorResponse, "description": "Sem permissão de refresh."},
+        422: {
+            "model": CrawlErrorResponse,
+            "description": "Pedido inválido ou falha ao interpretar a página.",
+        },
+        429: {
+            "model": CrawlErrorResponse,
+            "description": "Limite de requisições excedido.",
+        },
+        502: {
+            "model": CrawlErrorResponse,
+            "description": "Bloqueio ou falha ao acessar loja de origem.",
+        },
+        503: {
+            "model": CrawlErrorResponse,
+            "description": "Banco de dados indisponível ou não configurado.",
+        },
     },
     status_code=status.HTTP_200_OK,
     dependencies=[
         Depends(require_permission("offers:refresh")),
         Depends(enforce_rate_limit("crawler")),
     ],
+    summary="Atualizar ofertas",
+    description=(
+        "Reexecuta o scraping das ofertas indicadas por produto canônico, "
+        "listing_ids ou urls e registra mudanças de preço, vendedor ou disponibilidade."
+    ),
 )
 def refresh_offers(
     payload: OfferRefreshRequest,

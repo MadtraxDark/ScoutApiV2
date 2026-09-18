@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Annotated
 from urllib.parse import urlencode
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from fastapi.responses import RedirectResponse
 
 from scout_api.core.config import Settings, get_settings
@@ -34,7 +34,7 @@ from scout_api.modules.auth.schemas import (
     principal_to_public,
 )
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(prefix="/auth", tags=["Autenticação"])
 
 
 def _http_auth_error(exc: AuthError) -> HTTPException:
@@ -53,6 +53,11 @@ def _http_auth_error(exc: AuthError) -> HTTPException:
     "/google",
     response_model=GoogleAuthStartResponse,
     dependencies=[Depends(enforce_rate_limit("auth", use_user=False))],
+    summary="Iniciar login com Google",
+    description=(
+        "Gera a URL de autorização Google (OAuth) "
+        "para o cliente redirecionar o usuário."
+    ),
 )
 def start_google_auth(
     response: Response,
@@ -92,13 +97,25 @@ def start_google_auth(
     "/callback",
     response_model=None,
     dependencies=[Depends(enforce_rate_limit("auth", use_user=False))],
+    summary="Concluir login com Google",
+    description=(
+        "Troca o código OAuth por sessão autenticada. "
+        "Pode redirecionar ao frontend configurado "
+        "ou devolver o access token na resposta."
+    ),
 )
 def google_auth_callback(
     request: Request,
     response: Response,
     settings: Annotated[Settings, Depends(get_settings)],
-    code: str | None = None,
-    error: str | None = None,
+    code: Annotated[
+        str | None,
+        Query(description="Código de autorização retornado pelo provedor OAuth."),
+    ] = None,
+    error: Annotated[
+        str | None,
+        Query(description="Código de erro quando o provedor nega a autenticação."),
+    ] = None,
 ) -> RedirectResponse | AuthSessionResponse:
     if error:
         raise HTTPException(
@@ -160,6 +177,10 @@ def google_auth_callback(
     "/refresh",
     response_model=AuthSessionResponse,
     dependencies=[Depends(enforce_rate_limit("auth", use_user=False))],
+    summary="Renovar sessão",
+    description=(
+        "Emite um novo access token a partir do cookie de refresh HttpOnly da sessão."
+    ),
 )
 def refresh_auth_session(
     request: Request,
@@ -197,6 +218,8 @@ def refresh_auth_session(
     "/logout",
     status_code=status.HTTP_204_NO_CONTENT,
     dependencies=[Depends(enforce_rate_limit("auth", use_user=False))],
+    summary="Encerrar sessão",
+    description="Remove os cookies de sessão de autenticação no cliente.",
 )
 def logout(response: Response) -> None:
     clear_refresh_cookie(response)
@@ -207,6 +230,10 @@ def logout(response: Response) -> None:
     "/me",
     response_model=PublicUser,
     dependencies=[Depends(enforce_rate_limit("default"))],
+    summary="Consultar usuário autenticado",
+    description=(
+        "Retorna id e display_name do usuário identificado pelo access token (JWT)."
+    ),
 )
 def me(
     principal: Annotated[AuthenticatedPrincipal, Depends(require_authenticated_user)],
