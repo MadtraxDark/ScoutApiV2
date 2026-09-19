@@ -36,9 +36,10 @@ diff sem fabricar matches por similaridade de título nem sobrescrever históric
 2. Descoberta via **busca ao vivo** (`supports_search`) em todas as lojas
    implementadas com adapter SERP (Amazon BR/US, Kabum, Magalu, Shopee,
    Best Buy, Nissei, Shopping China).
-3. `MatchingEngine` precision-first: GTIN → brand+model → título auxiliar;
-   conflito de variante ou acessório → `reject`; título nunca basta para
-   `auto_match`.
+3. `MatchingEngine` precision-first: GTIN → **MPN** → brand+model → título auxiliar;
+   conflito de variante, assinatura crítica (GPU/SSD/telefone/DDR/capacidade) ou
+   acessório → `reject`; título nunca basta para `auto_match`. Detalhe da cascata:
+   [ADR 0024](0024-product-match-evidence-cascade.md).
 4. Persistência PostgreSQL: `CanonicalProduct`, `ProductIdentifier`,
    `StoreListing`, `OfferSnapshot`, `OfferEvent` (Alembic).
 5. Endpoints:

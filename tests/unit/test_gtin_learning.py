@@ -46,6 +46,8 @@ def _identity(**kwargs: object) -> ProductIdentity:
         "product_id": "241268000",
         "price": Decimal("6332.22"),
         "currency": "BRL",
+        "mpn": None,
+        "mpn_display": None,
     }
     defaults.update(kwargs)
     return ProductIdentity(**defaults)  # type: ignore[arg-type]

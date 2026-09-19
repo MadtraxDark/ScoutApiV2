@@ -30,27 +30,39 @@ Fetch (Camoufox / urllib) → Store Adapter (spider) → Offer | Details | Image
 | Refresh | `OfferRefreshResponse` | `POST /offers/refresh` | re-scrape + offer history diff |
 
 ADR: [0011](../adr/0011-offer-vs-product-details.md), [0012](../adr/0012-optional-image-extraction.md),
-[0019](../adr/0019-product-matching.md).
+[0019](../adr/0019-product-matching.md),
+[0024](../adr/0024-product-match-evidence-cascade.md).
 
-### Product Matching (ADR 0019)
+### Product Matching (ADR 0019 / 0024)
 
 - Discovery: live SERP on all implemented stores with `supports_search`
   (`kabum`, `bestbuy`, `nissei`, `shoppingchina`, `amazon_br`, `amazon_us`,
   `magazineluiza`, `shopee` — ordered by typical GTIN/EAN exposure) via
   `build_search_url` / `parse_search_results`.
-- Scoring: validated GTIN first; brand+model; variant gates (color/storage/size
-  /capacity/pack) with canonicalization for storage unit spacing (`256 gb`≡
-  `256gb`) and common PT/EN color synonyms (`preto`≡`black`, `luna grey`/
-  `arctic grey`/`cinza`≡`grey`); accessory tokens reject; title similarity
-  never alone for `auto_match`. Soft model compatibility strips marketing/
-  CPU suffixes and treats `Slim 3`≡`Slim 3i` (still rejects Intel↔AMD, distinct
-  chassis codes, and conflicting CPU SKUs such as Core 3 100U vs i5-1335U). Soft
-  model matches also require title similarity ≥ 0.75. Opaque store SKUs yield to
-  title-inferred family names (iPhone / IdeaPad Slim). When metadata maps RAM into
-  `storage`, identity prefers SSD-sized capacities from the title. When PDP
-  `model` is missing, identity may infer it from the title; placeholder brands
-  (`outros`, Amazon Renewed store) are ignored so title brand can win.
-  Decisions: `auto_match` | `review` | `reject`.
+- Scoring cascade (precision-first): variant / **critical identity** blockers →
+  accessory / **bundle** (kit+watch/AirPods) reject → **condition**
+  (renewed/usado vs novo) → same store+`product_id`
+  → validated **GTIN** → normalized **MPN** → brand+model (série comercial / MPN
+  cruzado no título) → title similarity (cap; never alone for `auto_match`).
+  Critical blockers include GPU suffix (`Ti`/`Super`), phone trim (`Pro`/`Max` /
+  `16e`≠`16`), SSD series (`990 evo plus` ≠ `870 evo`), DDR4≠DDR5, and storage
+  ≥128GB divergente. Soft model compatibility strips marketing/CPU suffixes and
+  treats `Slim 3`≡`Slim 3i` (still rejects Intel↔AMD, chassis codes, CPU SKU
+  conflicts, and critical suffixes like `pro`/`plus`/`ti`). Soft model matches
+  also require title similarity ≥ 0.75. Title normalization compacta
+  `128 GB`≡`128gb`, preserva MPN como token único e mapeia cores PT/EN/ES
+  (`Preto`≡`Black`, `Verde-acinzentado`≡`teal`). Variant key aliases
+  (`cor`/`colour`→`color`, `armazenamento` / `tamanho`≥128GB→`storage`) keep the
+  color/storage gates active across locales. Opaque store SKUs / MPNs cedem a
+  nomes de família inferidos do título (iPhone, IdeaPad, séries SSD/GPU). When
+  metadata maps RAM into `storage`, identity prefers SSD-sized capacities from
+  the title. Placeholder brands (`outros`, Amazon Renewed store) are ignored so
+  title brand can win. Decisions: `auto_match` | `review` | `reject`.
+- **Search queries:** `GTIN → display MPN (hyphenated) → brand + spaced series
+  + storage → color synonyms (preto/black) → progressive drop → compacted MPN
+  → título`. Compact tokens like `990evoplus` / `mzv9s1t0bam` are weak on Amazon
+  SERP; `StoreSearchService` also re-ranks cards by query/title/**path** overlap
+  (ignora `keywords=` na query-string da Amazon) before the scrape cap.
 - **Trusted GTIN learning:** when an `auto_match` yields a check-digit-valid
   GTIN (and brands agree; no cross-match conflicts), the API records it on the
   canonical product (`ProductIdentifier`) and returns `discovered_gtin` /
@@ -104,7 +116,7 @@ ADR: [0011](../adr/0011-offer-vs-product-details.md), [0012](../adr/0012-optiona
 |---|---|---|---|
 | `ParseError` / `MissingPriceError` | Page shape / price not understood | 422 | **No** |
 | `RequestError(AUTH_REQUIRED)` | Login/session gate (falta de login) after resolution attempts; Shopee `/verify/traffic` or `/buyer/login` | 401 | **Yes** (FALLBACK stores) |
-| `RequestError(UPSTREAM_BLOCKED)` | Challenge/CAPTCHA/hard block **after** resolution attempts failed | 502/403-class | **Yes** (FALLBACK stores) |
+| `RequestError(UPSTREAM_BLOCKED)` | Challenge/CAPTCHA/hard block **after** resolution attempts failed; also Camoufox navigation resets (`NS_ERROR_NET_RESET` / connection refused) treated as upstream block | 502/403-class | **Yes** (FALLBACK stores) |
 | `RequestError(UNSUPPORTED_STORE)` | No spider for hostname | — | No |
 | `ProductUnavailable` | Reserved domain product state | — | No |
 

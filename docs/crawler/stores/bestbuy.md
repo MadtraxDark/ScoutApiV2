@@ -72,7 +72,24 @@ Canonical: [ADR 0013](../../adr/0013-bestbuy-availability-semantics.md).
 
 ## Known blocking
 
-- Cloudflare/WAF via fetcher classification
+- Cloudflare/WAF / Akamai via fetcher classification
+- Direct Camoufox from non-US egress often hits `NS_ERROR_NET_RESET` on PDP;
+  classified as `UPSTREAM_BLOCKED` → Proxy Cost Mode FALLBACK
+- Proxied Camoufox pins DataImpulse-style geo to **`__cr.us`** for
+  `bestbuy.com` (BR residential IPs also reset against Akamai). Locale
+  `en-US` when proxy is active; `geoip=True` on Best Buy proxied launches so
+  timezone/WebRTC align with the US exit IP
+- Sticky DataImpulse ``sessid.scoutbb`` keeps ``_abck`` / sensor cookies on one
+  residential exit (~30 min)
+- **Homepage warmup** before PDP (mint Akamai ``bmak`` / ``_abck`` / ``bm_sz``)
+  with longer settle + light mouse telemetry; Referer from origin on PDP
+- On PDP ``NS_ERROR_NET_RESET``, re-warm and retry once in-session; StoreAware
+  also retries the proxied leg once after classified block
+- Camoufox ``disableInstantAnimations`` (community: Akamai detection vector —
+  daijro/camoufox#450/#555; Docker uses Camoufox Firefox 152+)
+- Plain HTTP without Akamai cookies is unreliable; prefer browser + FALLBACK
+- Never fabricate `price=null` / `available=false` from a TCP reset — classify
+  as `UPSTREAM_BLOCKED` until resolution succeeds
 
 ## Important invariants
 
@@ -85,6 +102,14 @@ Canonical: [ADR 0013](../../adr/0013-bestbuy-availability-semantics.md).
 - Location/ZIP can change page copy without changing stock semantics
 - Deactivated legacy SKUs may 404 (`page not found`) or redirect elsewhere —
   mismatch is rejected; true 404 stays `ParseError`
+- SERP titles often come from the `/product/{slug}/` path when card text is empty
+- Carrier-locked SKUs (Verizon/AT&T/…) appear in US SERP; matching treats carrier
+  as commercial condition, not identity — unlocked / BR-ref matches still prefer
+  unlocked when available
+- Candidate search can succeed while PDP scrape still needs US residential
+  proxy after direct `NET_RESET`
+- Cold PDP without homepage warmup historically caused intermittent TCP RST;
+  mitigated by origin warmup + sticky sessid (see Known blocking)
 
 ## Tests / fixtures
 

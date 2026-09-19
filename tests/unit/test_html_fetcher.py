@@ -79,6 +79,7 @@ def test_proxy_settings_from_url_parses_credentials() -> None:
 def test_locale_and_warmup_for_url() -> None:
     from scout_api.modules.crawler.services.html_fetcher import (
         apply_shopee_br_proxy_targeting,
+        is_auth_wall_page,
         is_shopee_get_pc_url,
         is_shopee_traffic_block,
         locale_for_url,
@@ -93,8 +94,10 @@ def test_locale_and_warmup_for_url() -> None:
     assert locale_for_url("https://shopee.com.br/i.1.2") == "pt-BR"
     assert locale_for_url("https://www.amazon.com.br/dp/B09WNK39JN") == "pt-BR"
     assert locale_for_url("https://www.amazon.com/dp/B09WNK39JN") == "en-US"
+    assert locale_for_url("https://www.bestbuy.com/product/x/1") == "en-US"
     assert locale_for_url("https://example.com/") is None
     from scout_api.modules.crawler.services.html_fetcher import (
+        apply_proxy_geo_targeting,
         marketplace_referer_for_url,
     )
 
@@ -107,12 +110,18 @@ def test_locale_and_warmup_for_url() -> None:
         == "https://www.amazon.com/"
     )
     assert marketplace_referer_for_url("https://www.kabum.com.br/p/1") is None
+    assert marketplace_referer_for_url(
+        "https://www.bestbuy.com/product/ps5/JXHQ37TYYL"
+    ) == ("https://www.bestbuy.com/")
     assert warmup_url_for("https://nissei.com/py/produto") == "https://nissei.com/py/"
     assert warmup_url_for("https://www.magazineluiza.com.br/p/1") == (
         "https://www.magazineluiza.com.br/"
     )
     assert (
         warmup_url_for("https://shopee.com.br/item-i.1.2") == "https://shopee.com.br/"
+    )
+    assert warmup_url_for("https://www.bestbuy.com/product/ps5/1") == (
+        "https://www.bestbuy.com/"
     )
     assert shopee_ids_from_url(
         "https://shopee.com.br/prod-i.341936748.29277977480"
@@ -124,6 +133,11 @@ def test_locale_and_warmup_for_url() -> None:
     )
     assert is_shopee_traffic_block(
         "https://shopee.com.br/verify/traffic/error?next=x", ""
+    )
+    assert is_auth_wall_page(
+        "<html><body>verify/traffic</body></html>",
+        url="https://shopee.com.br/verify/traffic?anti_bot_tracking_id=x",
+        title="verify",
     )
     assert "data-shopee-pdp" in wrap_shopee_pdp_json('{"item":{"item_id":1}}')
     assert (
@@ -147,6 +161,80 @@ def test_locale_and_warmup_for_url() -> None:
         )
         == "http://login:pass@gw.dataimpulse.com:10001"
     )
+    assert (
+        apply_proxy_geo_targeting(
+            "http://login:pass@gw.dataimpulse.com:10001",
+            "https://www.bestbuy.com/product/ps5/JXHQ37TYYL",
+        )
+        == "http://login__cr.us%3Bsessid.scoutbb:pass@gw.dataimpulse.com:10001"
+    )
+    assert (
+        apply_proxy_geo_targeting(
+            "http://login__cr.br:pass@gw.dataimpulse.com:10001",
+            "https://www.bestbuy.com/product/ps5/JXHQ37TYYL",
+        )
+        == "http://login__cr.us%3Bsessid.scoutbb:pass@gw.dataimpulse.com:10001"
+    )
+
+
+def test_bestbuy_net_reset_classified_as_upstream_blocked() -> None:
+    """Regression: Akamai connection reset must be UPSTREAM_BLOCKED (proxy FALLBACK)."""
+    from scout_api.modules.crawler.services.html_fetcher import (
+        classify_camoufox_navigation_error,
+    )
+
+    err = classify_camoufox_navigation_error(
+        Exception("Page.goto: NS_ERROR_NET_RESET"),
+        url="https://www.bestbuy.com/product/playstation-5/JXHQ37TYYL",
+    )
+    assert err.code == "UPSTREAM_BLOCKED"
+    assert err.retryable is True
+
+
+def test_bestbuy_proxied_launch_enables_geoip(tmp_path: Any) -> None:
+    """US-pinned Best Buy exits need geoip so timezone/WebRTC match the proxy IP."""
+    captured: dict[str, Any] = {}
+
+    @contextmanager
+    def fake_factory(**kwargs: Any) -> Iterator[Any]:
+        captured.update(kwargs)
+
+        class FakePage:
+            url = "https://www.bestbuy.com/product/ps5/JXHQ37TYYL"
+
+            def goto(self, url: str, **goto_kwargs: Any) -> None:
+                del url, goto_kwargs
+
+            def content(self) -> str:
+                return "<html><body><h1>ok</h1></body></html>"
+
+            def title(self) -> str:
+                return "ok"
+
+            def wait_for_timeout(self, ms: int) -> None:
+                del ms
+
+        class FakeBrowser:
+            def new_page(self) -> FakePage:
+                return FakePage()
+
+        yield FakeBrowser()
+
+    fetcher = CamoufoxHtmlFetcher(
+        browser_factory=fake_factory,
+        proxy_url="http://u:p@proxy.example:9000",
+        settle_ms=0,
+        max_settle_attempts=1,
+        user_data_dir=tmp_path / "bb-profile",
+        warmup_origin=False,
+    )
+    fetcher.fetch("https://www.bestbuy.com/product/ps5/JXHQ37TYYL")
+    assert captured["locale"] == "en-US"
+    assert captured["geoip"] is True
+    username = str(captured.get("proxy", {}).get("username", ""))
+    assert "__cr.us" in username
+    assert "sessid.scoutbb" in username
+    assert captured.get("config", {}).get("disableInstantAnimations") is True
 
 
 def test_urllib_fetcher_maps_http_403() -> None:

@@ -8,7 +8,11 @@ from typing import Literal
 
 from scout_api.modules.matching.identity import (
     ProductIdentity,
+    condition_conflict,
+    console_soft_model_title_exempt,
+    critical_identity_conflict,
     looks_like_accessory,
+    looks_like_bundle,
     models_compatible,
     token_set_ratio,
     variants_equal,
@@ -79,6 +83,21 @@ class MatchingEngine:
                 reasons=tuple(reasons),
             )
 
+        critical = critical_identity_conflict(reference, candidate)
+        if critical:
+            reasons.append(
+                MatchReason(
+                    code="critical_conflict",
+                    detail=critical,
+                    score=0.0,
+                )
+            )
+            return MatchScore(
+                decision="reject",
+                confidence=Decimal("0.0000"),
+                reasons=tuple(reasons),
+            )
+
         if looks_like_accessory(candidate.title, reference_title=reference.title):
             reasons.append(
                 MatchReason(
@@ -86,6 +105,31 @@ class MatchingEngine:
                     detail="candidate_title_looks_like_accessory",
                     score=0.0,
                 )
+            )
+            return MatchScore(
+                decision="reject",
+                confidence=Decimal("0.0000"),
+                reasons=tuple(reasons),
+            )
+
+        if looks_like_bundle(candidate.title, reference_title=reference.title):
+            reasons.append(
+                MatchReason(
+                    code="bundle_reject",
+                    detail="candidate_title_looks_like_bundle",
+                    score=0.0,
+                )
+            )
+            return MatchScore(
+                decision="reject",
+                confidence=Decimal("0.0000"),
+                reasons=tuple(reasons),
+            )
+
+        condition = condition_conflict(reference.title, candidate.title)
+        if condition:
+            reasons.append(
+                MatchReason(code="condition_reject", detail=condition, score=0.0)
             )
             return MatchScore(
                 decision="reject",
@@ -147,6 +191,38 @@ class MatchingEngine:
                 reasons=tuple(reasons),
             )
 
+        # Manufacturer part number exact — strong identifier after GTIN.
+        if reference.mpn and candidate.mpn and reference.mpn == candidate.mpn:
+            reasons.append(
+                MatchReason(
+                    code="mpn_exact",
+                    detail=f"mpn={reference.mpn}",
+                    score=1.0,
+                )
+            )
+            if (
+                reference.brand
+                and candidate.brand
+                and not _brand_compatible(reference, candidate)
+            ):
+                reasons.append(
+                    MatchReason(
+                        code="mpn_brand_conflict",
+                        detail="mpn_match_but_brand_diverges",
+                        score=0.5,
+                    )
+                )
+                return MatchScore(
+                    decision="review",
+                    confidence=Decimal("0.8500"),
+                    reasons=tuple(reasons),
+                )
+            return MatchScore(
+                decision="auto_match",
+                confidence=Decimal("0.9800"),
+                reasons=tuple(reasons),
+            )
+
         confidence = Decimal("0.0000")
         has_strong_id = False
 
@@ -188,7 +264,10 @@ class MatchingEngine:
             and _brand_compatible(reference, candidate)
         )
         if model_soft_ok and reference.model != candidate.model:
-            if title_sim < SOFT_MODEL_TITLE_MIN:
+            # Consoles: sparse vs marketing titles must not veto family+edition.
+            if title_sim < SOFT_MODEL_TITLE_MIN and not console_soft_model_title_exempt(
+                reference, candidate
+            ):
                 model_soft_ok = False
 
         if model_soft_ok:

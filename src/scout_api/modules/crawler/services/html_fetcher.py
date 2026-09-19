@@ -37,6 +37,55 @@ SHOPEE_BLOCKED_RESOURCE_TYPES: tuple[str, ...] = ("image", "media", "font")
 PROXY_COST_BLOCKED_RESOURCE_TYPES: tuple[str, ...] = SHOPEE_BLOCKED_RESOURCE_TYPES
 WarmupPolicy = str  # always | once_per_session | never
 
+# Playwright/Firefox resets that typically mean WAF/IP reset, not local bugs.
+_CAMOUFOX_UPSTREAM_BLOCK_MARKERS: tuple[str, ...] = (
+    "ns_error_net_reset",
+    "ns_error_connection_refused",
+    "ns_error_net_interrupt",
+    "ns_error_net_timeout",
+    "ns_error_proxy_connection_refused",
+    "err_connection_reset",
+    "err_connection_refused",
+    "err_proxy_connection_failed",
+    "net::err_connection_reset",
+    "net::err_connection_refused",
+)
+
+
+def classify_camoufox_navigation_error(exc: BaseException, *, url: str) -> RequestError:
+    """Map Camoufox/Playwright navigation failures to crawler RequestError codes.
+
+    Connection resets / refused from the upstream (or its WAF) are treated as
+    ``UPSTREAM_BLOCKED`` so Proxy Cost Mode FALLBACK may retry with proxy.
+    Other render failures stay ``UPSTREAM_REQUEST_ERROR`` (no proxy fallback).
+    """
+    message = str(exc).casefold()
+    if any(marker in message for marker in _CAMOUFOX_UPSTREAM_BLOCK_MARKERS):
+        return RequestError(
+            "A loja resetou ou recusou a conexão (bloqueio de rede / WAF)",
+            code="UPSTREAM_BLOCKED",
+            url=url,
+            retryable=True,
+        )
+    return RequestError(
+        f"Falha ao renderizar a página: {exc}",
+        code="UPSTREAM_REQUEST_ERROR",
+        url=url,
+        retryable=True,
+    )
+
+
+def _is_net_reset_error(exc: BaseException) -> bool:
+    message = str(exc).casefold()
+    return any(marker in message for marker in _CAMOUFOX_UPSTREAM_BLOCK_MARKERS)
+
+
+def _warmup_origin_key(url: str) -> str:
+    warm = warmup_url_for(url)
+    target = warm or url
+    return (urlparse(target).netloc or "").lower()
+
+
 # HTTP leg for Amazon only (AmazonHttpFirst). Browser-like UA; not Camoufox spoofing.
 _AMAZON_HTTP_USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -163,6 +212,8 @@ def is_auth_wall_page(
             return True
 
     if "shopee." in folded_url or "shopee." in lower[:2_000]:
+        if "/verify/traffic" in folded_url or "verify/traff" in lower:
+            return True
         if "/buyer/login" in folded_url:
             return True
         if "login" in folded_url and "next=" in folded_url:
@@ -201,6 +252,8 @@ def locale_for_url(url: str) -> str | None:
         return "pt-BR"
     if hostname == "amazon.com" or hostname.endswith(".amazon.com"):
         return "en-US"
+    if hostname == "bestbuy.com" or hostname.endswith(".bestbuy.com"):
+        return "en-US"
     return None
 
 
@@ -217,17 +270,19 @@ def accept_language_for_url(url: str) -> str:
 
 
 def marketplace_referer_for_url(url: str) -> str | None:
-    """Same-marketplace Referer for Amazon PDP fetches (session continuity)."""
+    """Same-marketplace Referer for Amazon / Best Buy PDP session continuity."""
     hostname = (urlparse(url).hostname or "").lower().removeprefix("www.")
     if hostname == "amazon.com.br" or hostname.endswith(".amazon.com.br"):
         return "https://www.amazon.com.br/"
     if hostname == "amazon.com" or hostname.endswith(".amazon.com"):
         return "https://www.amazon.com/"
+    if hostname == "bestbuy.com" or hostname.endswith(".bestbuy.com"):
+        return "https://www.bestbuy.com/"
     return None
 
 
 def warmup_url_for(url: str) -> str | None:
-    """Origin warm-up URL used to mint Cloudflare cookies before the product page."""
+    """Origin warm-up to mint Cloudflare / Akamai cookies before the PDP."""
     parsed = urlparse(url)
     hostname = (parsed.hostname or "").lower()
     if not hostname or not parsed.scheme:
@@ -238,6 +293,10 @@ def warmup_url_for(url: str) -> str | None:
         return f"{parsed.scheme}://{parsed.netloc}/"
     if hostname == "magazineluiza.com.br" or hostname.endswith(".magazineluiza.com.br"):
         # Mint Akamai/_abck cookies on the origin before the PDP (ADR 0017).
+        return f"{parsed.scheme}://{parsed.netloc}/"
+    if hostname == "bestbuy.com" or hostname.endswith(".bestbuy.com"):
+        # Akamai Bot Manager: cold PDP navigations often get TCP RST / sec-cpt.
+        # Homepage first lets ``bmak`` mint ``_abck`` / ``bm_sz`` on the same IP.
         return f"{parsed.scheme}://{parsed.netloc}/"
     return None
 
@@ -324,24 +383,95 @@ def looks_like_shopee_search_payload(raw: str) -> bool:
 
 def apply_shopee_br_proxy_targeting(proxy_url: str, page_url: str) -> str:
     """Pin DataImpulse-style username geo to Brazil for shopee.com.br."""
-    if not proxy_url or not is_shopee_url(page_url):
+    return apply_proxy_geo_targeting(proxy_url, page_url)
+
+
+def apply_proxy_geo_targeting(proxy_url: str, page_url: str) -> str:
+    """Pin residential proxy country to the storefront market when possible.
+
+    DataImpulse-style usernames accept ``__cr.<cc>`` (ISO country). Shopee BR
+    needs Brazil egress; Best Buy (and amazon.com) need US egress — BR IPs
+    often see ``NS_ERROR_NET_RESET`` from Akamai on ``bestbuy.com``.
+
+    Best Buy also pins a sticky ``sessid`` so ``_abck`` / sensor cookies stay
+    bound to one residential exit for the session window (~30 min).
+    """
+    if not proxy_url:
         return proxy_url
+    country: str | None = None
+    if is_shopee_url(page_url):
+        country = "br"
+    elif is_bestbuy_url(page_url):
+        country = "us"
+    elif is_amazon_us_url(page_url):
+        country = "us"
+    if country is None:
+        return proxy_url
+    pinned = _pin_proxy_country(proxy_url, country)
+    if is_bestbuy_url(page_url):
+        return _pin_proxy_sessid(pinned, "scoutbb")
+    return pinned
+
+
+def is_bestbuy_url(url: str) -> bool:
+    host = (urlparse(url).hostname or "").casefold().removeprefix("www.")
+    return host == "bestbuy.com" or host.endswith(".bestbuy.com")
+
+
+def is_amazon_us_url(url: str) -> bool:
+    host = (urlparse(url).hostname or "").casefold().removeprefix("www.")
+    return host == "amazon.com"
+
+
+def _pin_proxy_country(proxy_url: str, country: str) -> str:
     parsed = urlparse(proxy_url.strip())
     if not parsed.hostname or not parsed.username:
         return proxy_url
     username = unquote(parsed.username)
+    marker = f"__cr.{country.casefold()}"
     if "__cr." in username:
+        # Replace an existing country pin rather than stacking markers.
+        username = re.sub(r"__cr\.[a-z]{2}\b", marker, username, count=1, flags=re.I)
+        if marker not in username.casefold():
+            username = f"{username}{marker}"
+    else:
+        username = f"{username}{marker}"
+    return _rebuild_proxy_url(parsed, username)
+
+
+def _pin_proxy_sessid(proxy_url: str, sessid: str) -> str:
+    """Pin DataImpulse-style sticky session (``;sessid.<id>``) on the username."""
+    parsed = urlparse(proxy_url.strip())
+    if not parsed.hostname or not parsed.username:
         return proxy_url
+    username = unquote(parsed.username)
+    token = f"sessid.{sessid}"
+    if "sessid." in username.casefold():
+        username = re.sub(
+            r";?sessid\.[^;]+",
+            f";{token}",
+            username,
+            count=1,
+            flags=re.I,
+        )
+        if "sessid." not in username.casefold():
+            username = f"{username};{token}"
+    else:
+        username = f"{username};{token}"
+    return _rebuild_proxy_url(parsed, username)
+
+
+def _rebuild_proxy_url(parsed: Any, username: str) -> str:
     from urllib.parse import quote, urlunparse
 
     netloc = (
-        f"{quote(username + '__cr.br', safe='')}"
+        f"{quote(username, safe='')}"
         f":{quote(unquote(parsed.password or ''), safe='')}"
         f"@{parsed.hostname}"
     )
     if parsed.port is not None:
         netloc = f"{netloc}:{parsed.port}"
-    return urlunparse(
+    rebuilt: str = urlunparse(
         (
             parsed.scheme,
             netloc,
@@ -351,6 +481,7 @@ def apply_shopee_br_proxy_targeting(proxy_url: str, page_url: str) -> str:
             parsed.fragment,
         )
     )
+    return rebuilt
 
 
 def proxy_settings_from_url(proxy_url: str) -> dict[str, str]:
@@ -592,7 +723,7 @@ class CamoufoxHtmlFetcher:
                     self._goto_shopee_early_stop(page, url, captured)
                     metrics.early_stop = True
                 else:
-                    self._goto(page, url)
+                    self._goto_with_bestbuy_retry(page, url, metrics=metrics)
 
                 html, final_url, title = self._wait_for_product_html(
                     page, captured=captured, resume_url=url
@@ -622,9 +753,65 @@ class CamoufoxHtmlFetcher:
                         captured.get("body")
                         and (shopee_search or captured.get("kind") == "search")
                     ):
-                        metrics.result = "blocked"
-                        self._log_metrics(metrics, request_types, byte_holder["n"], t0)
-                        raise shopee_auth_required_error(url=final_url or url)
+                        # ADR 0018: attempt login/session before AUTH_REQUIRED.
+                        if self._challenge_resolver is not None:
+                            resolved = self._challenge_resolver.try_resolve(
+                                page,
+                                html=html,
+                                title=title,
+                                page_url=final_url or url,
+                                resume_url=url,
+                            )
+                            if resolved:
+                                metrics.retry_count = int(metrics.retry_count) + 1
+                                # Short resume: do not re-enter the full settle
+                                # loop (would re-attempt login many times).
+                                try:
+                                    self._goto(page, url)
+                                    resume_deadline = time.perf_counter() + 20.0
+                                    while (
+                                        not captured.get("body")
+                                        and time.perf_counter() < resume_deadline
+                                    ):
+                                        cur = str(getattr(page, "url", "") or "")
+                                        if is_shopee_traffic_block(cur, ""):
+                                            break
+                                        page.wait_for_timeout(250)
+                                    html = page.content()
+                                    final_url = str(page.url)
+                                    try:
+                                        title = str(page.title())
+                                    except Exception:
+                                        title = title
+                                except Exception:
+                                    logger.warning(
+                                        "shopee_post_auth_resume_failed",
+                                        exc_info=True,
+                                    )
+                                if captured.get("body") and (
+                                    shopee_search or captured.get("kind") == "search"
+                                ):
+                                    html = wrap_shopee_search_json(captured["body"])
+                                    final_url = url
+                                    title = "Shopee Search"
+                                    metrics.get_pc_captured = True
+                                elif captured.get("body"):
+                                    html = wrap_shopee_pdp_json(captured["body"])
+                                    final_url = url
+                                    title = "Shopee PDP"
+                                    metrics.get_pc_captured = True
+                        if is_shopee_traffic_block(final_url or url, html) and not (
+                            captured.get("body")
+                            and (
+                                shopee_search
+                                or captured.get("kind") in {"search", "pdp"}
+                            )
+                        ):
+                            metrics.result = "blocked"
+                            self._log_metrics(
+                                metrics, request_types, byte_holder["n"], t0
+                            )
+                            raise shopee_auth_required_error(url=final_url or url)
                 if is_hard_block_page(html, title=title):
                     metrics.result = "blocked"
                     self._log_metrics(metrics, request_types, byte_holder["n"], t0)
@@ -706,12 +893,7 @@ class CamoufoxHtmlFetcher:
             metrics.result = "error"
             self._log_metrics(metrics, request_types, transferred, t0)
             logger.exception("camoufox_fetch_failed", extra={"url": url})
-            raise RequestError(
-                "Falha ao renderizar a página com Camoufox",
-                code="UPSTREAM_REQUEST_ERROR",
-                url=url,
-                retryable=True,
-            ) from exc
+            raise classify_camoufox_navigation_error(exc, url=url) from exc
 
     def _log_metrics(
         self,
@@ -819,6 +1001,9 @@ class CamoufoxHtmlFetcher:
             "persistent_context": True,
             "user_data_dir": str(profile_dir),
         }
+        # Camoufox #450 / #555: instant CSS-animation collapse is an Akamai
+        # detection vector on some builds; opt out when the flag exists.
+        kwargs["config"] = {"disableInstantAnimations": True}
         # uBlock triggers Shopee "automated tools" detection (Camoufox #345).
         try:
             from camoufox.addons import DefaultAddons
@@ -831,11 +1016,16 @@ class CamoufoxHtmlFetcher:
             kwargs["disable_coop"] = True
             kwargs["i_know_what_im_doing"] = True
         if self._proxy_url:
-            proxy_url = apply_shopee_br_proxy_targeting(self._proxy_url, url)
+            proxy_url = apply_proxy_geo_targeting(self._proxy_url, url)
             kwargs["proxy"] = proxy_settings_from_url(proxy_url)
             # Some HTTP residential proxies break Camoufox's geoip IP probe (SSL to
             # ipecho/etc). Keep residential egress; pin locale from the store URL.
-            kwargs["geoip"] = False
+            # Best Buy Akamai is especially sensitive — prefer geoip when we already
+            # pinned ``__cr.us`` so timezone/WebRTC match the US exit IP.
+            if is_bestbuy_url(url):
+                kwargs["geoip"] = True
+            else:
+                kwargs["geoip"] = False
             locale = locale_for_url(url)
             if locale is not None:
                 kwargs["locale"] = locale
@@ -878,9 +1068,16 @@ class CamoufoxHtmlFetcher:
             return False
         logger.info("camoufox_warmup_origin", extra={"url": warmup})
         try:
+            self._apply_page_headers(page, url)
             self._goto(page, warmup)
             # Brief pause so JS challenge / cookie minting can finish before product.
-            page.wait_for_timeout(min(self._settle_ms, 3_000))
+            # Best Buy Akamai sensor (``bmak`` / ``_abck``) needs a longer settle
+            # plus light pointer telemetry — cold PDPs often see NET_RESET.
+            settle = min(self._settle_ms, 3_000)
+            if is_bestbuy_url(url):
+                settle = max(settle, 6_000)
+                self._bestbuy_akamai_sensor_nudge(page)
+            page.wait_for_timeout(settle)
             self._mark_warmup(url)
             return True
         except Exception:
@@ -890,6 +1087,59 @@ class CamoufoxHtmlFetcher:
                 exc_info=True,
             )
             return False
+
+    def _goto_with_bestbuy_retry(
+        self,
+        page: Any,
+        url: str,
+        *,
+        metrics: FetchCostMetrics,
+    ) -> None:
+        """Navigate to PDP; on Best Buy Akamai TCP reset, re-warm and retry once."""
+        self._apply_page_headers(page, url)
+        try:
+            self._goto(page, url)
+            return
+        except Exception as exc:
+            if not is_bestbuy_url(url) or not _is_net_reset_error(exc):
+                raise
+            logger.warning(
+                "bestbuy_net_reset_retry_after_warmup",
+                extra={"url": url},
+                exc_info=True,
+            )
+            metrics.retry_count = int(metrics.retry_count) + 1
+            # Force another origin warm so ``_abck`` can mint on this sticky IP.
+            self._warmed_origins.discard(_warmup_origin_key(url))
+            self._maybe_warmup(page, url)
+            self._apply_page_headers(page, url)
+            self._goto(page, url)
+
+    @staticmethod
+    def _apply_page_headers(page: Any, url: str) -> None:
+        headers: dict[str, str] = {
+            "Accept-Language": accept_language_for_url(url),
+        }
+        referer = marketplace_referer_for_url(url)
+        path = (urlparse(url).path or "/").rstrip("/") or "/"
+        if referer and path != "/":
+            headers["Referer"] = referer
+        setter = getattr(page, "set_extra_http_headers", None)
+        if callable(setter):
+            try:
+                setter(headers)
+            except Exception:
+                logger.debug("camoufox_set_headers_failed", exc_info=True)
+
+    @staticmethod
+    def _bestbuy_akamai_sensor_nudge(page: Any) -> None:
+        """Light mouse wander so Akamai ``bmak`` posts telemetry on the homepage."""
+        try:
+            from .challenge_resolution import ChallengeResolver
+
+            ChallengeResolver._akamai_wander_mouse(page)
+        except Exception:
+            logger.debug("bestbuy_akamai_sensor_nudge_failed", exc_info=True)
 
     def _goto(self, page: Any, url: str) -> None:
         page.goto(url, wait_until="domcontentloaded", timeout=self._timeout_ms)
@@ -942,8 +1192,8 @@ class CamoufoxHtmlFetcher:
                 title = ""
             if is_hard_block_page(html, title=title):
                 return html, final_url, title
-            if is_shopee_traffic_block(final_url, html):
-                return html, final_url, title
+            # verify/traffic is an auth wall — keep settling so the resolver
+            # can login before we treat the response as terminal.
             if not needs_interstitial_resolution(html, url=final_url, title=title):
                 return html, final_url, title
             logger.info(
@@ -952,13 +1202,14 @@ class CamoufoxHtmlFetcher:
             )
             # Mid-settle resolution (CAPTCHA / CF / auth wall).
             if self._challenge_resolver is not None and attempt >= 1:
-                if self._challenge_resolver.try_resolve(
+                resolved = self._challenge_resolver.try_resolve(
                     page,
                     html=html,
                     title=title,
                     page_url=final_url,
                     resume_url=resume_url,
-                ):
+                )
+                if resolved:
                     html = page.content()
                     final_url = str(page.url)
                     try:
@@ -969,6 +1220,12 @@ class CamoufoxHtmlFetcher:
                         html, url=final_url, title=title
                     ):
                         return html, final_url, title
+                # Shopee /verify/traffic: one auth attempt is enough — do not
+                # re-login for every settle tick (can hang /match for minutes).
+                if is_shopee_traffic_block(final_url, html) or is_shopee_traffic_block(
+                    str(getattr(page, "url", "") or ""), ""
+                ):
+                    return html, final_url, title
         return html, final_url, title
 
     @classmethod

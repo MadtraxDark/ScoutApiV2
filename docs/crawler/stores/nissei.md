@@ -61,7 +61,8 @@
 ## Known limitations
 
 - WAF friction; parser depends on Magento markup stability
-
+- Catalog assortment varies; when the exact generation/SKU is absent from SERP,
+  matching correctly leaves the store unmatched (never cross-generation fabricate)
 ## Tests / fixtures
 
 - Covered in spider parsing / Nissei unit cases under `tests/unit/`

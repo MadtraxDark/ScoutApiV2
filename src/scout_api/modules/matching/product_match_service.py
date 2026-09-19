@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from decimal import Decimal
 from uuid import UUID
 
@@ -54,6 +55,32 @@ MVP_SEARCH_STORES = (
     "shopee",
 )
 
+_MAX_RATE_LIMIT_WAIT_SECONDS = 20.0
+# Cap empty SERP retries so blocked/expensive stores (Shopee) cannot burn
+# N queries × multi-minute browser sessions when the first searches return [].
+# Identifier-only misses (bare MPN/GTIN) do not count — the next commercial
+# series query may still recover the SKU (e.g. CFI-2114B vs CFI-2115B on SC).
+_MAX_EMPTY_SEARCH_QUERIES = 2
+
+
+def _is_identifier_only_query(query: str) -> bool:
+    """True for bare GTIN/MPN queries that often miss across store revisions."""
+    text = (query or "").strip()
+    if not text:
+        return False
+    if " " not in text:
+        return len(text) >= 6
+    parts = text.split()
+    if len(parts) == 2 and parts[0].casefold() in {
+        "sony",
+        "apple",
+        "samsung",
+        "kingston",
+        "corsair",
+    }:
+        return len(parts[1]) >= 6
+    return False
+
 
 class ProductMatchService:
     def __init__(
@@ -104,6 +131,7 @@ class ProductMatchService:
 
             store_matched = False
             last_error: MatchStoreError | None = None
+            empty_searches = 0
             for query in queries:
                 try:
                     candidates = self._search.search(
@@ -128,25 +156,32 @@ class ProductMatchService:
                     )
                     continue
 
+                if not candidates:
+                    if not _is_identifier_only_query(query):
+                        empty_searches += 1
+                    if empty_searches >= _MAX_EMPTY_SEARCH_QUERIES:
+                        logger.info(
+                            "match_empty_search_cap",
+                            extra={
+                                "store": store_key,
+                                "empty_searches": empty_searches,
+                            },
+                        )
+                        break
+                    continue
+
+                empty_searches = 0
                 for candidate in candidates:
                     if canonicalize_url(candidate.url) == canonicalize_url(
                         reference.canonical_url
                     ):
                         continue
-                    try:
-                        product = self._scrape.scrape(
-                            candidate.url,
-                            include_images=request.include_images,
-                        )
-                    except (RequestError, ParseError) as exc:
-                        logger.info(
-                            "match_candidate_scrape_failed",
-                            extra={
-                                "store": store_key,
-                                "url": candidate.url,
-                                "error": str(exc),
-                            },
-                        )
+                    product = self._scrape_candidate(
+                        candidate.url,
+                        store_key=store_key,
+                        include_images=request.include_images,
+                    )
+                    if product is None:
                         continue
 
                     score = self._engine.score(
@@ -250,6 +285,54 @@ class ProductMatchService:
             extra={"previous": current.gtin, "candidate": cand},
         )
         return current if current.source == "reference" else None
+
+    def _scrape_candidate(
+        self,
+        url: str,
+        *,
+        store_key: str,
+        include_images: bool,
+    ) -> ProductPriceItem | None:
+        """Scrape a SERP candidate; wait once on domain RATE_LIMITED."""
+        try:
+            return self._scrape.scrape(url, include_images=include_images)
+        except ParseError as exc:
+            logger.info(
+                "match_candidate_scrape_failed",
+                extra={"store": store_key, "url": url, "error": str(exc)},
+            )
+            return None
+        except RequestError as exc:
+            if exc.code != "RATE_LIMITED":
+                logger.info(
+                    "match_candidate_scrape_failed",
+                    extra={
+                        "store": store_key,
+                        "url": url,
+                        "error": str(exc),
+                        "code": exc.code,
+                    },
+                )
+                return None
+            wait = float(exc.retry_after or 15)
+            wait = min(max(wait, 0.5), _MAX_RATE_LIMIT_WAIT_SECONDS)
+            logger.info(
+                "match_candidate_rate_limited_retry",
+                extra={"store": store_key, "url": url, "wait_s": wait},
+            )
+            time.sleep(wait)
+            try:
+                return self._scrape.scrape(url, include_images=include_images)
+            except (RequestError, ParseError) as retry_exc:
+                logger.info(
+                    "match_candidate_scrape_failed",
+                    extra={
+                        "store": store_key,
+                        "url": url,
+                        "error": str(retry_exc),
+                    },
+                )
+                return None
 
     def _persist(
         self,

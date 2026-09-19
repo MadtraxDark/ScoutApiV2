@@ -40,23 +40,36 @@ Valores de exemplo: [`.env.example`](../../.env.example).
 ## Setup local (Compose)
 
 1. Copie `.env.example` → `.env`.
-2. Mantenha o default Compose:
-   `DATABASE_URL=postgresql+psycopg://scout:scout@postgres:5432/scoutapi`
-   (no host: `localhost:5432`).
+2. Escolha o host da `DATABASE_URL` conforme o processo que conecta:
+   - **API no Compose** (container):  
+     `DATABASE_URL=postgresql+psycopg://scout:scout@postgres:5432/scoutapi`
+   - **API no host** (uvicorn local) contra o Postgres publicado:  
+     `DATABASE_URL=postgresql+psycopg://scout:scout@localhost:5432/scoutapi`  
+   Não use `localhost` dentro do container — aponta para o próprio `api`, não
+   para o serviço `postgres`.
 3. `docker compose up --build`
-4. Aplique migrations: `alembic upgrade head`
+4. Aplique migrations (entrypoint **não** roda Alembic sozinho):
+   `docker compose exec api alembic upgrade head`  
+   (ou `alembic upgrade head` no host com URL `localhost`).
 5. `GET /health` → `database: ok` quando o Postgres responder.
+   Se `database: unavailable`, `/match` com `persist=true` (default) responde
+   `503 DATABASE_UNAVAILABLE`.
 
 O serviço `postgres` no Compose continua útil para desenvolvimento offline.
 Para apontar a API local ao Supabase, substitua só `DATABASE_URL` (e não
-commite secrets).
+commite secrets). Em Docker Desktop (Windows/macOS) redes costumam ser
+**só-IPv4**: o host Direct `db.<ref>.supabase.co` frequentemente resolve só
+IPv6 e falha com `Network is unreachable` — use o **session pooler** IPv4
+(`*.pooler.supabase.com:5432?sslmode=require`).
 
 ## Setup produção (Supabase)
 
 1. No Dashboard Supabase → **Connect**, copie a connection string.
 2. Prefira **Direct** (`db.<ref>.supabase.co:5432`) para a API long-lived e
-   para Alembic.
-3. Em redes só-IPv4, use o **session pooler** (`…pooler.supabase.com:5432`).
+   para Alembic **quando a rede tiver IPv6** (ou o Direct também publicar A).
+3. Em redes só-IPv4 (inclui muitos ambientes Docker Desktop), use o
+   **session pooler** (`…pooler.supabase.com:5432`) — obrigatório se o Direct
+   resolver apenas AAAA.
 4. Transaction pooler (`:6543`) só se necessário; a API usa `NullPool` e
    desliga prepared statements. **Não** rode Alembic em `:6543`.
 5. Force SSL: `?sslmode=require` (ou deixe o auto-append da app).

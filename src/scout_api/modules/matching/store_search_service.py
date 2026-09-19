@@ -14,6 +14,7 @@ from scout_api.modules.crawler.services.store_resolver import (
     resolve_spider_by_store_key,
 )
 from scout_api.modules.crawler.spiders.base import BaseStoreSpider
+from scout_api.modules.matching.identity import rank_candidates_for_query
 
 logger = logging.getLogger(__name__)
 
@@ -58,10 +59,14 @@ class StoreSearchService:
                 f"Falha ao interpretar resultados de busca: {exc}"
             ) from exc
 
+        # Re-rank by query relevance before capping — retailers often promote
+        # sibling SKUs above the exact manufacturer PN / series hit.
+        ranked = rank_candidates_for_query(list(candidates), query)
+
         # Prefer candidates with distinct URLs, capped.
         seen: set[str] = set()
         selected: list[SearchCandidate] = []
-        for candidate in candidates:
+        for candidate in ranked:
             key = candidate.url.strip()
             if not key or key in seen:
                 continue

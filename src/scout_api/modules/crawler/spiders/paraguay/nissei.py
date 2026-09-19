@@ -33,14 +33,16 @@ class NisseiSpider(BaseStoreSpider):
     def parse_search_results(self, response: Response) -> list[SearchCandidate]:
         candidates: list[SearchCandidate] = []
         seen: set[str] = set()
-        for href in response.css(
-            "a.product-item-link::attr(href), "
-            "li.product-item a::attr(href), "
-            "a.product-item-photo::attr(href), "
-            "a.product::attr(href), "
-            "ol.products a::attr(href)"
-        ).getall():
-            absolute = urljoin(response.url, href.strip())
+        for link in response.css(
+            "a.product-item-link, "
+            "li.product-item a.product-item-photo, "
+            "a.product-item-photo, "
+            "ol.products a.product"
+        ):
+            href = link.attrib.get("href") or link.css("::attr(href)").get()
+            if not href or not str(href).strip():
+                continue
+            absolute = urljoin(response.url, str(href).strip())
             path = (urlparse(absolute).path or "").lower()
             if "catalogsearch" in path or path.rstrip("/").endswith("/search"):
                 continue
@@ -60,7 +62,22 @@ class NisseiSpider(BaseStoreSpider):
             if canonical in seen:
                 continue
             seen.add(canonical)
-            title = None
+            title_bits = [
+                t.strip() for t in link.css("::text").getall() if t and t.strip()
+            ]
+            title = " ".join(title_bits) or None
+            if not title:
+                # Photo-only anchors — title often lives on the sibling name link.
+                sibling = link.xpath(
+                    "ancestor::li[contains(@class,'product-item')][1]"
+                    "//a[contains(@class,'product-item-link')]"
+                )
+                title_bits = [
+                    t.strip()
+                    for t in sibling.css("::text").getall()
+                    if t and t.strip()
+                ]
+                title = " ".join(title_bits) or None
             candidates.append(
                 SearchCandidate(
                     url=absolute,

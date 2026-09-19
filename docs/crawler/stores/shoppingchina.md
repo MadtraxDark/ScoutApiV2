@@ -18,6 +18,9 @@
   (legacy Magento `/catalogsearch/result` returns 404)
 - Fallback HTML parser for `/site/search?query=` pages when JSON is absent
 - Product URLs: `/produto/` and `/producto/`
+- On **`.com.py`**, `quick_search` may still emit `/produto/` slugs that soft-404;
+  spider rewrites them to `/producto/` in search candidates and
+  `prepare_fetch_url` (`.com.br` keeps `/produto/`)
 - Used by `POST /match` (ADR 0019)
 
 ## Offer source
@@ -54,6 +57,7 @@
 ## Fetch strategy
 
 - `prepare_fetch_url` keeps the requested host (no silent rewrite to `.py`)
+- On `.com.py` only: normalize legacy `/produto/` → `/producto/` before fetch
 - Camoufox + Proxy Cost Mode
 
 ## Known blocking

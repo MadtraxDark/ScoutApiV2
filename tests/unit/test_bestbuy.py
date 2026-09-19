@@ -257,3 +257,24 @@ def test_bestbuy_full_scrape_only_calls_images_when_requested(monkeypatch) -> No
     images.assert_not_called()
     assert service.scrape(URL, include_images=True).images
     images.assert_called_once()
+
+
+def test_bestbuy_search_derives_title_from_product_slug() -> None:
+    body = b"""
+    <html><body>
+      <a href="/product/apple-iphone-16-128gb-apple-intelligence-black-verizon/JCQ6HRGR8C">x</a>
+      <a href="/product/apple-iphone-16e-128gb-apple-intelligence-black-at-t/JCQ6HRFZF3">y</a>
+    </body></html>
+    """
+    response = HtmlResponse(
+        "https://www.bestbuy.com/site/searchpage.jsp?st=iphone",
+        body=body,
+        encoding="utf-8",
+        request=Request("https://www.bestbuy.com/site/searchpage.jsp?st=iphone"),
+    )
+    candidates = BestBuySpider().parse_search_results(response)
+    assert len(candidates) == 2
+    assert candidates[0].product_id == "JCQ6HRGR8C"
+    assert candidates[0].title is not None
+    assert "iphone 16 128gb" in candidates[0].title.casefold()
+    assert "16e" in (candidates[1].title or "").casefold()

@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from io import BytesIO
 from typing import Any, Protocol
-from urllib.parse import parse_qs, unquote, urlparse
+from urllib.parse import parse_qs, quote, unquote, urlparse
 from urllib.request import Request, urlopen
 
 logger = logging.getLogger(__name__)
@@ -70,6 +70,7 @@ def classify_challenge(
         is_auth_wall_page,
         is_challenge_page,
         is_hard_block_page,
+        is_shopee_traffic_block,
     )
 
     if is_hard_block_page(html, title=title):
@@ -78,7 +79,9 @@ def classify_challenge(
             resolvable=False,
             detail="cloudflare-or-waf-hard-block",
         )
-    if is_auth_wall_page(html, url=url, title=title):
+    if is_shopee_traffic_block(url or "", html) or is_auth_wall_page(
+        html, url=url, title=title
+    ):
         return ChallengeAssessment(
             kind=ChallengeKind.AUTH_WALL,
             resolvable=True,
@@ -320,6 +323,29 @@ class ChallengeResolver:
         if self._is_amazon_host(host):
             logged_in = self._login_amazon(page)
         elif self._is_shopee_host(host):
+            # /verify/traffic has no password form — open buyer login first.
+            if "/verify/traffic" in (page_url or "").casefold():
+                target = (
+                    resume_url
+                    or extract_auth_resume_url(page_url, fallback=None)
+                    or "https://shopee.com.br/"
+                )
+                login_url = (
+                    "https://shopee.com.br/buyer/login?next="
+                    + quote(target, safe="")
+                )
+                try:
+                    page.goto(
+                        login_url,
+                        wait_until="domcontentloaded",
+                        timeout=max(15_000, self.soft_wait_ms * 2),
+                    )
+                    page.wait_for_timeout(min(self.soft_wait_ms, 2_500))
+                except Exception:
+                    logger.warning(
+                        "shopee_traffic_login_navigation_failed",
+                        exc_info=True,
+                    )
             logged_in = self._login_shopee(page)
         else:
             logged_in = self._login_generic(page)
@@ -338,7 +364,7 @@ class ChallengeResolver:
             page.wait_for_timeout(min(self.soft_wait_ms, 5_000))
         except Exception:
             pass
-        return True
+        return logged_in
 
     def _login_amazon(self, page: Any) -> bool:
         creds = self.credentials
@@ -444,6 +470,23 @@ class ChallengeResolver:
             page.wait_for_timeout(min(self.soft_wait_ms, 5_000))
         except Exception:
             pass
+        # Credentials filled ≠ session established. Only report success when the
+        # interstitial is gone (caller otherwise retries login for minutes).
+        from .html_fetcher import (  # noqa: PLC0415 — avoid import cycle
+            is_auth_wall_page,
+            is_shopee_traffic_block,
+        )
+
+        cur_url = _safe_url(page) or ""
+        cur_html = _safe_content(page)
+        if is_shopee_traffic_block(cur_url, cur_html):
+            return False
+        if is_auth_wall_page(
+            cur_html,
+            url=cur_url,
+            title=_safe_title(page),
+        ):
+            return False
         return True
 
     def _login_generic(self, page: Any) -> bool:

@@ -25,7 +25,15 @@ No FX conversion in spiders.
 - SERP US: `https://www.amazon.com/s?k={query}`
 - Parser: shared `parse_amazon_search_results` over `s-search-result` cards
   (`data-asin`)
-- Used by `POST /match` (ADR 0019)
+- Used by `POST /match` (ADR 0019 / ADR 0024)
+- **Query forms matter more than anti-bot on BR:** compact tokens like
+  `mzv9s1t0bam` / `990evoplus` often return sibling SKUs (990 PRO, 870 EVO).
+  Matching builds SERP queries as `GTIN → MZ-V9S1T0B/AM (display MPN) →
+  brand + spaced series + capacity → compacted fallback → title tokens`, then
+  re-ranks SERP cards by query/title overlap before scraping candidates.
+- HTTP-first still applies to SERP URLs (ADR 0016); challenge/robot pages follow
+  the usual escalate path — empty SERP after a clean 200 is usually a **query
+  quality** issue, not an anti-bot miss.
 
 ## Offer source
 
@@ -159,7 +167,10 @@ proxy only after classified `UPSTREAM_BLOCKED`.
 - Some ASINs return HTTP 500 for non-existent/blocked SKUs
 - Markup drift on price/seller widgets — fixtures + selector fallbacks
 - Official catalog API not used (eligibility / credentials)
-
+- Amazon US SERP for current-gen phones often ranks **Renewed / Renewed
+  Premium** above new unlocked SKUs. Matching rejects used/renewed when the
+  reference is new (`condition_reject`) — unmatched is correct when no new
+  listing appears in the candidate window.
 ## Live validation references
 
 - US: `B09V9Z1WLN` — HTTP-first offer (~3s, no browser/proxy)

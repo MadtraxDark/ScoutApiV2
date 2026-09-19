@@ -89,6 +89,11 @@ Itens resolvidos **não** ficam no índice ativo.
 Arquivo apagado (preferencial) ou pasta [`resolved/`](resolved/) quando arquivado.
 O Git preserva o histórico em qualquer caso.
 
+Resolvidas em 2026-09-19 (Best Buy Akamai):
+
+- [`resolved/PENDING-009-bestbuy-us-proxy-intermittent.md`](resolved/PENDING-009-bestbuy-us-proxy-intermittent.md)
+  — warmup homepage + sticky US sessid + retry `NET_RESET`; scrape live OK
+
 Resolvidas em 2026-09-14 (SERP matching PENDING-008):
 
 - PENDING-008 Shopping China `/quick_search` HTTP + Nissei `/py/catalogsearch`

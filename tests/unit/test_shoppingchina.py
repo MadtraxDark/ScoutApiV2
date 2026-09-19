@@ -42,6 +42,59 @@ def test_shoppingchina_keeps_requested_host() -> None:
     assert spider.prepare_fetch_url(PY_URL) == PY_URL
 
 
+def test_shoppingchina_py_rewrites_legacy_produto_path() -> None:
+    spider = ShoppingChinaSpider()
+    legacy = (
+        "https://www.shoppingchina.com.py/produto/"
+        "celular-apple-iphone-16-a3287-128gb-black-sim-948623"
+    )
+    assert spider.prepare_fetch_url(legacy) == (
+        "https://www.shoppingchina.com.py/producto/"
+        "celular-apple-iphone-16-a3287-128gb-black-sim-948623"
+    )
+    # BR locale keeps Portuguese path.
+    assert spider.prepare_fetch_url(URL) == URL
+
+
+def test_shoppingchina_quick_search_rewrites_produto_urls() -> None:
+    spider = ShoppingChinaSpider()
+    body = (
+        '[{"url_po":"/produto/celular-apple-iphone-16-a3287-128gb-black-sim-948623",'
+        '"title_po":"CELULAR APPLE IPHONE 16 A3287 128GB BLACK SIM"}]'
+    )
+    response = HtmlResponse(
+        "https://www.shoppingchina.com.py/quick_search?search=iphone",
+        body=body.encode(),
+        encoding="utf-8",
+        request=Request("https://www.shoppingchina.com.py/quick_search?search=iphone"),
+    )
+    candidates = spider.parse_search_results(response)
+    assert len(candidates) == 1
+    assert "/producto/" in candidates[0].url
+    assert "/produto/" not in candidates[0].url
+    assert candidates[0].product_id == "948623"
+    assert candidates[0].title and "IPHONE 16" in candidates[0].title.upper()
+
+
+def test_shoppingchina_soft_404_title_is_parse_error() -> None:
+    from scout_api.modules.crawler.core.exceptions import ParseError
+
+    spider = ShoppingChinaSpider()
+    response = HtmlResponse(
+        "https://www.shoppingchina.com.py/produto/missing-1",
+        body=b"<!DOCTYPE html><html><head><title>Error 404 | Shopping China"
+        b"</title></head><body></body></html>",
+        encoding="utf-8",
+        request=Request("https://www.shoppingchina.com.py/produto/missing-1"),
+    )
+    try:
+        spider.extract_offer(response)
+    except ParseError as exc:
+        assert "não encontrado" in str(exc).casefold()
+        return
+    raise AssertionError("expected ParseError")
+
+
 def test_shoppingchina_offer_identity_price_currency_and_seller() -> None:
     offer = ShoppingChinaSpider().extract_offer(
         response_from_fixture("product_available.html")

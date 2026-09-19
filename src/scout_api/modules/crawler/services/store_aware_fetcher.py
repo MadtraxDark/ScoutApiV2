@@ -89,7 +89,19 @@ class StoreAwareHtmlFetcher:
                     "code": exc.code,
                 },
             )
-            response = self._proxied.fetch(url)
+            try:
+                response = self._proxied.fetch(url)
+            except RequestError as proxy_exc:
+                # Best Buy Akamai: one sticky-session retry after TCP RST / WAF.
+                from .html_fetcher import is_bestbuy_url  # noqa: PLC0415
+
+                if not is_bestbuy_url(url) or proxy_exc.code != "UPSTREAM_BLOCKED":
+                    raise
+                logger.info(
+                    "bestbuy_proxy_retry_after_block",
+                    extra={"url": url, "code": proxy_exc.code},
+                )
+                response = self._proxied.fetch(url)
             return self._annotate(
                 response,
                 proxy_used=True,

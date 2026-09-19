@@ -41,6 +41,7 @@ Política de quando criar/atualizar docs:
 | [0018](0018-auth-wall-bypass.md) | Auth bypass obrigatório (login/session wall) | Accepted |
 | [0019](0019-product-matching.md) | Product Matching cross-store + histórico de ofertas | Accepted |
 | [0020](0020-distributed-scrape-cache-redis.md) | Cache/single-flight/cooldown distribuídos via Redis | Accepted |
+| [0024](0024-product-match-evidence-cascade.md) | Cascata de evidências do Product Match (MPN + bloqueadores) | Accepted |
 
 ## Quando criar ADR
 

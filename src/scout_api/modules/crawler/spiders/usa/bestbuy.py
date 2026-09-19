@@ -86,13 +86,24 @@ class BestBuySpider(BaseStoreSpider):
                 continue
             seen.add(canonical)
             product_id = None
+            title = None
             if modern:
                 product_id = modern.group(1)
+                # SERP cards often omit accessible title text; slug is enough
+                # for matching re-rank (e.g. apple-iphone-16-128gb-…-black-verizon).
+                slug_match = re.search(
+                    r"/product/([^/]+)/" + re.escape(product_id),
+                    path,
+                    re.I,
+                )
+                if slug_match:
+                    title = slug_match.group(1).replace("-", " ").strip() or None
             elif sku_q:
                 product_id = sku_q.group(1)
             candidates.append(
                 SearchCandidate(
                     url=absolute,
+                    title=title,
                     product_id=product_id,
                     metadata={"source": "bestbuy-search"},
                 )

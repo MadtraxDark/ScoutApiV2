@@ -23,7 +23,10 @@
   `search_items` fires. Mitigation: seeded Camoufox profile
   (`make seed-shopee` / `make seed-shopee-login`) + `ProxyPolicy.FALLBACK`.
   Without a warm session, search may still return `AUTH_REQUIRED` (falta de
-  login) — never fabricate matches from the block page.
+  login) — never fabricate matches from the block page. On `/verify/traffic`,
+  the fetcher **attempts auth bypass** (navigate to `/buyer/login` + operator
+  credentials) before emitting `AUTH_REQUIRED`, then falls back to proxy when
+  `ProxyPolicy.FALLBACK` applies.
 - Anti-bot/SERP fragility is higher than BR retail SERPs; failures surface as
   empty candidates / `AUTH_REQUIRED` / `UPSTREAM_BLOCKED`, never as fabricated
   matches
@@ -118,6 +121,13 @@ References: Stack Overflow 90309999 signature headers; [bintangtimurlangit/shope
 - Aggressive anti-bot; on typical Docker egress, **direct often hits**
   `/verify/traffic` and needs BR residential proxy fallback
 - Auth walls need seeded Camoufox profile and/or operator credentials
+  (`SHOPEE_AUTH_EMAIL` / `SHOPEE_AUTH_PASSWORD` or `make seed-shopee-login`).
+  Headless login may still leave `/verify/traffic` uncleared — fetcher then
+  emits `AUTH_REQUIRED` and FALLBACK retries with proxy (one auth attempt per
+  settle; no multi-minute login loop).
+- After auth/proxy, SERP can still return **zero** candidates (session/geo).
+  `/match` stops after two consecutive empty searches for that store (does not
+  burn the full query list × multi-minute browser sessions).
 - Image extraction disabled by store policy
 - No stable open-source path that removes proxy **and** skips a real browser
   for `get_pc`

@@ -86,4 +86,6 @@ def identity_with_gtin(identity: ProductIdentity, gtin: str) -> ProductIdentity:
         product_id=identity.product_id,
         price=identity.price,
         currency=identity.currency,
+        mpn=identity.mpn,
+        mpn_display=identity.mpn_display,
     )

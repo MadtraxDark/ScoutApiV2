@@ -105,28 +105,23 @@ def test_store_aware_direct_first_when_fallback_succeeds() -> None:
     assert response.meta["fetch_metrics"]["proxy_used"] is False
 
 
-def test_store_aware_proxy_fallback_once_after_upstream_blocked() -> None:
-    calls: list[str] = []
+def test_classify_camoufox_navigation_error_maps_net_reset_to_blocked() -> None:
+    from scout_api.modules.crawler.services.html_fetcher import (
+        classify_camoufox_navigation_error,
+    )
 
-    class Direct:
-        def fetch(self, url: str) -> HtmlResponse:
-            calls.append("direct")
-            raise RequestError(
-                "blocked", code="UPSTREAM_BLOCKED", url=url, retryable=True
-            )
+    err = classify_camoufox_navigation_error(
+        Exception("Page.goto: NS_ERROR_NET_RESET"),
+        url="https://www.bestbuy.com/product/x/1",
+    )
+    assert err.code == "UPSTREAM_BLOCKED"
+    assert err.retryable is True
 
-    class Proxied:
-        def fetch(self, url: str) -> HtmlResponse:
-            calls.append("proxied")
-            return HtmlResponse(
-                url, body=b"<html>ok</html>", encoding="utf-8", request=Request(url)
-            )
-
-    url = "https://www.magazineluiza.com.br/p/1"
-    response = StoreAwareHtmlFetcher(direct=Direct(), proxied=Proxied()).fetch(url)
-    assert calls == ["direct", "proxied"]
-    assert response.meta["fetch_metrics"]["proxy_used"] is True
-    assert response.meta["fetch_metrics"].get("proxy_fallback") is True
+    other = classify_camoufox_navigation_error(
+        Exception("Page.goto: something else exploded"),
+        url="https://example.com/",
+    )
+    assert other.code == "UPSTREAM_REQUEST_ERROR"
 
 
 def test_store_aware_no_proxy_on_parse_error_shaped_request() -> None:

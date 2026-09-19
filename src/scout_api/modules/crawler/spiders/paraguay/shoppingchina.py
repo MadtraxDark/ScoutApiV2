@@ -80,6 +80,33 @@ class ShoppingChinaSpider(BaseStoreSpider):
             f"{quote_plus(query.strip())}"
         )
 
+    def prepare_fetch_url(self, url: str) -> str:
+        # Keep requested host; only normalize locale path aliases (see below).
+        return self._normalize_product_path(url)
+
+    @staticmethod
+    def _normalize_product_path(url: str) -> str:
+        """Map legacy ``/produto/`` → ``/producto/`` on the ``.com.py`` host.
+
+        ``quick_search`` still emits Portuguese ``/produto/`` slugs that soft-404
+        on the live Paraguay storefront; Spanish ``/producto/`` is the PDP that
+        carries price/offer markup. ``.com.br`` keeps ``/produto/``.
+        """
+        parts = urlsplit(url)
+        host = (parts.hostname or "").casefold()
+        path = parts.path or ""
+        if host.endswith("shoppingchina.com.py") and "/produto/" in path.casefold():
+            # Preserve original casing outside the segment we rewrite.
+            rewritten = re.sub(
+                r"/produto/",
+                "/producto/",
+                path,
+                count=1,
+                flags=re.IGNORECASE,
+            )
+            return parts._replace(path=rewritten).geturl()
+        return url
+
     def parse_search_results(self, response: Response) -> list[SearchCandidate]:
         text = (response.text or "").strip()
         if text.startswith("[") or text.startswith("{"):
@@ -115,7 +142,9 @@ class ShoppingChinaSpider(BaseStoreSpider):
             )
             if not isinstance(href, str) or not href.strip():
                 continue
-            absolute = urljoin(page_url, href.strip())
+            absolute = self._normalize_product_path(
+                urljoin(page_url, href.strip())
+            )
             path = urlsplit(absolute).path or ""
             if "/produto/" not in path.lower() and "/producto/" not in path.lower():
                 continue
@@ -151,7 +180,9 @@ class ShoppingChinaSpider(BaseStoreSpider):
             "a.product-item-link::attr(href), "
             "li.product-item a::attr(href)"
         ).getall():
-            absolute = urljoin(response.url, href.strip())
+            absolute = self._normalize_product_path(
+                urljoin(response.url, href.strip())
+            )
             path = urlsplit(absolute).path or ""
             if "catalogsearch" in path.lower() or "/site/search" in path.lower():
                 continue
@@ -343,6 +374,7 @@ class ShoppingChinaSpider(BaseStoreSpider):
             "não encontrado" in title
             or "no encontrado" in title
             or "not found" in title
+            or "error 404" in title
         ):
             raise ParseError("Produto Shopping China não encontrado")
 
