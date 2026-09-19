@@ -21,6 +21,14 @@ STORE_CONFIGS = {
     "magazineluiza": StoreConfig(
         "magazineluiza", "BR", "BRL", ("magazineluiza.com.br",), True
     ),
+    "mercadolivre": StoreConfig(
+        "mercadolivre",
+        "BR",
+        "BRL",
+        ("mercadolivre.com.br", "produto.mercadolivre.com.br"),
+        True,
+        proxy_policy=ProxyPolicy.FALLBACK,
+    ),
     "pichau": StoreConfig("pichau", "BR", "BRL", ("pichau.com.br",)),
     "terabyteshop": StoreConfig("terabyteshop", "BR", "BRL", ("terabyteshop.com.br",)),
     "shopee": StoreConfig(
@@ -70,3 +78,8 @@ STORE_CONFIGS = {
         True,
     ),
 }
+
+
+def implemented_store_keys() -> tuple[str, ...]:
+    """Catalog keys marked ``implemented=True`` (dynamic match / crawl targets)."""
+    return tuple(key for key, config in STORE_CONFIGS.items() if config.implemented)

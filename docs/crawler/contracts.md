@@ -7,13 +7,14 @@ trade-offs live in ADRs (`docs/adr/0008`–`0019`). Store playbooks live under
 ## Pipeline
 
 ```
-Fetch (Camoufox / urllib) → Store Adapter (spider) → Offer | Details | Images → Services
+Fetch (Camoufox / urllib / curl_cffi@ML) → Store Adapter (spider) → Offer | Details | Images → Services
 ```
 
 - Spiders are **parse-only**. They do not own network I/O.
 - Fetch / Camoufox / proxy / retries are immutable without an explicit request
   (exceptions: Proxy Cost Mode; **challenge/CAPTCHA resolution**; **auth wall
-  bypass**). See ADR 0009/0010/0014/0017/0018 and
+  bypass**; Mercado Livre TLS-impersonated HTTP-first — ADR 0025). See
+  ADR 0009/0010/0014/0016/0017/0018/0025 and
   `.cursor/rules/scraper-camoufox-immutable.mdc`,
   `.cursor/rules/captcha-challenge-resolution.mdc`,
   `.cursor/rules/auth-wall-resolution.mdc`.
@@ -37,8 +38,10 @@ ADR: [0011](../adr/0011-offer-vs-product-details.md), [0012](../adr/0012-optiona
 
 - Discovery: live SERP on all implemented stores with `supports_search`
   (`kabum`, `bestbuy`, `nissei`, `shoppingchina`, `amazon_br`, `amazon_us`,
-  `magazineluiza`, `shopee` — ordered by typical GTIN/EAN exposure) via
+  `magazineluiza`, `mercadolivre`, `shopee` — ordered by typical GTIN/EAN exposure) via
   `build_search_url` / `parse_search_results`.
+  Lojas implementadas sem search (ex. `visaovip`) entram no `/match` como
+  `SEARCH_UNSUPPORTED` (ERROR terminal), nunca omitidas.
 - Scoring cascade (precision-first): variant / **critical identity** blockers →
   accessory / **bundle** (kit+watch/AirPods) reject → **condition**
   (renewed/usado vs novo) → same store+`product_id`

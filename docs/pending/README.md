@@ -84,6 +84,11 @@ Itens resolvidos **não** ficam no índice ativo.
 
 *(nenhuma pendência ativa)*
 
+Resolvida em 2026-09-19:
+
+- PENDING-010 Validação live Mercado Livre (Docker + curl_cffi) — arquivo
+  apagado; live `/crawl*` + `/match` multi-loja OK (ADR 0025)
+
 ## Resolvidas
 
 Arquivo apagado (preferencial) ou pasta [`resolved/`](resolved/) quando arquivado.

@@ -136,8 +136,25 @@ def is_akamai_sec_cpt_page(html: str) -> bool:
     return False
 
 
+def is_mercadolivre_snoopy_challenge(html: str) -> bool:
+    """Detect Mercado Livre Bot Manager / Snoopy PoW interstitial (often HTTP 200)."""
+    lower = (html or "").casefold()
+    if not lower:
+        return False
+    if "verifychallenge" in lower and "continue-button" in lower:
+        return True
+    if "snoopy-generation" in lower or "snoopy-script" in lower:
+        if "continue-button" in lower or "_bmc" in lower or "micro-landing" in lower:
+            return True
+    if "micro-landing-button" in lower and (
+        "verifychallenge" in lower or "_bmstate" in lower
+    ):
+        return True
+    return False
+
+
 def is_challenge_page(html: str, *, title: str | None = None) -> bool:
-    """Detect Cloudflare/Akamai/Amazon interstitials that are not product HTML."""
+    """Detect Cloudflare/Akamai/Amazon/ML interstitials that are not product HTML."""
     if is_hard_block_page(html, title=title):
         return True
     title_text = (title or "").strip().lower()
@@ -157,6 +174,8 @@ def is_challenge_page(html: str, *, title: str | None = None) -> bool:
     if re.search(r"cf-challenge|challenge-platform", lower) and len(html) < 40_000:
         return True
     if is_amazon_robot_check(html, title=title):
+        return True
+    if is_mercadolivre_snoopy_challenge(html):
         return True
     return False
 
@@ -254,6 +273,8 @@ def locale_for_url(url: str) -> str | None:
         return "en-US"
     if hostname == "bestbuy.com" or hostname.endswith(".bestbuy.com"):
         return "en-US"
+    if hostname == "mercadolivre.com.br" or hostname.endswith(".mercadolivre.com.br"):
+        return "pt-BR"
     return None
 
 
@@ -1440,4 +1461,11 @@ def build_html_fetcher(
         user_agent=_AMAZON_HTTP_USER_AGENT,
         timeout=urllib_timeout,
     )
-    return AmazonHttpFirstHtmlFetcher(http=amazon_http, browser=browser)
+    amazon_first = AmazonHttpFirstHtmlFetcher(http=amazon_http, browser=browser)
+
+    # Mercado Livre: curl_cffi TLS impersonation → Camoufox (+ proxy FALLBACK).
+    from .curl_cffi_fetcher import CurlCffiHtmlFetcher
+    from .mercadolivre_http_first_fetcher import MercadoLivreHttpFirstHtmlFetcher
+
+    ml_http = CurlCffiHtmlFetcher(timeout=float(urllib_timeout))
+    return MercadoLivreHttpFirstHtmlFetcher(http=ml_http, browser=amazon_first)

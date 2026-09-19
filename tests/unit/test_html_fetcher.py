@@ -40,6 +40,11 @@ def test_is_challenge_page_detects_cloudflare_and_akamai() -> None:
         "<h4>Enter the characters you see below</h4></form></html>",
         title="Amazon.com",
     )
+    assert is_challenge_page(
+        "<html><button id='continue-button'></button>"
+        "<script>verifyChallenge()</script>"
+        "<script src='snoopy-generation-web/x.js'></script></html>"
+    )
     akamai_sec = (
         "<!DOCTYPE html><html><head></head><body>"
         '<script src="/ua_lYE/DKZaoN/8RdfYr/x?v=9d2316eb-63cf-59fa"></script>'

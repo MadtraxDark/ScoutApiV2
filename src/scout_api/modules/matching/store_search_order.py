@@ -16,7 +16,9 @@ GTIN_EXPOSURE_RANK: dict[str, int] = {
     "amazon_br": 50,  # detail tables / JSON-LD sometimes
     "amazon_us": 55,
     "magazineluiza": 70,  # extractor exists; often absent on PDP
+    "mercadolivre": 75,  # catalog ids strong; GTIN often absent in JSON-LD
     "shopee": 90,  # marketplace; barcode often missing
+    "visaovip": 95,
 }
 
 _DEFAULT_RANK = 100

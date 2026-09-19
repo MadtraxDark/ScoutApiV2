@@ -37,6 +37,9 @@ sem contornar CAPTCHA?
   autorização.
 - **E — TLS impersonation (`curl_cffi`) agressiva:** risco de ser tratado como
   falsificação de fingerprint; não adotar sem pedido explícito.
+  *(Atualização 2026-09-19: Mercado Livre adotou `curl_cffi` HTTP-first sob
+  pedido explícito — ver [ADR 0025](0025-mercadolivre-curl-cffi-http-first.md).
+  Amazon permanece em urllib HTTP-first.)*
 
 ## Decisão
 

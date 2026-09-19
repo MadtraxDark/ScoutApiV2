@@ -36,6 +36,7 @@ Governança de documentação: [`.cursor/rules/documentation-governance.mdc`](..
 |---|---|
 | KaBuM | [`crawler/stores/kabum.md`](crawler/stores/kabum.md) |
 | Magazine Luiza | [`crawler/stores/magazineluiza.md`](crawler/stores/magazineluiza.md) |
+| Mercado Livre | [`crawler/stores/mercadolivre.md`](crawler/stores/mercadolivre.md) |
 | Shopee | [`crawler/stores/shopee.md`](crawler/stores/shopee.md) |
 | Best Buy | [`crawler/stores/bestbuy.md`](crawler/stores/bestbuy.md) |
 | Nissei | [`crawler/stores/nissei.md`](crawler/stores/nissei.md) |

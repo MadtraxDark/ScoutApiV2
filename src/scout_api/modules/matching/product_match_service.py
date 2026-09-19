@@ -20,6 +20,7 @@ from scout_api.modules.crawler.services.product_scrape_service import (
     ProductScrapeService,
 )
 from scout_api.modules.crawler.services.store_resolver import stores_supporting_search
+from scout_api.modules.crawler.stores import STORE_CONFIGS
 from scout_api.modules.matching.engine import MatchingEngine
 from scout_api.modules.matching.gtin_learning import (
     TrustedGtin,
@@ -144,6 +145,9 @@ class ProductMatchService:
             store_matched = False
             last_error: MatchStoreError | None = None
             empty_searches = 0
+            candidates_seen = 0
+            scrape_failures = 0
+            last_scrape_error: MatchStoreError | None = None
             for query in queries:
                 try:
                     candidates = self._search.search(
@@ -188,12 +192,16 @@ class ProductMatchService:
                         reference.canonical_url
                     ):
                         continue
-                    product = self._scrape_candidate(
+                    candidates_seen += 1
+                    product, scrape_error = self._scrape_candidate(
                         candidate.url,
                         store_key=store_key,
                         include_images=request.include_images,
                     )
                     if product is None:
+                        scrape_failures += 1
+                        if scrape_error is not None:
+                            last_scrape_error = scrape_error
                         continue
 
                     score = self._engine.score(
@@ -205,7 +213,7 @@ class ProductMatchService:
                         continue
 
                     hit = MatchHit(
-                        store=product.store,
+                        store=store_key,
                         country=product.country,
                         decision=score.decision,
                         confidence=score.confidence,
@@ -239,8 +247,16 @@ class ProductMatchService:
                 matches.append(best_by_store[store_key])
             else:
                 unmatched.append(store_key)
+                # Prefer search-level errors; otherwise surface scrape failures
+                # so UPSTREAM_BLOCKED / RATE_LIMITED never look like NO_MATCH.
                 if last_error is not None:
                     errors.append(last_error)
+                elif (
+                    candidates_seen > 0
+                    and scrape_failures >= candidates_seen
+                    and last_scrape_error is not None
+                ):
+                    errors.append(last_scrape_error)
 
         # Final consensus across all auto-matches (guards mid-flight conflicts).
         trusted = resolve_trusted_gtin(ref_identity, matches)
@@ -304,16 +320,20 @@ class ProductMatchService:
         *,
         store_key: str,
         include_images: bool,
-    ) -> ProductPriceItem | None:
+    ) -> tuple[ProductPriceItem | None, MatchStoreError | None]:
         """Scrape a SERP candidate; wait once on domain RATE_LIMITED."""
         try:
-            return self._scrape.scrape(url, include_images=include_images)
+            return self._scrape.scrape(url, include_images=include_images), None
         except ParseError as exc:
             logger.info(
                 "match_candidate_scrape_failed",
                 extra={"store": store_key, "url": url, "error": str(exc)},
             )
-            return None
+            return None, MatchStoreError(
+                store=store_key,
+                code="PARSE_ERROR",
+                message=str(exc),
+            )
         except RequestError as exc:
             if exc.code != "RATE_LIMITED":
                 logger.info(
@@ -325,7 +345,11 @@ class ProductMatchService:
                         "code": exc.code,
                     },
                 )
-                return None
+                return None, MatchStoreError(
+                    store=store_key,
+                    code=exc.code,
+                    message=str(exc),
+                )
             wait = float(exc.retry_after or 15)
             wait = min(max(wait, 0.5), _MAX_RATE_LIMIT_WAIT_SECONDS)
             logger.info(
@@ -334,8 +358,8 @@ class ProductMatchService:
             )
             time.sleep(wait)
             try:
-                return self._scrape.scrape(url, include_images=include_images)
-            except (RequestError, ParseError) as retry_exc:
+                return self._scrape.scrape(url, include_images=include_images), None
+            except RequestError as retry_exc:
                 logger.info(
                     "match_candidate_scrape_failed",
                     extra={
@@ -344,7 +368,25 @@ class ProductMatchService:
                         "error": str(retry_exc),
                     },
                 )
-                return None
+                return None, MatchStoreError(
+                    store=store_key,
+                    code=retry_exc.code,
+                    message=str(retry_exc),
+                )
+            except ParseError as retry_exc:
+                logger.info(
+                    "match_candidate_scrape_failed",
+                    extra={
+                        "store": store_key,
+                        "url": url,
+                        "error": str(retry_exc),
+                    },
+                )
+                return None, MatchStoreError(
+                    store=store_key,
+                    code="PARSE_ERROR",
+                    message=str(retry_exc),
+                )
 
     def _persist(
         self,
@@ -421,7 +463,13 @@ class ProductMatchService:
         *,
         reference_has_gtin: bool = False,
     ) -> list[str]:
-        available = list(stores_supporting_search()) or list(MVP_SEARCH_STORES)
+        # All implemented catalog keys — search-unsupported stores still appear
+        # as terminal ERROR (SEARCH_UNSUPPORTED), never silently omitted.
+        available = (
+            [key for key, config in STORE_CONFIGS.items() if config.implemented]
+            or list(stores_supporting_search())
+            or list(MVP_SEARCH_STORES)
+        )
         if requested:
             selected = [s.strip().lower() for s in requested if s.strip()]
         else:

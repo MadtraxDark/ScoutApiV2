@@ -42,6 +42,7 @@ Política de quando criar/atualizar docs:
 | [0019](0019-product-matching.md) | Product Matching cross-store + histórico de ofertas | Accepted |
 | [0020](0020-distributed-scrape-cache-redis.md) | Cache/single-flight/cooldown distribuídos via Redis | Accepted |
 | [0024](0024-product-match-evidence-cascade.md) | Cascata de evidências do Product Match (MPN + bloqueadores) | Accepted |
+| [0025](0025-mercadolivre-curl-cffi-http-first.md) | Mercado Livre HTTP-first com curl_cffi + Camoufox | Accepted |
 
 ## Quando criar ADR
 

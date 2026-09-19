@@ -24,6 +24,7 @@ class ChallengeKind(StrEnum):
     CLOUDFLARE_JS = "cloudflare_js"
     AKAMAI_SEC_CPT = "akamai_sec_cpt"
     AMAZON_IMAGE_CAPTCHA = "amazon_image_captcha"
+    MERCADOLIVRE_SNOOPY = "mercadolivre_snoopy"
     AUTH_WALL = "auth_wall"
     GENERIC = "generic"
 
@@ -70,6 +71,7 @@ def classify_challenge(
         is_auth_wall_page,
         is_challenge_page,
         is_hard_block_page,
+        is_mercadolivre_snoopy_challenge,
         is_shopee_traffic_block,
     )
 
@@ -94,6 +96,12 @@ def classify_challenge(
 
     title_text = (title or "").strip().casefold()
     lower = (html or "")[:40_000].casefold()
+    if is_mercadolivre_snoopy_challenge(html):
+        return ChallengeAssessment(
+            kind=ChallengeKind.MERCADOLIVRE_SNOOPY,
+            resolvable=True,
+            detail="mercadolivre-snoopy-pow",
+        )
     if is_amazon_robot_check(html, title=title) or "validatecaptcha" in lower:
         return ChallengeAssessment(
             kind=ChallengeKind.AMAZON_IMAGE_CAPTCHA,
@@ -255,6 +263,8 @@ class ChallengeResolver:
             try:
                 if assessment.kind is ChallengeKind.AMAZON_IMAGE_CAPTCHA:
                     ok = self._resolve_amazon_image_captcha(page, html)
+                elif assessment.kind is ChallengeKind.MERCADOLIVRE_SNOOPY:
+                    ok = self._resolve_mercadolivre_snoopy(page)
                 elif assessment.kind is ChallengeKind.CLOUDFLARE_JS:
                     ok = self._resolve_cloudflare_js(page)
                 elif assessment.kind is ChallengeKind.AKAMAI_SEC_CPT:
@@ -330,9 +340,8 @@ class ChallengeResolver:
                     or extract_auth_resume_url(page_url, fallback=None)
                     or "https://shopee.com.br/"
                 )
-                login_url = (
-                    "https://shopee.com.br/buyer/login?next="
-                    + quote(target, safe="")
+                login_url = "https://shopee.com.br/buyer/login?next=" + quote(
+                    target, safe=""
                 )
                 try:
                     page.goto(
@@ -703,6 +712,59 @@ class ChallengeResolver:
             except Exception:
                 continue
         return False
+
+    def _resolve_mercadolivre_snoopy(self, page: Any) -> bool:
+        """Wait for Snoopy PoW, click Continuar if needed, settle on PDP."""
+        wait_ms = max(15_000, min(60_000, self.soft_wait_ms * 6))
+        try:
+            page.wait_for_function(
+                """() => {
+                    const btn = document.getElementById('continue-button');
+                    if (!btn) return true;
+                    return !btn.disabled;
+                }""",
+                timeout=wait_ms,
+            )
+        except Exception:
+            logger.debug("mercadolivre_snoopy_wait_button_timeout", exc_info=True)
+
+        clicked = _click_first(
+            page,
+            (
+                "#continue-button:not([disabled])",
+                "button#continue-button",
+                "button.micro-landing-button",
+            ),
+        )
+        if clicked:
+            try:
+                page.wait_for_timeout(min(5_000, max(1_500, self.soft_wait_ms)))
+            except Exception:
+                pass
+
+        try:
+            page.wait_for_function(
+                """() => {
+                    if (document.getElementById('continue-button')
+                        && document.querySelector('script[src*=\"snoopy\"]')) {
+                        return false;
+                    }
+                    return !!(
+                        document.querySelector('script[type=\"application/ld+json\"]')
+                        || document.querySelector('.ui-pdp-price')
+                        || document.querySelector('h1.ui-pdp-title')
+                    );
+                }""",
+                timeout=wait_ms,
+            )
+            return True
+        except Exception:
+            logger.debug("mercadolivre_snoopy_wait_pdp_timeout", exc_info=True)
+            try:
+                page.wait_for_timeout(min(self.soft_wait_ms, 5_000))
+            except Exception:
+                pass
+            return True
 
     def _resolve_generic(self, page: Any) -> bool:
         try:
