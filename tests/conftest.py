@@ -10,14 +10,14 @@ from scout_api.main import app
 
 @pytest.fixture(autouse=True)
 def _default_test_security_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Existing integration/unit HTTP tests run with auth bypass (non-production).
+    """Existing integration/unit HTTP tests run with auth optional (non-production).
 
-    Security suite re-enables AUTH_ENABLED=true explicitly.
+    Security suite re-enables AUTH_REQUIRED=true explicitly.
     """
     if os.environ.get("SCOUT_SECURITY_TESTS") == "1":
         yield
         return
-    monkeypatch.setenv("AUTH_ENABLED", "false")
+    monkeypatch.setenv("AUTH_REQUIRED", "false")
     monkeypatch.setenv("ENVIRONMENT", "development")
     monkeypatch.setenv("RATE_LIMIT_ENABLED", "false")
     get_settings.cache_clear()

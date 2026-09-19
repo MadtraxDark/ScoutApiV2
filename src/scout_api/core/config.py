@@ -1,6 +1,7 @@
 from functools import lru_cache
+from typing import Self
 
-from pydantic import field_validator
+from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -24,7 +25,17 @@ class Settings(BaseSettings):
     database_sslmode: str | None = None
     database_application_name: str = "scout-api-v2"
     # --- API security (Supabase Auth). Never expose service_role to clients. ---
-    auth_enabled: bool = True
+    # AUTH_REQUIRED: whether protected routes demand a client Bearer.
+    # Alias AUTH_ENABLED kept for backward compatibility (same polarity).
+    auth_required: bool = Field(
+        default=True,
+        validation_alias=AliasChoices(
+            "auth_required",
+            "AUTH_REQUIRED",
+            "auth_enabled",
+            "AUTH_ENABLED",
+        ),
+    )
     supabase_url: str | None = None
     supabase_anon_key: str | None = None
     # HS256 legacy/test only. Prefer JWKS (ES256/RS256) via supabase_url.
@@ -107,11 +118,23 @@ class Settings(BaseSettings):
                 return normalized
         return value
 
+    @model_validator(mode="after")
+    def reject_insecure_auth_in_production(self) -> Self:
+        """Fail closed: never boot production with client auth optional."""
+        if self.environment.lower() == "production" and not self.auth_required:
+            raise ValueError(
+                "AUTH_REQUIRED=false (ou AUTH_ENABLED=false) não é permitido "
+                "quando ENVIRONMENT=production. "
+                "Defina AUTH_REQUIRED=true ou use um ambiente não-produção."
+            )
+        return self
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
+        populate_by_name=True,
     )
 
 

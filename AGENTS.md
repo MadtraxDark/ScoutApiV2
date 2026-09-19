@@ -12,9 +12,10 @@
 - **Segurança da API (crítico):** endpoints privados por padrão (DENY BY DEFAULT);
   allowlist pública explícita; secrets e credenciais privilegiadas nunca
   atravessam a API; dados pessoais com minimização (`PublicUser`); auth
-  (Supabase JWT) separada de autorização/ownership; rate limiting nos
-  endpoints (crawler mais restrito); logs/erros sanitizados. Ver
-  `.cursor/rules/security.mdc`, `docs/security/api-auth.md` e ADR 0023.
+  (Supabase JWT) separada de autorização/ownership; `AUTH_REQUIRED=true` por
+  padrão (`false` só em dev/teste — rejeitado no startup em production);
+  rate limiting nos endpoints (crawler mais restrito); logs/erros sanitizados.
+  Ver `.cursor/rules/security.mdc`, `docs/security/api-auth.md` e ADR 0023.
 - **Persistência (PostgreSQL / Supabase):** a API é o único componente que
   acessa o banco. Conexão direta via `DATABASE_URL` + SQLAlchemy/`psycopg`
   (nunca Supabase Data API no backend; nunca acesso do frontend ao Postgres).

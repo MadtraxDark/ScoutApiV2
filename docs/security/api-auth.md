@@ -30,7 +30,22 @@ A `service_role` **nunca** é usada pelo frontend nem retornada pela API.
 | `POST /auth/refresh` | Renovação via cookie |
 | `POST /auth/logout` | Limpa cookies de sessão |
 
-Tudo o mais exige `Authorization: Bearer` (incluindo `GET /auth/me`).
+Tudo o mais exige `Authorization: Bearer` (incluindo `GET /auth/me`) quando
+`AUTH_REQUIRED=true` (padrão).
+
+### `AUTH_REQUIRED`
+
+| Valor | Comportamento |
+|---|---|
+| `true` (default) | Endpoints protegidos exigem Bearer válido; 401 se ausente/inválido |
+| `false` | Modo local/dev/teste: sem Bearer usa principal fixo `dev-bypass` (`USER`, UUID estável). Bearer presente ainda é validado. Rate limiting, validação e secrets permanecem ativos |
+
+**Produção:** `ENVIRONMENT=production` + `AUTH_REQUIRED=false` (ou alias
+`AUTH_ENABLED=false`) **falha no startup** — a API não sobe pública por
+acidente de `.env`.
+
+Ownership continua derivando apenas do principal autenticado (ou do principal
+de bypass em dev) — nunca de `user_id` no body.
 
 Em `ENVIRONMENT=production`: `/docs`, `/redoc` e `/openapi.json` ficam
 desabilitados.
@@ -94,7 +109,15 @@ com credentials.
 
 Ver `.env.example` (valores vazios; nunca secrets reais).
 
+Relevantes para auth:
+
+- `AUTH_REQUIRED` (default `true`; alias legado `AUTH_ENABLED`)
+- `ENVIRONMENT` (produção rejeita `AUTH_REQUIRED=false` no startup)
+- `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_JWT_*`
+- `AUTH_ADMIN_USER_IDS`, `CORS_ALLOWED_ORIGINS`, `TRUSTED_PROXY_IPS`
+- `RATE_LIMIT_*`
+
 ## Testes
 
 `tests/unit/test_security.py` — 401/403/429, `alg=none`, minimização, redaction,
-CORS, admin gate.
+CORS, admin gate, `AUTH_REQUIRED=true/false`, rejeição em production.

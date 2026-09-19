@@ -21,7 +21,7 @@ from scout_api.modules.crawler.router import get_product_scrape_service
 @pytest.fixture
 def auth_settings(monkeypatch: pytest.MonkeyPatch):
     secret = "test-hs256-secret-for-security-suite-only"
-    monkeypatch.setenv("AUTH_ENABLED", "true")
+    monkeypatch.setenv("AUTH_REQUIRED", "true")
     monkeypatch.setenv("SUPABASE_JWT_SECRET", secret)
     monkeypatch.setenv("SUPABASE_JWT_AUDIENCE", "authenticated")
     monkeypatch.delenv("SUPABASE_URL", raising=False)
@@ -306,3 +306,150 @@ def test_admin_permission_gate(
         require_admin(user)
     assert denied.value.status_code == 403
     assert require_admin(admin).id == UUID(admin_id)
+
+
+@pytest.fixture
+def auth_optional_settings(monkeypatch: pytest.MonkeyPatch):
+    secret = "test-hs256-secret-for-security-suite-only"
+    monkeypatch.setenv("AUTH_REQUIRED", "false")
+    monkeypatch.setenv("ENVIRONMENT", "development")
+    monkeypatch.setenv("SUPABASE_JWT_SECRET", secret)
+    monkeypatch.setenv("SUPABASE_JWT_AUDIENCE", "authenticated")
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.setenv("SUPABASE_URL", "")
+    monkeypatch.setenv("RATE_LIMIT_ENABLED", "true")
+    monkeypatch.setenv("RATE_LIMIT_CRAWLER_PER_MINUTE", "2")
+    monkeypatch.setenv("CORS_ALLOWED_ORIGINS", "http://localhost:3000")
+    get_settings.cache_clear()
+    reset_rate_limiter()
+    yield secret
+    get_settings.cache_clear()
+    reset_rate_limiter()
+
+
+def test_auth_optional_allows_crawl_without_token(
+    auth_optional_settings: str,
+) -> None:
+    from decimal import Decimal
+
+    from scout_api.modules.auth.deps import DEV_BYPASS_USER_ID
+    from scout_api.modules.crawler.models.product import ProductPriceItem
+
+    class Fake:
+        def scrape(self, url: str, *, include_images: bool = False) -> ProductPriceItem:
+            return ProductPriceItem(
+                store="kabum",
+                country="BR",
+                product_id="1",
+                sku="1",
+                title="ok",
+                brand=None,
+                model=None,
+                seller="kabum",
+                url=url,
+                canonical_url=url,
+                currency="BRL",
+                price=Decimal("10.00"),
+                pix_price=None,
+                available=True,
+                availability="available",
+                images=[],
+            )
+
+    app.dependency_overrides[get_product_scrape_service] = Fake
+    try:
+        response = TestClient(app).post(
+            "/crawl",
+            json={"url": "https://www.kabum.com.br/produto/1"},
+        )
+        me = TestClient(app).get("/auth/me")
+    finally:
+        app.dependency_overrides.clear()
+    assert response.status_code == 200
+    assert me.status_code == 200
+    assert me.json()["id"] == str(DEV_BYPASS_USER_ID)
+    assert "password" not in response.text.lower()
+    assert "secret" not in response.text.lower()
+    assert "service_role" not in response.text.lower()
+
+
+def test_auth_optional_still_rejects_invalid_token(
+    auth_optional_settings: str,
+) -> None:
+    response = TestClient(app).post(
+        "/crawl",
+        headers={"Authorization": "Bearer not-a-jwt"},
+        json={"url": "https://www.kabum.com.br/produto/1"},
+    )
+    assert response.status_code == 401
+
+
+def test_auth_optional_keeps_rate_limiting(
+    auth_optional_settings: str,
+) -> None:
+    from decimal import Decimal
+
+    from scout_api.modules.crawler.models.product import ProductPriceItem
+
+    class Fake:
+        def scrape(self, url: str, *, include_images: bool = False) -> ProductPriceItem:
+            return ProductPriceItem(
+                store="kabum",
+                country="BR",
+                product_id="1",
+                sku="1",
+                title="ok",
+                brand=None,
+                model=None,
+                seller="kabum",
+                url=url,
+                canonical_url=url,
+                currency="BRL",
+                price=Decimal("10.00"),
+                pix_price=None,
+                available=True,
+                availability="available",
+                images=[],
+            )
+
+    app.dependency_overrides[get_product_scrape_service] = Fake
+    client = TestClient(app)
+    try:
+        for _ in range(2):
+            ok = client.post(
+                "/crawl",
+                json={"url": "https://www.kabum.com.br/produto/1"},
+            )
+            assert ok.status_code == 200
+        limited = client.post(
+            "/crawl",
+            json={"url": "https://www.kabum.com.br/produto/1"},
+        )
+    finally:
+        app.dependency_overrides.clear()
+    assert limited.status_code == 429
+    assert limited.json()["detail"]["code"] == "RATE_LIMITED"
+
+
+def test_auth_optional_rejected_in_production_settings(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from pydantic import ValidationError
+
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("AUTH_REQUIRED", "false")
+    get_settings.cache_clear()
+    with pytest.raises((ValidationError, ValueError)):
+        get_settings()
+    get_settings.cache_clear()
+
+
+def test_auth_enabled_alias_maps_to_auth_required(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("AUTH_REQUIRED", raising=False)
+    monkeypatch.setenv("AUTH_ENABLED", "false")
+    monkeypatch.setenv("ENVIRONMENT", "development")
+    get_settings.cache_clear()
+    assert get_settings().auth_required is False
+    get_settings.cache_clear()

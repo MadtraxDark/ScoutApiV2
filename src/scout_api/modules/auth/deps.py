@@ -7,6 +7,7 @@ import secrets
 from collections.abc import Callable
 from typing import Annotated
 from urllib.parse import urlsplit
+from uuid import UUID
 
 from fastapi import Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -14,12 +15,16 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from scout_api.core.config import Settings, get_settings
 from scout_api.core.rate_limit import RateLimitResult, get_rate_limiter
 from scout_api.modules.auth.jwt_service import AuthError, verify_access_token
-from scout_api.modules.auth.schemas import AuthenticatedPrincipal
+from scout_api.modules.auth.schemas import AuthenticatedPrincipal, UserRole
 
 _bearer = HTTPBearer(auto_error=False)
 
 REFRESH_COOKIE = "scout_refresh_token"
 PKCE_COOKIE = "scout_pkce_verifier"
+
+# Fixed local-dev principal when AUTH_REQUIRED=false (never production).
+# USER — not ADMIN — so ownership stays scoped to this UUID only.
+DEV_BYPASS_USER_ID = UUID("00000000-0000-4000-8000-000000000001")
 
 
 def client_ip(request: Request, settings: Settings | None = None) -> str:
@@ -48,30 +53,42 @@ def _auth_http_error(exc: AuthError) -> HTTPException:
     )
 
 
+def _development_bypass_principal() -> AuthenticatedPrincipal:
+    return AuthenticatedPrincipal(
+        id=DEV_BYPASS_USER_ID,
+        role=UserRole.USER,
+        display_name="dev-bypass",
+    )
+
+
 def require_authenticated_user(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> AuthenticatedPrincipal:
-    if not settings.auth_enabled:
+    """Resolve the caller principal for protected routes.
+
+    When ``AUTH_REQUIRED=true`` (default): Bearer JWT is mandatory.
+    When ``AUTH_REQUIRED=false`` (non-production only): missing Bearer uses the
+    fixed local-dev principal; a present Bearer is still validated.
+    """
+    if not settings.auth_required:
+        # Belt-and-suspenders: Settings already rejects this in production.
         if settings.environment.lower() == "production":
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail={
                     "code": "AUTH_MISCONFIGURED",
-                    "message": "AUTH_ENABLED=false não permitido em production",
+                    "message": "AUTH_REQUIRED=false não permitido em production",
                     "retryable": False,
                 },
             )
-        # Dev/test bypass only — never used in production.
-        from uuid import UUID
+        if credentials is None or not credentials.credentials:
+            return _development_bypass_principal()
+        try:
+            return verify_access_token(credentials.credentials, settings=settings)
+        except AuthError as exc:
+            raise _auth_http_error(exc) from exc
 
-        from scout_api.modules.auth.schemas import UserRole
-
-        return AuthenticatedPrincipal(
-            id=UUID("00000000-0000-4000-8000-000000000001"),
-            role=UserRole.ADMIN,
-            display_name="dev-bypass",
-        )
     if credentials is None or not credentials.credentials:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -113,8 +130,6 @@ def require_permission(
 def require_admin(
     principal: Annotated[AuthenticatedPrincipal, Depends(require_authenticated_user)],
 ) -> AuthenticatedPrincipal:
-    from scout_api.modules.auth.schemas import UserRole
-
     if principal.role != UserRole.ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

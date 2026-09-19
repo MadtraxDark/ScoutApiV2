@@ -6,6 +6,8 @@ services:
       APP_NAME: ${APP_NAME:-ScoutApiV2}
       ENVIRONMENT: ${ENVIRONMENT:-development}
       DEBUG: ${DEBUG:-false}
+      # Client auth mandatory by default; false only for local/dev (rejected in production).
+      AUTH_REQUIRED: ${AUTH_REQUIRED:-true}
       HOST: 0.0.0.0
       PORT: 8000
       REDIS_URL: redis://redis:6379/0

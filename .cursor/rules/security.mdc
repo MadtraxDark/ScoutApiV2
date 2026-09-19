@@ -28,7 +28,11 @@ Política permanente. Detalhes e fluxos: `docs/security/api-auth.md` + ADR 0023.
 - Access token: `Authorization: Bearer` validado com JWKS (ES256/RS256) ou HS256 só teste/legado.
 - Refresh: cookie HttpOnly `Secure` SameSite=Lax path `/auth`.
 - Dependências: `require_authenticated_user`, `require_permission`, `require_admin`.
-- `AUTH_ENABLED=false` **proibido** em `ENVIRONMENT=production`.
+- **`AUTH_REQUIRED=true` por padrão** (obrigatoriedade do Bearer nos endpoints protegidos).
+- `AUTH_REQUIRED=false` só para desenvolvimento/teste controlado — **rejeitado no
+  startup** se `ENVIRONMENT=production` (alias legado: `AUTH_ENABLED`).
+- Desligar a obrigatoriedade **não** desliga rate limiting, validação, redaction
+  nem secrets; ownership **nunca** vem de `user_id` no body.
 
 ## Crawler
 
