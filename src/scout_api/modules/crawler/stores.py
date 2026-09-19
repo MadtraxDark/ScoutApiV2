@@ -62,4 +62,11 @@ STORE_CONFIGS = {
         ("shoppingchina.com.py", "shoppingchina.com.br"),
         True,
     ),
+    "visaovip": StoreConfig(
+        "visaovip",
+        "PY",
+        "USD",
+        ("visaovip.com",),
+        True,
+    ),
 }

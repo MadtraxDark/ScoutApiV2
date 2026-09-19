@@ -40,4 +40,5 @@ Governança de documentação: [`.cursor/rules/documentation-governance.mdc`](..
 | Best Buy | [`crawler/stores/bestbuy.md`](crawler/stores/bestbuy.md) |
 | Nissei | [`crawler/stores/nissei.md`](crawler/stores/nissei.md) |
 | Shopping China | [`crawler/stores/shoppingchina.md`](crawler/stores/shoppingchina.md) |
+| Visão VIP | [`crawler/stores/visaovip.md`](crawler/stores/visaovip.md) |
 | Amazon (BR/US) | [`crawler/stores/amazon.md`](crawler/stores/amazon.md) |

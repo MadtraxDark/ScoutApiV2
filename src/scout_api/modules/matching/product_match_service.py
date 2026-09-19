@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import time
 from decimal import Decimal
 from uuid import UUID
@@ -71,14 +72,25 @@ def _is_identifier_only_query(query: str) -> bool:
     if " " not in text:
         return len(text) >= 6
     parts = text.split()
-    if len(parts) == 2 and parts[0].casefold() in {
-        "sony",
-        "apple",
-        "samsung",
-        "kingston",
-        "corsair",
-    }:
-        return len(parts[1]) >= 6
+    if len(parts) == 2:
+        # brand + manufacturer PN (including MSI-style board / GPU codes)
+        from scout_api.modules.matching.identity import looks_like_mpn, normalize_mpn
+
+        second = normalize_mpn(parts[1]) or parts[1]
+        compact = re.sub(r"[^a-z0-9]", "", parts[1].casefold())
+        if looks_like_mpn(second) or len(compact) >= 8:
+            return True
+        if parts[0].casefold() in {
+            "sony",
+            "apple",
+            "samsung",
+            "kingston",
+            "corsair",
+            "msi",
+            "asus",
+            "gigabyte",
+        }:
+            return len(parts[1]) >= 6
     return False
 
 

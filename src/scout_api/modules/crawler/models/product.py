@@ -107,6 +107,9 @@ def compose_product_price_item(
         or offer_meta.get("source")
         or details_meta.get("source"),
     }
+    # Matching identity reads structured specs from metadata when present.
+    if details.specifications and "specifications" not in metadata:
+        metadata["specifications"] = dict(details.specifications)
     return ProductPriceItem(
         store=offer.store,
         country=offer.country,

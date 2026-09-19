@@ -163,6 +163,10 @@ _MPN_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"\bmz[-\s]?[a-z]\d[a-z0-9]{4,}(?:/[a-z]{2})?\b"),  # Samsung SSD
     re.compile(r"\bcfi[-\s]?\d{4}[a-z]?\b"),  # PlayStation SKU
     re.compile(r"\bhx\d{3}[a-z0-9]{4,}\b"),  # Kingston HyperX
+    # MSI / board-style PNs (e.g. 912-V532-232) and GPU marketing codes
+    # (e.g. G5070-12S3C). Generic alnum+hyphen forms — not store-specific.
+    re.compile(r"\b\d{3}-v\d{3}-\d{3}\b"),
+    re.compile(r"\bg\d{4}-\d{1,2}[a-z0-9]{2,4}\b"),
 )
 
 # When metadata stores RAM as "storage", prefer SSD-sized capacities from title.
@@ -250,6 +254,25 @@ TITLE_STOPWORDS = frozenset(
         "o",
         "e",
         "ou",
+        # GPU / PDP marketing noise — presence on one listing must not veto match.
+        "nvidia",
+        "geforce",
+        "radeon",
+        "placa",
+        "video",
+        "vídeo",
+        "dlss",
+        "ray",
+        "tracing",
+        "fp4",
+        "pcie",
+        "pci",
+        "express",
+        "mhz",
+        "gbps",
+        "bit",
+        "displayport",
+        "hdmi",
     }
 )
 
@@ -421,40 +444,60 @@ def extract_mpn_forms(*texts: str | None) -> tuple[str | None, str | None]:
     Amazon and other retailers rank hyphenated manufacturer PNs
     (``MZ-V9S1T0B/AM``) far above compacted tokens (``mzv9s1t0bam``).
     """
+    forms = extract_all_mpn_forms(*texts)
+    if not forms:
+        return None, None
+    return forms[0]
+
+
+def extract_all_mpn_forms(*texts: str | None) -> list[tuple[str, str]]:
+    """Return every distinct ``(normalized, display)`` MPN found in texts.
+
+    Board numbers and marketing model codes often co-occur for the same SKU
+    (e.g. ``912-V532-232`` and ``G5070-12S3C``). Collecting all of them keeps
+    SERP queries and exact-MPN matching generic without hardcoding pairs.
+    """
     parts = [part for part in texts if part]
     if not parts:
-        return None, None
+        return []
     joined = " ".join(parts)
     folded = fold_text(joined)
+    found: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    raw_patterns = (
+        re.compile(r"\bMZ[-\s]?[A-Za-z]\d[A-Za-z0-9]{4,}(?:/[A-Za-z]{2})?\b"),
+        re.compile(r"\bCFI[-\s]?\d{4}[A-Za-z]?\b"),
+        re.compile(r"\bHX\d{3}[A-Za-z0-9]{4,}\b"),
+        re.compile(r"\b\d{3}-V\d{3}-\d{3}\b", re.IGNORECASE),
+        re.compile(r"\bG\d{4}-\d{1,2}[A-Za-z0-9]{2,4}\b", re.IGNORECASE),
+    )
     for pattern in _MPN_PATTERNS:
-        match = pattern.search(folded)
-        if not match:
-            continue
-        normalized = normalize_mpn(match.group(0))
-        if not normalized or len(normalized) < 8:
-            continue
-        display = None
-        for raw_pattern in (
-            re.compile(r"\bMZ[-\s]?[A-Za-z]\d[A-Za-z0-9]{4,}(?:/[A-Za-z]{2})?\b"),
-            re.compile(r"\bCFI[-\s]?\d{4}[A-Za-z]?\b"),
-            re.compile(r"\bHX\d{3}[A-Za-z0-9]{4,}\b"),
-        ):
-            raw_match = raw_pattern.search(joined)
-            if raw_match and normalize_mpn(raw_match.group(0)) == normalized:
-                display = raw_match.group(0).strip().upper().replace(" ", "")
-                if "/" not in display and normalized.startswith("mz"):
-                    display = _format_samsung_mpn_display(normalized) or display
-                if normalized.startswith("cfi"):
-                    display = _format_cfi_mpn_display(normalized) or display
-                break
-        if display is None:
-            display = (
-                _format_samsung_mpn_display(normalized)
-                or _format_cfi_mpn_display(normalized)
-                or match.group(0).upper()
-            )
-        return normalized, display
-    return None, None
+        for match in pattern.finditer(folded):
+            normalized = normalize_mpn(match.group(0))
+            if not normalized or len(normalized) < 8 or normalized in seen:
+                continue
+            display: str | None = None
+            for raw_pattern in raw_patterns:
+                for raw_match in raw_pattern.finditer(joined):
+                    if normalize_mpn(raw_match.group(0)) != normalized:
+                        continue
+                    display = raw_match.group(0).strip().upper().replace(" ", "")
+                    if "/" not in display and normalized.startswith("mz"):
+                        display = _format_samsung_mpn_display(normalized) or display
+                    if normalized.startswith("cfi"):
+                        display = _format_cfi_mpn_display(normalized) or display
+                    break
+                if display is not None:
+                    break
+            if display is None:
+                display = (
+                    _format_samsung_mpn_display(normalized)
+                    or _format_cfi_mpn_display(normalized)
+                    or match.group(0).upper()
+                )
+            seen.add(normalized)
+            found.append((normalized, display))
+    return found
 
 
 def extract_mpn(*texts: str | None) -> str | None:
@@ -576,6 +619,70 @@ def _gpu_signature(text: str | None) -> str | None:
     return f"{match.group(1)}{match.group(2)}{suffix}"
 
 
+_GPU_EDITION_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"\bshadow\s*(\d+)?\s*x(?:\s*oc)?\b"),
+    re.compile(r"\bventus\s*(\d+)?\s*x(?:\s*oc)?\b"),
+    re.compile(r"\bgaming\s*trio(?:\s*oc)?\b"),
+    re.compile(r"\binspire\s*(\d+)?\s*x(?:\s*oc)?\b"),
+    re.compile(r"\bsuprim\s*(?:liquid|x|soc)?\b"),
+    re.compile(r"\bvanguard\s*(?:soc)?\b"),
+    re.compile(r"\bexpert(?:\s*oc)?\b"),
+    re.compile(r"\baorus\s*(?:master|elite|gaming)?\b"),
+    re.compile(r"\btuf\s*(?:gaming|oc)?\b"),
+    re.compile(r"\brog\s*strix(?:\s*oc)?\b"),
+    re.compile(r"\bprime(?:\s*oc)?\b"),
+    re.compile(r"\bwindforce(?:\s*oc)?\b"),
+    re.compile(r"\beagle(?:\s*oc)?\b"),
+    re.compile(r"\bdual(?:\s*oc)?\b"),
+    re.compile(r"\binfinity\s*(\d+)?(?:\s*oc)?\b"),
+)
+
+
+def _gpu_edition_signature(text: str | None) -> str | None:
+    """Commercial cooler/edition line for discrete GPUs (missing ≠ conflict).
+
+    Normalizes ``Shadow 3X OC`` / ``SHADOW 3X`` to a compact token so SERP and
+    critical-identity gates can distinguish sibling RTX cards without treating
+    DLSS / MHz / bus-width marketing noise as identity.
+    """
+    folded = fold_text(text or "")
+    if not folded:
+        return None
+    # Require GPU / graphics context so "shadow" fashion listings don't fire.
+    if not (
+        _gpu_signature(folded)
+        or re.search(
+            r"\b(?:geforce|radeon|placa\s*de\s*v[ií]deo|graphics?\s*card)\b",
+            folded,
+        )
+    ):
+        return None
+    for pattern in _GPU_EDITION_PATTERNS:
+        match = pattern.search(folded)
+        if not match:
+            continue
+        token = re.sub(r"\s+", "", match.group(0))
+        return token or None
+    return None
+
+
+def _gpu_vram_from_text(text: str | None) -> str | None:
+    folded = fold_text(text or "")
+    if not folded or not _gpu_signature(folded):
+        return None
+    match = re.search(r"\b(8|10|12|16|20|24)\s*g(?:b|ddr)?\b", folded)
+    if not match:
+        return None
+    return f"{match.group(1)}gb"
+
+
+def _memory_type_signature(text: str | None) -> str | None:
+    match = re.search(r"\bgddr\s*([567])\b", fold_text(text or ""))
+    if not match:
+        return None
+    return f"gddr{match.group(1)}"
+
+
 def _ssd_signature(text: str | None) -> str | None:
     folded = fold_text(text or "")
     match = re.search(
@@ -655,6 +762,33 @@ def _ddr_signature(text: str | None) -> str | None:
     return f"ddr{match.group(1)}"
 
 
+def _edition_token(identity: ProductIdentity) -> str | None:
+    blob = _identity_blob(identity.model, identity.title)
+    from_text = _gpu_edition_signature(blob)
+    raw = from_text or identity.variant_attrs.get("edition")
+    if not raw:
+        return None
+    return normalize_variant_value("edition", str(raw)) or None
+
+
+def _edition_search_phrase(identity: ProductIdentity) -> str | None:
+    """Spaced commercial edition for SERP (``shadow 3x oc``), not compacted token."""
+    folded = fold_text(_identity_blob(identity.model, identity.title))
+    for pattern in _GPU_EDITION_PATTERNS:
+        match = pattern.search(folded)
+        if match:
+            return re.sub(r"\s+", " ", match.group(0)).strip()
+    raw = identity.variant_attrs.get("edition")
+    if not raw:
+        return None
+    token = fold_text(str(raw))
+    # Best-effort expand compacted tokens like shadow3xoc → shadow 3x oc.
+    token = re.sub(r"(\d+)x", r" \1x ", token)
+    token = re.sub(r"oc$", " oc", token)
+    token = re.sub(r"([a-z])(\d)", r"\1 \2", token)
+    return re.sub(r"\s+", " ", token).strip() or None
+
+
 def _identity_blob(model: str | None, title: str | None) -> str:
     return f"{model or ''} {title or ''}".strip()
 
@@ -676,6 +810,11 @@ def critical_identity_conflict(
             "gpu",
             _gpu_signature(_identity_blob(reference.model, reference.title)),
             _gpu_signature(_identity_blob(candidate.model, candidate.title)),
+        ),
+        (
+            "gpu_edition",
+            _edition_token(reference),
+            _edition_token(candidate),
         ),
         (
             "ssd",
@@ -715,6 +854,18 @@ def critical_identity_conflict(
     ):
         return f"controller_count_mismatch:{ref_controllers}!={cand_controllers}"
 
+    ref_vram = reference.variant_attrs.get("vram") or _gpu_vram_from_text(
+        _identity_blob(reference.model, reference.title)
+    )
+    cand_vram = candidate.variant_attrs.get("vram") or _gpu_vram_from_text(
+        _identity_blob(candidate.model, candidate.title)
+    )
+    if ref_vram and cand_vram:
+        left = normalize_variant_value("vram", str(ref_vram))
+        right = normalize_variant_value("vram", str(cand_vram))
+        if left and right and left != right:
+            return f"vram_mismatch:{left}!={right}"
+
     ref_storage = reference.variant_attrs.get("storage") or reference.variant_attrs.get(
         "capacity"
     )
@@ -751,9 +902,11 @@ def models_compatible(
     """True when model tokens refer to the same product line (not opaque SKUs)."""
     left_blob = _identity_blob(left, left_title)
     right_blob = _identity_blob(right, right_title)
-    left_mpn = extract_mpn(left, left_title)
-    right_mpn = extract_mpn(right, right_title)
-    if left_mpn and right_mpn and left_mpn == right_mpn:
+    left_mpns = {norm for norm, _ in extract_all_mpn_forms(left, left_title)}
+    right_mpns = {norm for norm, _ in extract_all_mpn_forms(right, right_title)}
+    left_mpn = next(iter(sorted(left_mpns)), None)
+    right_mpn = next(iter(sorted(right_mpns)), None)
+    if left_mpns and right_mpns and left_mpns & right_mpns:
         return True
 
     left_ssd = _ssd_signature(left_blob)
@@ -884,6 +1037,13 @@ def infer_model_from_title(title: str | None) -> str | None:
 
 def resolve_model(raw_model: str | None, title: str | None) -> str | None:
     """Prefer commercial/family model strings; keep MPN only when nothing better."""
+    blob = _identity_blob(raw_model, title)
+    # Discrete GPUs: chip identity (rtx5070 / rtx5070ti) is the model token;
+    # cooler lines (Shadow 3X) live in variant_attrs.edition, not model.
+    gpu = _gpu_signature(blob)
+    if gpu:
+        return gpu
+
     structured = normalize_model(raw_model)
     inferred = infer_model_from_title(title)
     if structured and _model_has_family(structured) and not looks_like_mpn(structured):
@@ -935,6 +1095,18 @@ def console_soft_model_title_exempt(
     return critical_identity_conflict(reference, candidate) is None
 
 
+def gpu_soft_model_title_exempt(
+    reference: ProductIdentity,
+    candidate: ProductIdentity,
+) -> bool:
+    """Title noise (DLSS / MHz / bus) must not veto GPU chip+edition identity."""
+    left = _gpu_signature(_identity_blob(reference.model, reference.title))
+    right = _gpu_signature(_identity_blob(candidate.model, candidate.title))
+    if not left or not right or left != right:
+        return False
+    return critical_identity_conflict(reference, candidate) is None
+
+
 def _canonical_color(text: str) -> str:
     text = re.sub(r"[-_]+", " ", text)
     text = re.sub(r"\s+", " ", text).strip()
@@ -955,14 +1127,20 @@ def normalize_variant_value(key: str, value: str) -> str:
     text = re.sub(r"\s+", " ", text).strip()
     if not text:
         return text
-    if key in {"storage", "capacity", "ram", "size"}:
-        # "256 gb" / "256GB" → "256gb"
+    if key in {"storage", "capacity", "ram", "size", "vram"}:
+        # "256 gb" / "256GB" / "12G" → "256gb" / "12gb"
         compacted = re.sub(r"\s+", "", text)
-        match = re.fullmatch(r"(\d+)(gb|tb|mb|mm|cm|in|\"|')?", compacted)
+        match = re.fullmatch(r"(\d+)(gb|tb|mb|g|mm|cm|in|\"|')?", compacted)
         if match:
             unit = match.group(2) or ""
+            if unit == "g":
+                unit = "gb"
             return f"{match.group(1)}{unit}"
         return compacted
+    if key == "edition":
+        # Trailing OC is a marketing boost flag, not a distinct SKU line.
+        compacted = re.sub(r"[^a-z0-9]+", "", text)
+        return re.sub(r"oc$", "", compacted) or compacted
     if key == "color":
         return _canonical_color(text)
     return text
@@ -1195,6 +1373,7 @@ class ProductIdentity:
     currency: str | None = None
     mpn: str | None = None
     mpn_display: str | None = None
+    mpn_aliases: frozenset[str] = field(default_factory=frozenset)
 
     @property
     def variant_key(self) -> str | None:
@@ -1206,7 +1385,7 @@ def identity_from_price_item(item: ProductPriceItem) -> ProductIdentity:
     raw_specs = meta.get("specifications")
     specs: dict[str, Any] = raw_specs if isinstance(raw_specs, dict) else {}
     extra: dict[str, Any] = {}
-    for key in ("color", "storage", "size", "capacity", "ram"):
+    for key in ("color", "storage", "size", "capacity", "ram", "vram", "edition"):
         value = meta.get(key)
         if (
             value is not None
@@ -1229,8 +1408,55 @@ def identity_from_price_item(item: ProductPriceItem) -> ProductIdentity:
         title_color = _color_label_from_title(item.title)
         if title_color:
             attrs["color"] = title_color
+
+    blob = _identity_blob(item.model, item.title)
+    # GPU VRAM is often mis-tagged as RAM by generic parsers — promote when GPU.
+    if _gpu_signature(blob):
+        if "vram" not in attrs:
+            vram = (
+                attrs.pop("ram", None)
+                if attrs.get("ram")
+                else _gpu_vram_from_text(blob)
+            )
+            if vram:
+                attrs["vram"] = normalize_variant_value("vram", str(vram))
+        elif "ram" in attrs and normalize_variant_value(
+            "ram", str(attrs["ram"])
+        ) == normalize_variant_value("vram", str(attrs["vram"])):
+            attrs.pop("ram", None)
+        if "edition" not in attrs:
+            edition = _gpu_edition_signature(blob) or _gpu_edition_signature(
+                " ".join(str(v) for v in specs.values() if v)
+            )
+            if edition:
+                attrs["edition"] = normalize_variant_value("edition", edition)
+        memory_type = _memory_type_signature(blob) or _memory_type_signature(
+            " ".join(str(v) for v in specs.values() if v)
+        )
+        if memory_type and "memory_type" not in attrs:
+            attrs["memory_type"] = memory_type
+
     model = resolve_model(item.model, item.title)
-    mpn, mpn_display = extract_mpn_forms(item.model, item.sku, item.title)
+    # Spec REFERÊNCIA / manufacturer codes feed MPN extraction alongside sku/title.
+    spec_mpn_bits = [
+        str(specs[key])
+        for key in specs
+        if fold_text(str(key))
+        in {
+            "referencia",
+            "reference",
+            "mpn",
+            "part number",
+            "codigo do fabricante",
+            "manufacturer code",
+        }
+    ]
+    mpn_forms = extract_all_mpn_forms(
+        item.model, item.sku, item.title, *spec_mpn_bits
+    )
+    mpn = mpn_forms[0][0] if mpn_forms else None
+    mpn_display = mpn_forms[0][1] if mpn_forms else None
+    mpn_aliases = frozenset(norm for norm, _disp in mpn_forms)
     brand = normalize_brand(item.brand)
     if brand is None:
         # Title often starts with the real brand when PDP brand is a placeholder.
@@ -1252,6 +1478,7 @@ def identity_from_price_item(item: ProductPriceItem) -> ProductIdentity:
         currency=item.currency,
         mpn=mpn,
         mpn_display=mpn_display,
+        mpn_aliases=mpn_aliases,
     )
 
 
@@ -1264,6 +1491,9 @@ def build_search_queries(identity: ProductIdentity) -> list[str]:
     Amazon-like SERPs; prefer hyphenated PNs and human-spaced model phrases.
     Color queries emit locale synonyms (``preto`` / ``black``) without dropping
     critical storage/model attributes.
+
+    For discrete GPUs, prefer progressive commercial queries
+    (brand + chip + edition + VRAM) before noisy SEO title prefixes.
     """
     queries: list[str] = []
 
@@ -1274,36 +1504,95 @@ def build_search_queries(identity: ProductIdentity) -> list[str]:
 
     add(identity.gtin)
 
-    # Bare manufacturer PN ranks best on Amazon BR for exact SKU recovery.
-    add(identity.mpn_display)
-    if identity.brand and identity.mpn_display:
-        add(f"{identity.brand} {identity.mpn_display}")
+    # Collect manufacturer PN displays for later (after category-specific ladders).
+    alias_displays: list[str] = []
+    if identity.mpn_display:
+        alias_displays.append(identity.mpn_display)
+    for _norm, display in extract_all_mpn_forms(
+        identity.mpn_display,
+        identity.mpn,
+        identity.model,
+        identity.title,
+        *identity.mpn_aliases,
+    ):
+        if display not in alias_displays:
+            alias_displays.append(display)
 
     series = model_search_phrase(model=identity.model, title=identity.title)
     storage = identity.variant_attrs.get("storage") or identity.variant_attrs.get(
         "capacity"
     )
+    vram = identity.variant_attrs.get("vram")
     color = identity.variant_attrs.get("color")
-    edition = _console_edition_signature(_identity_blob(identity.model, identity.title))
+    edition = _edition_search_phrase(identity)
+    memory_type = identity.variant_attrs.get("memory_type") or _memory_type_signature(
+        _identity_blob(identity.model, identity.title)
+    )
+    gpu = _gpu_signature(_identity_blob(identity.model, identity.title))
+    console_edition = _console_edition_signature(
+        _identity_blob(identity.model, identity.title)
+    )
     series_fold = fold_text(series or "")
-    if edition and edition in series_fold:
-        edition = None
+    if console_edition and console_edition in series_fold:
+        console_edition = None
+
+    # --- GPU progressive ladder (discriminating attrs first, noise last) ---
+    # Prefer commercial identity before bare board/marketing PNs: BR SERPs often
+    # surface marketplace siblings for opaque codes while Shadow/VRAM queries
+    # rediscover the exact cooler line.
+    if gpu:
+        spaced_gpu = re.sub(r"(rtx|gtx)(\d{4})(ti|super)?", r"\1 \2 \3", gpu).strip()
+        spaced_gpu = re.sub(r"\s+", " ", spaced_gpu).strip()
+        capacity = vram or storage
+        ladder: list[list[str]] = []
+        full = [
+            p for p in (identity.brand, spaced_gpu, edition, capacity, memory_type) if p
+        ]
+        ladder.append(full)
+        ladder.append([p for p in (identity.brand, spaced_gpu, edition, capacity) if p])
+        ladder.append([p for p in (identity.brand, spaced_gpu, edition) if p])
+        ladder.append([p for p in (identity.brand, spaced_gpu, capacity) if p])
+        ladder.append([p for p in (identity.brand, spaced_gpu) if p])
+        if edition and capacity:
+            ladder.append([p for p in (spaced_gpu, edition, capacity) if p])
+        for parts in ladder:
+            if parts:
+                add(" ".join(parts))
+        for display in alias_displays:
+            add(display)
+            if identity.brand:
+                add(f"{identity.brand} {display}")
+        if identity.mpn:
+            add(identity.mpn)
+            if identity.brand:
+                add(f"{identity.brand} {identity.mpn}")
+        return queries
+
+    # Bare manufacturer PN ranks best on Amazon BR for exact SKU recovery
+    # (non-GPU categories).
+    for display in alias_displays:
+        add(display)
+        if identity.brand:
+            add(f"{identity.brand} {display}")
 
     # Colorless series+storage first: locale color tokens (branco/black) often
     # miss on foreign SERPs (Shopping China) even when the SKU is present.
     series_parts = [part for part in (identity.brand, series) if part]
-    if storage:
-        series_parts.append(storage)
-    if edition:
-        series_parts.append(edition)
+    capacity = storage or vram
+    if capacity:
+        series_parts.append(capacity)
+    if console_edition:
+        series_parts.append(console_edition)
+    if edition and not gpu:
+        series_parts.append(str(edition))
     add(" ".join(series_parts) if series_parts else None)
 
     # Brandless series+storage early — some catalogs (Shopping China) rank
     # better without the brand token and empty out on brand+slim combos.
-    if series and storage:
-        add(f"{series} {storage}")
-    elif series and edition:
-        add(f"{series} {edition}")
+    if series and capacity:
+        add(f"{series} {capacity}")
+    elif series and console_edition:
+        add(f"{series} {console_edition}")
 
     color_labels: list[str] = []
     if color:
@@ -1315,18 +1604,18 @@ def build_search_queries(identity: ProductIdentity) -> list[str]:
 
     for color_label in color_labels:
         colored = [part for part in (identity.brand, series) if part]
-        if storage:
-            colored.append(storage)
-        if edition:
-            colored.append(edition)
+        if capacity:
+            colored.append(capacity)
+        if console_edition:
+            colored.append(console_edition)
         colored.append(color_label)
         add(" ".join(colored))
 
     # Progressive drop: keep critical model+storage without brand/color.
-    if series and storage:
-        add(f"{series} {storage}")
-    if series and edition:
-        add(f"{series} {edition}")
+    if series and capacity:
+        add(f"{series} {capacity}")
+    if series and console_edition:
+        add(f"{series} {console_edition}")
     if identity.brand and series:
         add(f"{identity.brand} {series}")
 
@@ -1338,5 +1627,26 @@ def build_search_queries(identity: ProductIdentity) -> list[str]:
 
     tokens = identity.title_normalized.split()
     if tokens:
-        add(" ".join(tokens[:8]))
+        # Drop marketing/noise tokens before taking a title window.
+        noise = {
+            "placa",
+            "video",
+            "geforce",
+            "nvidia",
+            "amd",
+            "radeon",
+            "ray",
+            "tracing",
+            "dlss",
+            "fp4",
+            "mhz",
+            "bit",
+            "bits",
+            "pcie",
+            "pci",
+            "express",
+        }
+        filtered = [tok for tok in tokens if tok not in noise]
+        window = filtered[:8] if filtered else tokens[:8]
+        add(" ".join(window))
     return queries

@@ -58,14 +58,27 @@ antes de recall. Embeddings/ML descartados no momento (custo/opacidade).
    `brand+slim+storage`) e emite MPN CFI hifenizado (`CFI-2115B`).
 8. Thresholds inalterados em espírito: `AUTO=0.92`, `REVIEW=0.75`; título sozinho
    nunca `auto_match`.
+9. **GPUs (refino 2026-09-19):** modelo canônico = chip (`rtx5070` / `rtx5070ti`);
+   cooler/edition (`Shadow 3X` ≠ `Gaming Trio`) e VRAM vão para `variant_attrs` /
+   `critical_identity_conflict`. Queries progressivas
+   `brand + GPU + edition + VRAM (+ memory_type)` **antes** de MPN/board codes;
+   ruído SEO (DLSS, MHz, bus, Ray Tracing) é stopword de título. Soft-model GPU
+   também dispensa `SOFT_MODEL_TITLE_MIN` quando chip+edition+VRAM concordam.
+   Padrões genéricos de MPN (`###-V###-###`, `G####-…`) coletam aliases
+   co-ocorrentes sem hardcode de SKU. KaBuM SERP lê
+   `__NEXT_DATA__.catalogServer.data` (anchors `/produto/` ausentes no HTML
+   inicial).
 
 ## Consequências
 
 - Melhor recall em componentes com MPN no título sem hardcode de produto.
 - Menos falsos positivos entre séries/sufixos críticos.
 - SERP ainda depende de qualidade da loja; retrieval ruim ≠ baixar threshold.
+- GPU: rediscovery por identidade comercial (não URL/ID hardcoded); variantes
+  Ti / VRAM / edition continuam rejeitadas.
 
 ## Relacionado
 
 - ADR 0019, `modules/matching/engine.py`, `modules/matching/identity.py`
 - Testes: `tests/unit/test_matching_regression.py`
+- KaBuM search: `spiders/brazil/kabum.py` (`_parse_search_next_data`)

@@ -1,0 +1,244 @@
+<!DOCTYPE html><html lang="pt-BR" data-theme="light" class="light" dir="ltr"><head><meta charSet="utf-8"/><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5"/><link rel="stylesheet" href="/_next/static/chunks/74a847b88c98a4fd.css" data-precedence="next"/><link rel="stylesheet" href="/_next/static/chunks/163f657a16afbe5e.css" data-precedence="next"/><link rel="stylesheet" href="/_next/static/chunks/7a934a5f86178360.css" data-precedence="next"/><link rel="stylesheet" href="/_next/static/chunks/b7b53a33339efa98.css" data-precedence="next"/><link rel="stylesheet" href="/_next/static/chunks/77afe5c8cec05505.css" data-precedence="next"/><link rel="stylesheet" href="/_next/static/chunks/25fef8c594c61c2a.css" data-precedence="next"/><link rel="stylesheet" href="/_next/static/chunks/f5274b9d98052fe1.css" data-precedence="next"/><link rel="preload" as="script" fetchPriority="low" href="/_next/static/chunks/bbe375ffde6ebcf9.js"/><script src="/_next/static/chunks/a445300cb05540f8.js" async=""></script><script src="/_next/static/chunks/400caa205b06bbba.js" async=""></script><script src="/_next/static/chunks/e57860e039fdae00.js" async=""></script><script src="/_next/static/chunks/5954e0d5d312cb67.js" async=""></script><script src="/_next/static/chunks/turbopack-ed7c3a1370dfe057.js" async=""></script><script src="/_next/static/chunks/ff1a16fafef87110.js" async=""></script><script src="/_next/static/chunks/bccac104f89fec91.js" async=""></script><script src="/_next/static/chunks/e0e3660a4151af38.js" async=""></script><script src="/_next/static/chunks/ac86e150f80b4ba5.js" async=""></script><script src="/_next/static/chunks/a1a368f929698f2b.js" async=""></script><script src="/_next/static/chunks/29929a81203fe81e.js" async=""></script><script src="/_next/static/chunks/7405125396776205.js" async=""></script><script src="/_next/static/chunks/c2ebf0f87b25623f.js" async=""></script><script src="/_next/static/chunks/38b8744644acd596.js" async=""></script><script src="/_next/static/chunks/05525b1b6a065569.js" async=""></script><script src="/_next/static/chunks/9a5cba3cdbe40f9c.js" async=""></script><script src="/_next/static/chunks/4b054591ec8acd70.js" async=""></script><script src="/_next/static/chunks/1218c807350d6143.js" async=""></script><script src="/_next/static/chunks/8881d8a9275de5e3.js" async=""></script><link rel="preload" href="/_next/static/chunks/bd8c30e83bd5998a.css" as="style"/><link rel="preload" href="https://www.googletagmanager.com/gtag/js?id=AW-10826548130" as="script"/><link rel="preload" href="https://analytics.visaovip.com/tracker.js" as="script"/><link rel="alternate" hrefLang="es" href="https://www.visaovip.com/es"/><link rel="alternate" hrefLang="pt-BR" href="https://www.visaovip.com"/><meta http-equiv="X-UA-Compatible" content="IE=edge"/><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/><meta name="mobile-web-app-capable" content="yes"/><meta name="robots" content="index, follow"/><script src="/_next/static/chunks/a6dad97d9634a72d.js" noModule=""></script></head><body class="inter_890a4e7c-module__HlsNya__className inter_890a4e7c-module__HlsNya__variable sora_caba463e-module__AxjI6W__variable"><div hidden=""><!--$?--><template id="B:0"></template><!--/$--></div><!--&--><noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-TC6N84V" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript><noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=2098088733825475&amp;ev=PageView&amp;noscript=1" alt=""/></noscript><!--$?--><template id="B:1"></template><!--/$--><div class="grid p-0 px-2 m-0 lg:m-auto flex-column col-12 md:p-2" style="max-width:1600px"><style>
+:root {
+  --bprogress-color: #00ae42;
+  --bprogress-height: 10px;
+  --bprogress-spinner-size: 18px;
+  --bprogress-spinner-animation-duration: 400ms;
+  --bprogress-spinner-border-size: 2px;
+  --bprogress-box-shadow: 0 0 10px #00ae42, 0 0 5px #00ae42;
+  --bprogress-z-index: 99999;
+  --bprogress-spinner-top: 15px;
+  --bprogress-spinner-bottom: auto;
+  --bprogress-spinner-right: 15px;
+  --bprogress-spinner-left: auto;
+}
+
+.bprogress {
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: var(--bprogress-z-index);
+}
+
+.bprogress .bar {
+  background: var(--bprogress-color);
+  position: fixed;
+  z-index: var(--bprogress-z-index);
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: var(--bprogress-height);
+}
+
+/* Fancy blur effect */
+.bprogress .peg {
+  display: block;
+  position: absolute;
+  right: 0;
+  width: 100px;
+  height: 100%;
+  box-shadow: var(--bprogress-box-shadow);
+  opacity: 1.0;
+  transform: rotate(3deg) translate(0px, -4px);
+}
+
+/* Remove these to get rid of the spinner */
+.bprogress .spinner {
+  display: block;
+  position: fixed;
+  z-index: var(--bprogress-z-index);
+  top: var(--bprogress-spinner-top);
+  bottom: var(--bprogress-spinner-bottom);
+  right: var(--bprogress-spinner-right);
+  left: var(--bprogress-spinner-left);
+}
+
+.bprogress .spinner-icon {
+  width: var(--bprogress-spinner-size);
+  height: var(--bprogress-spinner-size);
+  box-sizing: border-box;
+  border: solid var(--bprogress-spinner-border-size) transparent;
+  border-top-color: var(--bprogress-color);
+  border-left-color: var(--bprogress-color);
+  border-radius: 50%;
+  -webkit-animation: bprogress-spinner var(--bprogress-spinner-animation-duration) linear infinite;
+  animation: bprogress-spinner var(--bprogress-spinner-animation-duration) linear infinite;
+}
+
+.bprogress-custom-parent {
+  overflow: hidden;
+  position: relative;
+}
+
+.bprogress-custom-parent .bprogress .spinner,
+.bprogress-custom-parent .bprogress .bar {
+  position: absolute;
+}
+
+.bprogress .indeterminate {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: var(--bprogress-height);
+  overflow: hidden;
+}
+
+.bprogress .indeterminate .inc,
+.bprogress .indeterminate .dec {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background-color: var(--bprogress-color);
+}
+
+.bprogress .indeterminate .inc {
+  animation: bprogress-indeterminate-increase 2s infinite;
+}
+
+.bprogress .indeterminate .dec {
+  animation: bprogress-indeterminate-decrease 2s 0.5s infinite;
+}
+
+@-webkit-keyframes bprogress-spinner {
+  0%   { -webkit-transform: rotate(0deg); transform: rotate(0deg); }
+  100% { -webkit-transform: rotate(360deg); transform: rotate(360deg); }
+}
+
+@keyframes bprogress-spinner {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes bprogress-indeterminate-increase {
+  from { left: -5%; width: 5%; }
+  to { left: 130%; width: 100%; }
+}
+
+@keyframes bprogress-indeterminate-decrease {
+  from { left: -80%; width: 80%; }
+  to { left: 110%; width: 10%; }
+}
+</style><!--$?--><template id="B:2"></template><!--/$--><!--$?--><template id="B:4"></template><!--/$--><!--$?--><template id="B:8"></template><div class="w-full" style="min-height:60vh"></div><!--/$--><!--$--><style>
+:root {
+  --bprogress-color: #00ae42;
+  --bprogress-height: 10px;
+  --bprogress-spinner-size: 18px;
+  --bprogress-spinner-animation-duration: 400ms;
+  --bprogress-spinner-border-size: 2px;
+  --bprogress-box-shadow: 0 0 10px #00ae42, 0 0 5px #00ae42;
+  --bprogress-z-index: 99999;
+  --bprogress-spinner-top: 15px;
+  --bprogress-spinner-bottom: auto;
+  --bprogress-spinner-right: 15px;
+  --bprogress-spinner-left: auto;
+}
+
+.bprogress {
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: var(--bprogress-z-index);
+}
+
+.bprogress .bar {
+  background: var(--bprogress-color);
+  position: fixed;
+  z-index: var(--bprogress-z-index);
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: var(--bprogress-height);
+}
+
+/* Fancy blur effect */
+.bprogress .peg {
+  display: block;
+  position: absolute;
+  right: 0;
+  width: 100px;
+  height: 100%;
+  box-shadow: var(--bprogress-box-shadow);
+  opacity: 1.0;
+  transform: rotate(3deg) translate(0px, -4px);
+}
+
+/* Remove these to get rid of the spinner */
+.bprogress .spinner {
+  display: block;
+  position: fixed;
+  z-index: var(--bprogress-z-index);
+  top: var(--bprogress-spinner-top);
+  bottom: var(--bprogress-spinner-bottom);
+  right: var(--bprogress-spinner-right);
+  left: var(--bprogress-spinner-left);
+}
+
+.bprogress .spinner-icon {
+  width: var(--bprogress-spinner-size);
+  height: var(--bprogress-spinner-size);
+  box-sizing: border-box;
+  border: solid var(--bprogress-spinner-border-size) transparent;
+  border-top-color: var(--bprogress-color);
+  border-left-color: var(--bprogress-color);
+  border-radius: 50%;
+  -webkit-animation: bprogress-spinner var(--bprogress-spinner-animation-duration) linear infinite;
+  animation: bprogress-spinner var(--bprogress-spinner-animation-duration) linear infinite;
+}
+
+.bprogress-custom-parent {
+  overflow: hidden;
+  position: relative;
+}
+
+.bprogress-custom-parent .bprogress .spinner,
+.bprogress-custom-parent .bprogress .bar {
+  position: absolute;
+}
+
+.bprogress .indeterminate {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: var(--bprogress-height);
+  overflow: hidden;
+}
+
+.bprogress .indeterminate .inc,
+.bprogress .indeterminate .dec {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background-color: var(--bprogress-color);
+}
+
+.bprogress .indeterminate .inc {
+  animation: bprogress-indeterminate-increase 2s infinite;
+}
+
+.bprogress .indeterminate .dec {
+  animation: bprogress-indeterminate-decrease 2s 0.5s infinite;
+}
+
+@-webkit-keyframes bprogress-spinner {
+  0%   { -webkit-transform: rotate(0deg); transform: rotate(0deg); }
+  100% { -webkit-transform: rotate(360deg); transform: rotate(360deg); }
+}
+
+@keyframes bprogress-spinner {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes bprogress-indeterminate-increase {
+  from { left: -5%; width: 5%; }
+  to { left: 130%; width: 100%; }
+}
+
+@keyframes bprogress-indeterminate-decrease {
+  from { left: -80%; width: 80%; }
+  to { left: 110%; width: 10%; }
+}
+</style><!--$?--><template id="B:b"></template><!--/$--><!--$--><!--$!--><template data-dgst="BAILOUT_TO_CLIENT_SIDE_RENDERING"></template><div style="height:120px"></div><!--/$--><!--$!--><template data-dgst="BAILOUT_TO_CLIENT_SIDE_RENDERING"></template><div style="height:80px"></div><!--/$--><!--$!--><template data-dgst="BAILOUT_TO_CLIENT_SIDE_RENDERING"></template><div style="height:200px;background-color:#f5f5f5;border-radius:8px;margin-top:2rem;animation:pulse 1.5s ease-in-out infinite" class="jsx-eb45bb8fc68f5093"></div><!--/$--><!--/$--><!--/$--></div><!--$--><!--/$--><!--/&--><script>requestAnimationFrame(function(){$RT=performance.now()});</script><script src="/_next/static/chunks/bbe375ffde6ebcf9.js" id="_R_" async=""></script><div hidden id="S:4"><!--$?--><template id="B:3"></template><!--/$--><nav class="grid w-full p-0 m-0 col-12 default-border border-bottom-1 transition-all transition-duration-500 glass-navbar position-sticky" style="left:0%;justify-content:center;width:100vw !important;margin-left:-50vw !important;margin-right:-50vw !important"><div class="flex p-0 p-2  m-0 align-items-center col-12 justify-content-between" style="max-width:1560px"><div class="cursor-pointer lg:hidden "><i class="text-lg pi pi-bars flex" aria-label="Categorias"></i></div><div class="flex h-full p-0 px-0 m-0 md:justify-content-between xl:justify-content-start align-items-center "><template id="P:5"></template><div class="hidden gap-2 px-2 m-0 w-fit lg:flex align-items-center justify-content-center "><div class="flex gap-2 px-3 py-2 text-white cursor-pointer align-items-center justify-content-center bg-vip border-round-3xl " style="max-width:140px;user-select:none"><i class="pi pi-bars "></i><span class="py-1 text-sm font-semibold">Categorias</span></div></div></div><div class="items-center justify-center hidden p-0 p-2 px-1 lg:flex lg:bg-vip lg:flex-1"><div class="p-2 px-3 col-12 border-round-3xl h-40px  p-skeleton p-component" style="width:100%;height:1rem;position:relative" aria-hidden="true" data-pc-name="skeleton" data-pc-section="root"></div></div><div class="p-0 "><div class="flex w-full justify-content-end lg:hidden"><i class="text-lg cursor-pointer pi pi-search lg:hidden" aria-label="Buscar"></i></div><div class="hidden w-full gap-3 m-0 lg:flex justify-content-end align-items-center xl:gap-3" style="font-size:12px"><template id="P:6"></template></div></div></div></nav><div class="flex w-full pt-2 lg:hidden"><div class="SearchBar-module__ury18W__searchContainer"><label for="search-header-sub-bar" class="SearchBar-module__ury18W__searchLabel   p-inputgroup"><input class="SearchBar-module__ury18W__searchInput p-inputtext p-component" autoComplete="off" placeholder="Pesquisar produtos..." id="search-header-sub-bar" data-pc-name="inputtext" data-pc-section="root" value=""/><button class="SearchBar-module__ury18W__searchButton  ml-2 p-button p-component p-button-icon-only p-disabled" disabled="" data-pc-name="button" data-pc-section="root"><span class="p-button-icon p-c pi pi-search" data-pc-section="icon"></span><span class="p-button-label p-c" data-pc-section="label">&nbsp;</span></button></label></div></div><div class="hidden px-3 lg:flex col-12 align-items-center justify-content-between text-12px"><nav class="flex gap-4" style="font-size:13px"><a class="font-semibold no-underline texto-cinza-400" href="/vendedores/">Vendedores</a><a class="m-0 font-semibold no-underline texto-cinza-400" href="/busca/destaques/">Destaques</a><a class="m-0 font-semibold no-underline texto-cinza-400" href="/busca/promocoes/">Promoções</a></nav><div class="flex gap-2 align-items-center"><!--$?--><template id="B:7"></template><!--/$--></div></div></div><div hidden id="S:8"><!--&--><!--&--><!--&--><!--&--><!--&--><template id="P:9"></template><!--$?--><template id="B:a"></template><!--/$--><!--/&--><!--/&--><!--/&--><!--/&--><!--/&--></div><script>(self.__next_f=self.__next_f||[]).push([0])</script><script src="/_next/static/chunks/a6dad97d9634a72d.js" noModule=""></script><script src="/_next/static/chunks/1e25a6f4fa54ea3c.js" async=""></script><script src="/_next/static/chunks/c8803943917fdbc1.js" async=""></script><script src="/_next/static/chunks/7e81c081f95bf4e6.js" async=""></script><div hidden id="S:1"></div><script>$RB=[];$RV=function(a){$RT=performance.now();for(var b=0;b<a.length;b+=2){var c=a[b],e=a[b+1];null!==e.parentNode&&e.parentNode.removeChild(e);var f=c.parentNode;if(f){var g=c.previousSibling,h=0;do{if(c&&8===c.nodeType){var d=c.data;if("/$"===d||"/&"===d)if(0===h)break;else h--;else"$"!==d&&"$?"!==d&&"$~"!==d&&"$!"!==d&&"&"!==d||h++}d=c.nextSibling;f.removeChild(c);c=d}while(c);for(;e.firstChild;)f.insertBefore(e.firstChild,c);g.data="$";g._reactRetry&&requestAnimationFrame(g._reactRetry)}}a.length=0};
+$RC=function(a,b){if(b=document.getElementById(b))(a=document.getElementById(a))?(a.previousSibling.data="$~",$RB.push(a,b),2===$RB.length&&("number"!==typeof $RT?requestAnimationFrame($RV.bind(null,$RB)):(a=performance.now(),setTimeout($RV.bind(null,$RB),2300>a&&2E3<a?2300-a:$RT+300-a)))):b.parentNode.removeChild(b)};$RC("B:1","S:1")</script><div hidden id="S:2"></div><script>$RC("B:2","S:2")</script><div hidden id="S:3"></div><script>$RC("B:3","S:3")</script><div hidden id="S:7"><div class="languageSwitch-module__Sp2O3G__dropdown "><button type="button" class="languageSwitch-module__Sp2O3G__trigger " aria-label="Select language" aria-haspopup="listbox" aria-expanded="false">Português<svg class="languageSwitch-module__Sp2O3G__arrow " width="16" height="16" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 4.5L6 7.5L9 4.5" stroke="#00ae42" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg></button></div></div><script>$RC("B:7","S:7")</script><div hidden id="S:5"><a style="text-decoration:none;color:inherit" class="flex p-0 align-items-center justify-content-center " href="/"><img alt="Logo Visãovip" loading="lazy" width="186" height="37" decoding="async" data-nimg="1" class="h-full " style="color:transparent;object-fit:contain;max-height:55px;width:200px" src="/_next/static/media/Visãovip-Logo-Simple.a6e111e6.svg"/></a></div><script>$RS=function(a,b){a=document.getElementById(a);b=document.getElementById(b);for(a.parentNode.removeChild(a);a.firstChild;)b.parentNode.insertBefore(a.firstChild,b);b.parentNode.removeChild(b)};$RS("S:5","P:5")</script><div hidden id="S:6"><a style="text-decoration:none;color:inherit" class="no-underline" href="/lista-desejos/"><button aria-label="Lista de desejos" class="bg-vip-gray-100 p-button-text p-button-rounded p-button p-component p-button-icon-only" style="height:40px;width:40px" data-pc-name="button" data-pc-section="root"><span class="p-button-icon p-c pi pi-heart text-vip" data-pc-section="icon"></span><span class="p-button-label p-c" data-pc-section="label">&nbsp;</span></button></a></div><script>$RS("S:6","P:6")</script><script>$RC("B:4","S:4")</script><div hidden id="S:b"></div><script>$RC("B:b","S:b")</script><script>self.__next_f.push([1,"1:\"$Sreact.fragment\"\n2:I[39756,[\"/_next/static/chunks/ff1a16fafef87110.js\",\"/_next/static/chunks/bccac104f89fec91.js\"],\"default\"]\n3:I[37457,[\"/_next/static/chunks/ff1a16fafef87110.js\",\"/_next/static/chunks/bccac104f89fec91.js\"],\"default\"]\n4:\"$Sreact.suspense\"\n8:I[97367,[\"/_next/static/chunks/ff1a16fafef87110.js\",\"/_next/static/chunks/bccac104f89fec91.js\"],\"OutletBoundary\"]\na:I[97367,[\"/_next/static/chunks/ff1a16fafef87110.js\",\"/_next/static/chunks/bccac104f89fec91.js\"],\"ViewportBoundary\"]\nd:I[68027,[\"/_next/static/chunks/ff1a16fafef87110.js\",\"/_next/static/chunks/bccac104f89fec91.js\"],\"default\"]\ne:I[97367,[\"/_next/static/chunks/ff1a16fafef87110.js\",\"/_next/static/chunks/bccac104f89fec91.js\"],\"MetadataBoundary\"]\n10:I[48264,[\"/_next/static/chunks/e0e3660a4151af38.js\",\"/_next/static/chunks/ac86e150f80b4ba5.js\",\"/_next/static/chunks/a1a368f929698f2b.js\",\"/_next/static/chunks/29929a81203fe81e.js\",\"/_next/static/chunks/7405125396776205.js\",\"/_next/static/chunks/c2ebf0f87b25623f.js\",\"/_next/static/chunks/38b8744644acd596.js\",\"/_next/static/chunks/05525b1b6a065569.js\",\"/_next/static/chunks/9a5cba3cdbe40f9c.js\",\"/_next/static/chunks/4b054591ec8acd70.js\"],\"PrimeReactProvider\"]\n11:I[79120,[\"/_next/static/chunks/e0e3660a4151af38.js\",\"/_next/static/chunks/ac86e150f80b4ba5.js\",\"/_next/static/chunks/a1a368f929698f2b.js\",\"/_next/static/chunks/29929a81203fe81e.js\",\"/_next/static/chunks/7405125396776205.js\",\"/_next/static/chunks/c2ebf0f87b25623f.js\",\"/_next/static/chunks/38b8744644acd596.js\",\"/_next/static/chunks/05525b1b6a065569.js\",\"/_next/static/chunks/9a5cba3cdbe40f9c.js\",\"/_next/static/chunks/4b054591ec8acd70.js\"],\"Navbar\"]\n12:I[65885,[\"/_next/static/chunks/e0e3660a4151af38.js\",\"/_next/static/chunks/ac86e150f80b4ba5.js\",\"/_next/static/chunks/a1a368f929698f2b.js\",\"/_next/static/chunks/29929a81203fe81e.js\",\"/_next/static/chunks/7405125396776205.js\",\"/_next/static/chunks/c2ebf0f87b25623f.js\",\"/_next/static/chunks/38b8744644acd596.js\",\"/_next/static/chunks/05525b1b6a065569.js\",\"/_next/static/chunks/9a5cba3cdbe40f9c.js\",\"/_next/static/chunks/4b054591ec8acd70.js\"],\"HeaderSubBar\"]\n13:I[93301,[\"/_next/static/chunks/1e25a6f4fa54ea3c.js\",\"/_next/static/chunks/ac86e150f80b4ba5.js\",\"/_next/static/chunks/9a5cba3cdbe40f9c.js\",\"/_next/static/chunks/29929a81203fe81e.js\",\"/_next/static/chunks/c8803943917fdbc1.js\",\"/_next/static/chunks/a1a368f929698f2b.js\",\"/_next/static/chunks/7e81c081f95bf4e6.js\",\"/_next/static/chunks/38b8744644acd596.js\",\"/_next/static/chunks/4b054591ec8acd70.js\",\"/_next/static/chunks/c2ebf0f87b25623f.js\"],\"NotFoundSearchBar\"]\n14:I[5303,[\"/_next/static/chunks/1e25a6f4fa54ea3c.js\",\"/_next/static/chunks/ac86e150f80b4ba5.js\",\"/_next/static/chunks/9a5cba3cdbe40f9c.js\",\"/_next/static/chunks/29929a81203fe81e.js\",\"/_next/static/chunks/c8803943917fdbc1.js\",\"/_next/static/chunks/a1a368f929698f2b.js\",\"/_next/static/chunks/7e81c081f95bf4e6.js\",\"/_next/static/chunks/38b8744644acd596.js\",\"/_next/static/chunks/4b054591ec8acd70.js\",\"/_next/static/chunks/c2ebf0f87b25623f.js\"],\"FooterNav\"]\n15:I[90648,[\"/_next/static/chunks/1e25a6f4fa54ea3c.js\",\"/_next/static/chunks/ac86e150f80b4ba5.js\",\"/_next/static/chunks/9a5cba3cdbe40f9c.js\",\"/_next/static/chunks/29929a81203fe81e.js\",\"/_next/static/chunks/c8803943917fdbc1.js\",\"/_next/static/chunks/a1a368f929698f2b.js\",\"/_next/static/chunks/7e81c081f95bf4e6.js\",\"/_next/static/chunks/38b8744644acd596.js\",\"/_next/static/chunks/4b054591ec8acd70.js\",\"/_next/static/chunks/c2ebf0f87b25623f.js\"],\"Footer\"]\n16:I[79520,[\"/_next/static/chunks/e0e3660a4151af38.js\",\"/_next/static/chunks/ac86e150f80b4ba5.js\",\"/_next/static/chunks/a1a368f929698f2b.js\",\"/_next/static/chunks/29929a81203fe81e.js\",\"/_next/static/chunks/7405125396776205.js\",\"/_next/static/chunks/c2ebf0f87b25623f.js\",\"/_next/static/chunks/38b8744644acd596.js\",\"/_next/static/chunks/05525b1b6a065569.js\",\"/_next/static/chunks/9a5cba3cdbe40f9c.js\",\"/_next/static/chunks/4b054591ec8acd70.js\"],\"\"]\n17:I[85930,[\"/_next/static/chunks/e0e3660a4151af38.js\",\"/_next/static/chunks/ac86e150f80b4ba5.js\",\"/_next/static/chunks/a1a368f929698f2b.js\",\"/_next/static/chunks/29929a81203fe81e"])</script><script>self.__next_f.push([1,".js\",\"/_next/static/chunks/7405125396776205.js\",\"/_next/static/chunks/c2ebf0f87b25623f.js\",\"/_next/static/chunks/38b8744644acd596.js\",\"/_next/static/chunks/05525b1b6a065569.js\",\"/_next/static/chunks/9a5cba3cdbe40f9c.js\",\"/_next/static/chunks/4b054591ec8acd70.js\"],\"FilterProvider\"]\n1a:I[23049,[\"/_next/static/chunks/e0e3660a4151af38.js\",\"/_next/static/chunks/ac86e150f80b4ba5.js\",\"/_next/static/chunks/a1a368f929698f2b.js\",\"/_next/static/chunks/29929a81203fe81e.js\",\"/_next/static/chunks/7405125396776205.js\",\"/_next/static/chunks/c2ebf0f87b25623f.js\",\"/_next/static/chunks/38b8744644acd596.js\",\"/_next/static/chunks/05525b1b6a065569.js\",\"/_next/static/chunks/9a5cba3cdbe40f9c.js\",\"/_next/static/chunks/4b054591ec8acd70.js\"],\"NavigationRefresh\"]\n1b:I[67967,[\"/_next/static/chunks/e0e3660a4151af38.js\",\"/_next/static/chunks/ac86e150f80b4ba5.js\",\"/_next/static/chunks/a1a368f929698f2b.js\",\"/_next/static/chunks/29929a81203fe81e.js\",\"/_next/static/chunks/7405125396776205.js\",\"/_next/static/chunks/c2ebf0f87b25623f.js\",\"/_next/static/chunks/38b8744644acd596.js\",\"/_next/static/chunks/05525b1b6a065569.js\",\"/_next/static/chunks/9a5cba3cdbe40f9c.js\",\"/_next/static/chunks/4b054591ec8acd70.js\"],\"ClientProviders\"]\n1e:I[64743,[\"/_next/static/chunks/e0e3660a4151af38.js\",\"/_next/static/chunks/ac86e150f80b4ba5.js\",\"/_next/static/chunks/a1a368f929698f2b.js\",\"/_next/static/chunks/29929a81203fe81e.js\",\"/_next/static/chunks/7405125396776205.js\",\"/_next/static/chunks/c2ebf0f87b25623f.js\",\"/_next/static/chunks/38b8744644acd596.js\",\"/_next/static/chunks/05525b1b6a065569.js\",\"/_next/static/chunks/9a5cba3cdbe40f9c.js\",\"/_next/static/chunks/4b054591ec8acd70.js\"],\"LazyFooterGroup\"]\n1f:I[63863,[\"/_next/static/chunks/e0e3660a4151af38.js\",\"/_next/static/chunks/ac86e150f80b4ba5.js\",\"/_next/static/chunks/a1a368f929698f2b.js\",\"/_next/static/chunks/29929a81203fe81e.js\",\"/_next/static/chunks/7405125396776205.js\",\"/_next/static/chunks/c2ebf0f87b25623f.js\",\"/_next/static/chunks/38b8744644acd596.js\",\"/_next/static/chunks/05525b1b6a065569.js\",\"/_next/static/chunks/9a5cba3cdbe40f9c.js\",\"/_next/static/chunks/4b054591ec8acd70.js\"],\"FloatingChatMenu\"]\n:HL[\"/_next/static/chunks/74a847b88c98a4fd.css\",\"style\"]\n:HL[\"/_next/static/chunks/163f657a16afbe5e.css\",\"style\"]\n:HL[\"/_next/static/chunks/7a934a5f86178360.css\",\"style\"]\n:HL[\"/_next/static/chunks/b7b53a33339efa98.css\",\"style\"]\n:HL[\"/_next/static/chunks/77afe5c8cec05505.css\",\"style\"]\n:HL[\"/_next/static/chunks/25fef8c594c61c2a.css\",\"style\"]\n:HL[\"/_next/static/media/83afe278b6a6bb3c.p.3a6ba036.woff2\",\"font\",{\"crossOrigin\":\"\",\"type\":\"font/woff2\"}]\n:HL[\"/_next/static/chunks/f5274b9d98052fe1.css\",\"style\"]\n:HL[\"/_next/static/chunks/bd8c30e83bd5998a.css\",\"style\"]\n"])</script><script>self.__next_f.push([1,"0:{\"P\":null,\"b\":\"QAm14Voexwwlur451SrkG\",\"c\":[\"\",\"prod\",\"memoria-ram\",\"memoria-ram-macrovip-max-ddr4-8gb-3200mhz-mvx32n168\",\"51563\",\"\"],\"q\":\"\",\"i\":false,\"f\":[[[\"\",{\"children\":[[\"locale\",\"pt-BR\",\"d\"],{\"children\":[\"prod\",{\"children\":[[\"category\",\"memoria-ram\",\"d\"],{\"children\":[[\"slug\",\"memoria-ram-macrovip-max-ddr4-8gb-3200mhz-mvx32n168\",\"d\"],{\"children\":[[\"id\",\"51563\",\"d\"],{\"children\":[\"__PAGE__\",{}]}]}]}]}]}]},\"$undefined\",\"$undefined\",true],[[\"$\",\"$1\",\"c\",{\"children\":[[[\"$\",\"link\",\"0\",{\"rel\":\"stylesheet\",\"href\":\"/_next/static/chunks/74a847b88c98a4fd.css\",\"precedence\":\"next\",\"crossOrigin\":\"$undefined\",\"nonce\":\"$undefined\"}],[\"$\",\"link\",\"1\",{\"rel\":\"stylesheet\",\"href\":\"/_next/static/chunks/163f657a16afbe5e.css\",\"precedence\":\"next\",\"crossOrigin\":\"$undefined\",\"nonce\":\"$undefined\"}],[\"$\",\"link\",\"2\",{\"rel\":\"stylesheet\",\"href\":\"/_next/static/chunks/7a934a5f86178360.css\",\"precedence\":\"next\",\"crossOrigin\":\"$undefined\",\"nonce\":\"$undefined\"}],[\"$\",\"link\",\"3\",{\"rel\":\"stylesheet\",\"href\":\"/_next/static/chunks/b7b53a33339efa98.css\",\"precedence\":\"next\",\"crossOrigin\":\"$undefined\",\"nonce\":\"$undefined\"}]],[\"$\",\"$L2\",null,{\"parallelRouterKey\":\"children\",\"error\":\"$undefined\",\"errorStyles\":\"$undefined\",\"errorScripts\":\"$undefined\",\"template\":[\"$\",\"$L3\",null,{}],\"templateStyles\":\"$undefined\",\"templateScripts\":\"$undefined\",\"notFound\":[[\"$\",\"$4\",null,{\"fallback\":[\"$\",\"div\",null,{\"className\":\"w-full h-screen flex items-center justify-center\",\"children\":[\"$\",\"div\",null,{\"className\":\"pi pi-spin pi-spinner\",\"style\":{\"fontSize\":\"2rem\"}}]}],\"children\":\"$L5\"}],[[\"$\",\"link\",\"0\",{\"rel\":\"stylesheet\",\"href\":\"/_next/static/chunks/77afe5c8cec05505.css\",\"precedence\":\"next\",\"crossOrigin\":\"$undefined\",\"nonce\":\"$undefined\"}],[\"$\",\"link\",\"1\",{\"rel\":\"stylesheet\",\"href\":\"/_next/static/chunks/25fef8c594c61c2a.css\",\"precedence\":\"next\",\"crossOrigin\":\"$undefined\",\"nonce\":\"$undefined\"}],[\"$\",\"link\",\"2\",{\"rel\":\"stylesheet\",\"href\":\"/_next/static/chunks/bd8c30e83bd5998a.css\",\"precedence\":\"next\",\"crossOrigin\":\"$undefined\",\"nonce\":\"$undefined\"}]]],\"forbidden\":\"$undefined\",\"unauthorized\":\"$undefined\"}]]}],{\"children\":[[\"$\",\"$1\",\"c\",{\"children\":[[[\"$\",\"link\",\"0\",{\"rel\":\"stylesheet\",\"href\":\"/_next/static/chunks/77afe5c8cec05505.css\",\"precedence\":\"next\",\"crossOrigin\":\"$undefined\",\"nonce\":\"$undefined\"}],[\"$\",\"link\",\"1\",{\"rel\":\"stylesheet\",\"href\":\"/_next/static/chunks/25fef8c594c61c2a.css\",\"precedence\":\"next\",\"crossOrigin\":\"$undefined\",\"nonce\":\"$undefined\"}],[\"$\",\"script\",\"script-0\",{\"src\":\"/_next/static/chunks/e0e3660a4151af38.js\",\"async\":true,\"nonce\":\"$undefined\"}],[\"$\",\"script\",\"script-1\",{\"src\":\"/_next/static/chunks/ac86e150f80b4ba5.js\",\"async\":true,\"nonce\":\"$undefined\"}],[\"$\",\"script\",\"script-2\",{\"src\":\"/_next/static/chunks/a1a368f929698f2b.js\",\"async\":true,\"nonce\":\"$undefined\"}],[\"$\",\"script\",\"script-3\",{\"src\":\"/_next/static/chunks/29929a81203fe81e.js\",\"async\":true,\"nonce\":\"$undefined\"}],[\"$\",\"script\",\"script-4\",{\"src\":\"/_next/static/chunks/7405125396776205.js\",\"async\":true,\"nonce\":\"$undefined\"}],[\"$\",\"script\",\"script-5\",{\"src\":\"/_next/static/chunks/c2ebf0f87b25623f.js\",\"async\":true,\"nonce\":\"$undefined\"}],[\"$\",\"script\",\"script-6\",{\"src\":\"/_next/static/chunks/38b8744644acd596.js\",\"async\":true,\"nonce\":\"$undefined\"}],[\"$\",\"script\",\"script-7\",{\"src\":\"/_next/static/chunks/05525b1b6a065569.js\",\"async\":true,\"nonce\":\"$undefined\"}],[\"$\",\"script\",\"script-8\",{\"src\":\"/_next/static/chunks/9a5cba3cdbe40f9c.js\",\"async\":true,\"nonce\":\"$undefined\"}],[\"$\",\"script\",\"script-9\",{\"src\":\"/_next/static/chunks/4b054591ec8acd70.js\",\"async\":true,\"nonce\":\"$undefined\"}]],\"$L6\"]}],{\"children\":[[\"$\",\"$1\",\"c\",{\"children\":[null,[\"$\",\"$L2\",null,{\"parallelRouterKey\":\"children\",\"error\":\"$undefined\",\"errorStyles\":\"$undefined\",\"errorScripts\":\"$undefined\",\"template\":[\"$\",\"$L3\",null,{}],\"templateStyles\":\"$undefined\",\"templateScripts\":\"$undefined\",\"notFound\":\"$undefined\",\"forbidden\":\"$undefined\",\"unauthorized\":\"$undefined\"}]]}],{\"children\":[[\"$\",\"$1\",\"c\",{\"children\":[null,[\"$\",\"$L2\",null,{\"parallelRouterKey\":\"children\",\"error\":\"$undefined\",\"errorStyles\":\"$undefined\",\"errorScripts\":\"$undefined\",\"template\":[\"$\",\"$L3\",null,{}],\"templateStyles\":\"$undefined\",\"templateScripts\":\"$undefined\",\"notFound\":\"$undefined\",\"forbidden\":\"$undefined\",\"unauthorized\":\"$undefined\"}]]}],{\"children\":[[\"$\",\"$1\",\"c\",{\"children\":[null,[\"$\",\"$L2\",null,{\"parallelRouterKey\":\"children\",\"error\":\"$undefined\",\"errorStyles\":\"$undefined\",\"errorScripts\":\"$undefined\",\"template\":[\"$\",\"$L3\",null,{}],\"templateStyles\":\"$undefined\",\"templateScripts\":\"$undefined\",\"notFound\":\"$undefined\",\"forbidden\":\"$undefined\",\"unauthorized\":\"$undefined\"}]]}],{\"children\":[[\"$\",\"$1\",\"c\",{\"children\":[null,[\"$\",\"$L2\",null,{\"parallelRouterKey\":\"children\",\"error\":\"$undefined\",\"errorStyles\":\"$undefined\",\"errorScripts\":\"$undefined\",\"template\":[\"$\",\"$L3\",null,{}],\"templateStyles\":\"$undefined\",\"templateScripts\":\"$undefined\",\"notFound\":\"$undefined\",\"forbidden\":\"$undefined\",\"unauthorized\":\"$undefined\"}]]}],{\"children\":[[\"$\",\"$1\",\"c\",{\"children\":[\"$L7\",[[\"$\",\"link\",\"0\",{\"rel\":\"stylesheet\",\"href\":\"/_next/static/chunks/f5274b9d98052fe1.css\",\"precedence\":\"next\",\"crossOrigin\":\"$undefined\",\"nonce\":\"$undefined\"}],[\"$\",\"script\",\"script-0\",{\"src\":\"/_next/static/chunks/1218c807350d6143.js\",\"async\":true,\"nonce\":\"$undefined\"}],[\"$\",\"script\",\"script-1\",{\"src\":\"/_next/static/chunks/8881d8a9275de5e3.js\",\"async\":true,\"nonce\":\"$undefined\"}]],[\"$\",\"$L8\",null,{\"children\":[\"$\",\"$4\",null,{\"name\":\"Next.MetadataOutlet\",\"children\":\"$@9\"}]}]]}],{},null,false,false]},null,false,false]},null,false,false]},null,false,false]},null,false,false]},null,false,false]},null,false,false],[\"$\",\"$1\",\"h\",{\"children\":[null,[\"$\",\"$La\",null,{\"children\":\"$Lb\"}],[\"$\",\"div\",null,{\"hidden\":true,\"children\":\"$Lc\"}],null]}],false]],\"m\":\"$undefined\",\"G\":[\"$d\",[]],\"S\":false}\n"])</script><script>self.__next_f.push([1,"c:[\"$\",\"$Le\",null,{\"children\":[\"$\",\"$4\",null,{\"name\":\"Next.Metadata\",\"children\":\"$Lf\"}]}]\n"])</script><script>self.__next_f.push([1,"5:[\"$\",\"html\",null,{\"suppressHydrationWarning\":true,\"lang\":\"pt-BR\",\"children\":[[\"$\",\"head\",null,{}],[\"$\",\"body\",null,{\"children\":[\"$\",\"$L10\",null,{\"children\":[\"$\",\"div\",null,{\"className\":\"inter_51299d8c-module__qBVNXG__className inter_51299d8c-module__qBVNXG__variable sora_d6ad3eea-module__05QugW__variable\",\"children\":[\"$\",\"div\",null,{\"className\":\"grid p-0 px-2 m-0 lg:m-auto flex-column col-12 md:p-2\",\"style\":{\"maxWidth\":\"1600px\"},\"children\":[[\"$\",\"$L11\",null,{\"locale\":\"pt-BR\"}],[\"$\",\"$L12\",null,{\"locale\":\"pt-BR\"}],[\"$\",\"section\",null,{\"className\":\"flex p-1 sm:p-3 lg:p-6 justify-content-center align-items-center flex-column\",\"style\":{\"minHeight\":\"60vh\"},\"children\":[\"$\",\"div\",null,{\"className\":\"text-center\",\"children\":[[\"$\",\"h1\",null,{\"className\":\"mx-auto my-0 w-fit not-found-module__NRqkFW__notFoundTitle\",\"children\":[\"404\",[\"$\",\"span\",null,{\"className\":\" font-sora not-found-module__NRqkFW__centeredSubtitle\",\"children\":\"NÃO ENCONTRADO\"}]]}],[\"$\",\"h2\",null,{\"className\":\"mt-3 mb-2 text-3xl md:text-5xl md:mb-4 font-sora\",\"style\":{\"fontWeight\":700,\"fontSize\":\"40px\"},\"children\":\"Tente novamente\"}],[\"$\",\"p\",null,{\"className\":\"mb-4 texto-cinza-200\",\"style\":{\"fontSize\":\"16px\"},\"children\":\"Parece que não foi encontrado nada nesta página. Tente buscar conteúdo similar.\"}],[\"$\",\"$L13\",null,{\"locale\":\"pt-BR\",\"placeholder\":\"Buscar produtos\"}]]}]}],[\"$\",\"$L14\",null,{}],[\"$\",\"$L15\",null,{}]]}]}]}]}]]}]\n"])</script><script>self.__next_f.push([1,"18:[\"$\",\"iframe\",null,{\"src\":\"https://www.googletagmanager.com/ns.html?id=GTM-TC6N84V\",\"height\":\"0\",\"width\":\"0\",\"style\":{\"display\":\"none\",\"visibility\":\"hidden\"}}]\n19:[\"$\",\"img\",null,{\"height\":\"1\",\"width\":\"1\",\"style\":{\"display\":\"none\"},\"src\":\"https://www.facebook.com/tr?id=2098088733825475\u0026ev=PageView\u0026noscript=1\",\"alt\":\"\"}]\n"])</script><script>self.__next_f.push([1,"6:[\"$\",\"html\",null,{\"lang\":\"pt-BR\",\"data-theme\":\"light\",\"className\":\"light\",\"dir\":\"ltr\",\"suppressHydrationWarning\":true,\"children\":[[\"$\",\"head\",null,{\"children\":[[[\"$\",\"link\",\"es\",{\"rel\":\"alternate\",\"hrefLang\":\"es\",\"href\":\"https://www.visaovip.com/es\"}],[\"$\",\"link\",\"pt-BR\",{\"rel\":\"alternate\",\"hrefLang\":\"pt-BR\",\"href\":\"https://www.visaovip.com\"}]],[\"$\",\"meta\",null,{\"charSet\":\"utf-8\"}],[\"$\",\"meta\",null,{\"httpEquiv\":\"X-UA-Compatible\",\"content\":\"IE=edge\"}],[\"$\",\"meta\",null,{\"httpEquiv\":\"Content-Type\",\"content\":\"text/html; charset=UTF-8\"}],[\"$\",\"meta\",null,{\"name\":\"viewport\",\"content\":\"width=device-width, initial-scale=1, maximum-scale=5\"}],[\"$\",\"meta\",null,{\"name\":\"mobile-web-app-capable\",\"content\":\"yes\"}],[\"$\",\"meta\",null,{\"name\":\"robots\",\"content\":\"index, follow\"}],[[\"$\",\"$L16\",null,{\"id\":\"gtm-script\",\"strategy\":\"afterInteractive\",\"dangerouslySetInnerHTML\":{\"__html\":\"(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':\\nnew Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],\\nj=d.createElement(s),dl=l!='dataLayer'?'\u0026l='+l:'';j.async=true;j.src=\\n'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);\\n})(window,document,'script','dataLayer','GTM-TC6N84V');\"}}],[\"$\",\"$L16\",null,{\"id\":\"gtag-js\",\"strategy\":\"afterInteractive\",\"src\":\"https://www.googletagmanager.com/gtag/js?id=AW-10826548130\"}],[\"$\",\"$L16\",null,{\"id\":\"gtag-config\",\"strategy\":\"afterInteractive\",\"dangerouslySetInnerHTML\":{\"__html\":\"window.dataLayer = window.dataLayer || [];\\nfunction gtag(){dataLayer.push(arguments);}\\ngtag('js', new Date());\\ngtag('config', 'AW-10826548130');\"}}]],[\"$\",\"$L16\",null,{\"id\":\"fb-pixel\",\"strategy\":\"afterInteractive\",\"dangerouslySetInnerHTML\":{\"__html\":\"!function(f,b,e,v,n,t,s)\\n{if(f.fbq)return;n=f.fbq=function(){n.callMethod?\\nn.callMethod.apply(n,arguments):n.queue.push(arguments)};\\nif(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';\\nn.queue=[];t=b.createElement(e);t.async=!0;\\nt.src=v;s=b.getElementsByTagName(e)[0];\\ns.parentNode.insertBefore(t,s)}(window, document,'script',\\n'https://connect.facebook.net/en_US/fbevents.js');\\nfbq('init', '2098088733825475');\\nfbq('track', 'PageView');\"}}],[\"$\",\"$L16\",null,{\"id\":\"vedoble-analytics\",\"strategy\":\"afterInteractive\",\"src\":\"https://analytics.visaovip.com/tracker.js\",\"data-site-id\":\"VISAOVIPINFO-6CB51D\",\"data-token\":\"pub_GbK1tPwyIdAMhNylBQnx1bbPMK7UH1yy7otn67SDzik\"}]]}],[\"$\",\"$L10\",null,{\"value\":{\"unstyled\":false,\"ripple\":false,\"pt\":{}},\"children\":[\"$\",\"$L17\",null,{\"children\":[\"$\",\"body\",null,{\"className\":\"inter_890a4e7c-module__HlsNya__className inter_890a4e7c-module__HlsNya__variable sora_caba463e-module__AxjI6W__variable\",\"children\":[[\"$\",\"noscript\",null,{\"children\":\"$18\"}],[\"$\",\"noscript\",null,{\"children\":\"$19\"}],[\"$\",\"$4\",null,{\"children\":[\"$\",\"$L1a\",null,{}]}],[\"$\",\"div\",null,{\"className\":\"grid p-0 px-2 m-0 lg:m-auto flex-column col-12 md:p-2\",\"style\":{\"maxWidth\":\"1600px\"},\"children\":[[\"$\",\"$L1b\",null,{\"locale\":\"pt-BR\",\"children\":[\"$\",\"$4\",null,{\"children\":[[\"$\",\"$L11\",null,{\"locale\":\"pt-BR\"}],[\"$\",\"$L12\",null,{\"locale\":\"pt-BR\"}]]}]}],[\"$\",\"$4\",null,{\"fallback\":[\"$\",\"div\",null,{\"className\":\"w-full\",\"style\":{\"minHeight\":\"60vh\"}}],\"children\":[\"$\",\"$L2\",null,{\"parallelRouterKey\":\"children\",\"error\":\"$undefined\",\"errorStyles\":\"$undefined\",\"errorScripts\":\"$undefined\",\"template\":[\"$\",\"$L3\",null,{}],\"templateStyles\":\"$undefined\",\"templateScripts\":\"$undefined\",\"notFound\":\"$undefined\",\"forbidden\":\"$undefined\",\"unauthorized\":\"$undefined\"}]}],[\"$\",\"$4\",null,{\"fallback\":[\"$\",\"div\",null,{\"style\":{\"height\":\"400px\"}}],\"children\":[\"$\",\"$L1b\",null,{\"locale\":\"pt-BR\",\"children\":\"$L1c\"}]}]]}],[\"$\",\"$4\",null,{\"fallback\":[\"$\",\"p\",null,{\"children\":\"Loading...\"}],\"children\":\"$L1d\"}]]}]}]}]]}]\n"])</script><script>self.__next_f.push([1,"1c:[\"$\",\"$L1e\",null,{\"locale\":\"pt-BR\",\"newsletterBannerData\":\"$undefined\"}]\n1d:[\"$\",\"$L1f\",null,{\"showChatbot\":false}]\nb:[[\"$\",\"meta\",\"0\",{\"charSet\":\"utf-8\"}],[\"$\",\"meta\",\"1\",{\"name\":\"viewport\",\"content\":\"width=device-width, initial-scale=1\"}]]\n"])</script><script>self.__next_f.push([1,"7:E{\"digest\":\"NEXT_HTTP_ERROR_FALLBACK;404\"}\n"])</script><meta name="robots" content="noindex"/><script>$RX=function(b,c,d,e,f){var a=document.getElementById(b);a&&(b=a.previousSibling,b.data="$!",a=a.dataset,c&&(a.dgst=c),d&&(a.msg=d),e&&(a.stck=e),f&&(a.cstck=f),b._reactRetry&&b._reactRetry())};;$RX("B:8","NEXT_HTTP_ERROR_FALLBACK;404")</script><script>self.__next_f.push([1,"20:I[27201,[\"/_next/static/chunks/ff1a16fafef87110.js\",\"/_next/static/chunks/bccac104f89fec91.js\"],\"IconMark\"]\n9:null\n"])</script><title>Produto - Visãovip | Visãovip Informática</title><meta name="description" content="Produto - Visãovip"/><meta name="application-name" content="Visãovip Informática - Compras no Paraguai - Loja de Informatica"/><link rel="author" href="https://www.visaovip.com"/><meta name="author" content="Vedoble Consultoria"/><meta name="referrer" content="origin-when-cross-origin"/><meta name="creator" content="Vedoble Consultoria"/><meta name="publisher" content="Vedoble Consultoria"/><meta name="robots" content="index, follow"/><meta name="googlebot" content="index, follow, max-video-preview:-1, max-image-preview:large, max-snippet:-1"/><meta name="category" content="technology"/><link rel="canonical" href="https://www.visaovip.com/prod/"/><link rel="alternate" hrefLang="es" href="https://www.visaovip.com/es/prod/"/><link rel="alternate" hrefLang="pt-BR" href="https://www.visaovip.com/prod/"/><link rel="alternate" hrefLang="x-default" href="https://www.visaovip.com/"/><meta name="google-site-verification" content="xYt9BW0JPe0qXwlAAvEkqL86AdqB55gdbcRoQzU7LvU"/><meta name="yandex-verification" content="your-yandex-verification-code"/><meta property="og:title" content="Produto - Visãovip"/><meta property="og:description" content="Produto - Visãovip"/><meta property="og:locale" content="pt-BR"/><meta property="og:type" content="website"/><meta name="twitter:card" content="summary_large_image"/><meta name="twitter:title" content="Produto - Visãovip"/><meta name="twitter:description" content="Produto - Visãovip"/><link rel="icon" href="/images/favicon.png"/><link rel="icon" href="/images/favicon.png" sizes="16x16" type="image/png"/><link rel="icon" href="/images/favicon.png" sizes="32x32" type="image/png"/><link rel="apple-touch-icon" href="/images/favicon.png" sizes="180x180" type="image/png"/><link rel="mask-icon" href="/images/favicon.png"/><script >document.querySelectorAll('body link[rel="icon"], body link[rel="apple-touch-icon"]').forEach(el => document.head.appendChild(el))</script><div hidden id="S:a"></div><script>$RC("B:a","S:a")</script><div hidden id="S:0"></div><script>$RC("B:0","S:0")</script><script>self.__next_f.push([1,"f:[[\"$\",\"title\",\"0\",{\"children\":\"Produto - Visãovip | Visãovip Informática\"}],[\"$\",\"meta\",\"1\",{\"name\":\"description\",\"content\":\"Produto - Visãovip\"}],[\"$\",\"meta\",\"2\",{\"name\":\"application-name\",\"content\":\"Visãovip Informática - Compras no Paraguai - Loja de Informatica\"}],[\"$\",\"link\",\"3\",{\"rel\":\"author\",\"href\":\"https://www.visaovip.com\"}],[\"$\",\"meta\",\"4\",{\"name\":\"author\",\"content\":\"Vedoble Consultoria\"}],[\"$\",\"meta\",\"5\",{\"name\":\"referrer\",\"content\":\"origin-when-cross-origin\"}],[\"$\",\"meta\",\"6\",{\"name\":\"creator\",\"content\":\"Vedoble Consultoria\"}],[\"$\",\"meta\",\"7\",{\"name\":\"publisher\",\"content\":\"Vedoble Consultoria\"}],[\"$\",\"meta\",\"8\",{\"name\":\"robots\",\"content\":\"index, follow\"}],[\"$\",\"meta\",\"9\",{\"name\":\"googlebot\",\"content\":\"index, follow, max-video-preview:-1, max-image-preview:large, max-snippet:-1\"}],[\"$\",\"meta\",\"10\",{\"name\":\"category\",\"content\":\"technology\"}],[\"$\",\"link\",\"11\",{\"rel\":\"canonical\",\"href\":\"https://www.visaovip.com/prod/\"}],[\"$\",\"link\",\"12\",{\"rel\":\"alternate\",\"hrefLang\":\"es\",\"href\":\"https://www.visaovip.com/es/prod/\"}],[\"$\",\"link\",\"13\",{\"rel\":\"alternate\",\"hrefLang\":\"pt-BR\",\"href\":\"https://www.visaovip.com/prod/\"}],[\"$\",\"link\",\"14\",{\"rel\":\"alternate\",\"hrefLang\":\"x-default\",\"href\":\"https://www.visaovip.com/\"}],[\"$\",\"meta\",\"15\",{\"name\":\"google-site-verification\",\"content\":\"xYt9BW0JPe0qXwlAAvEkqL86AdqB55gdbcRoQzU7LvU\"}],[\"$\",\"meta\",\"16\",{\"name\":\"yandex-verification\",\"content\":\"your-yandex-verification-code\"}],[\"$\",\"meta\",\"17\",{\"property\":\"og:title\",\"content\":\"Produto - Visãovip\"}],[\"$\",\"meta\",\"18\",{\"property\":\"og:description\",\"content\":\"Produto - Visãovip\"}],[\"$\",\"meta\",\"19\",{\"property\":\"og:locale\",\"content\":\"pt-BR\"}],[\"$\",\"meta\",\"20\",{\"property\":\"og:type\",\"content\":\"website\"}],[\"$\",\"meta\",\"21\",{\"name\":\"twitter:card\",\"content\":\"summary_large_image\"}],[\"$\",\"meta\",\"22\",{\"name\":\"twitter:title\",\"content\":\"Produto - Visãovip\"}],[\"$\",\"meta\",\"23\",{\"name\":\"twitter:description\",\"content\":\"Produto - Visãovip\"}],[\"$\",\"link\",\"24\",{\"rel\":\"icon\",\"href\":\"/images/favicon.png\"}],[\"$\",\"link\",\"25\",{\"rel\":\"icon\",\"href\":\"/images/favicon.png\",\"sizes\":\"16x16\",\"type\":\"image/png\"}],[\"$\",\"link\",\"26\",{\"rel\":\"icon\",\"href\":\"/images/favicon.png\",\"sizes\":\"32x32\",\"type\":\"image/png\"}],[\"$\",\"link\",\"27\",{\"rel\":\"apple-touch-icon\",\"href\":\"/images/favicon.png\",\"sizes\":\"180x180\",\"type\":\"image/png\"}],[\"$\",\"link\",\"28\",{\"rel\":\"mask-icon\",\"href\":\"/images/favicon.png\"}],[\"$\",\"$L20\",\"29\",{}]]\n"])</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3db49309a5ab7bb',t:'MTc4OTg0OTE3Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body></html>

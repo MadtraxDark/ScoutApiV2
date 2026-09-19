@@ -11,6 +11,7 @@ from scout_api.modules.matching.identity import (
     condition_conflict,
     console_soft_model_title_exempt,
     critical_identity_conflict,
+    gpu_soft_model_title_exempt,
     looks_like_accessory,
     looks_like_bundle,
     models_compatible,
@@ -192,11 +193,19 @@ class MatchingEngine:
             )
 
         # Manufacturer part number exact — strong identifier after GTIN.
-        if reference.mpn and candidate.mpn and reference.mpn == candidate.mpn:
+        ref_mpns = set(reference.mpn_aliases)
+        if reference.mpn:
+            ref_mpns.add(reference.mpn)
+        cand_mpns = set(candidate.mpn_aliases)
+        if candidate.mpn:
+            cand_mpns.add(candidate.mpn)
+        shared_mpns = ref_mpns & cand_mpns
+        if shared_mpns:
+            shared = sorted(shared_mpns)[0]
             reasons.append(
                 MatchReason(
                     code="mpn_exact",
-                    detail=f"mpn={reference.mpn}",
+                    detail=f"mpn={shared}",
                     score=1.0,
                 )
             )
@@ -264,9 +273,11 @@ class MatchingEngine:
             and _brand_compatible(reference, candidate)
         )
         if model_soft_ok and reference.model != candidate.model:
-            # Consoles: sparse vs marketing titles must not veto family+edition.
-            if title_sim < SOFT_MODEL_TITLE_MIN and not console_soft_model_title_exempt(
-                reference, candidate
+            # Consoles / GPUs: sparse vs marketing titles must not veto family
+            # identity when critical edition/VRAM/storage gates already agree.
+            if title_sim < SOFT_MODEL_TITLE_MIN and not (
+                console_soft_model_title_exempt(reference, candidate)
+                or gpu_soft_model_title_exempt(reference, candidate)
             ):
                 model_soft_ok = False
 

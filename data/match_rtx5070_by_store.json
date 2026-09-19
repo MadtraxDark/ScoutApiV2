@@ -1,0 +1,138 @@
+{
+  "reference_url": "https://visaovip.com/prod/placas-de-video-nvidia/placa-de-video-msi-shadow-3x-oc-12gb-geforce-rtx5070-gddr7-912-v532-232/55359/",
+  "results": [
+    {
+      "store": "kabum",
+      "secs": 116.4,
+      "matches": [],
+      "unmatched": [
+        "kabum"
+      ],
+      "errors": [],
+      "reference_title": "Placa de Vídeo MSI Shadow 3X OC 12GB GeForce RTX5070 GDDR7 - 912-V532-232",
+      "reference_price": "889.00"
+    },
+    {
+      "store": "magazineluiza",
+      "secs": 206.4,
+      "matches": [],
+      "unmatched": [
+        "magazineluiza"
+      ],
+      "errors": [],
+      "reference_title": "Placa de Vídeo MSI Shadow 3X OC 12GB GeForce RTX5070 GDDR7 - 912-V532-232",
+      "reference_price": "889.00"
+    },
+    {
+      "store": "shopee",
+      "secs": 473.9,
+      "matches": [],
+      "unmatched": [
+        "shopee"
+      ],
+      "errors": [],
+      "reference_title": "Placa de Vídeo MSI Shadow 3X OC 12GB GeForce RTX5070 GDDR7 - 912-V532-232",
+      "reference_price": "889.00"
+    },
+    {
+      "store": "amazon_br",
+      "secs": 77.2,
+      "matches": [
+        {
+          "decision": "auto_match",
+          "confidence": "0.92",
+          "title": "msi Placa gráfica Gaming RTX 5070 12G World of Warcraft Midnight Void Edition OC (12 GB GDDR7, 192 bits, desempenho extr",
+          "price": "7632.00",
+          "currency": "BRL",
+          "brand": "MSI",
+          "model": "Placa",
+          "sku": "B0GNCD2VW6",
+          "url": "https://www.amazon.com.br/dp/B0GNCD2VW6",
+          "reasons": [
+            "brand_match",
+            "brand_model_exact",
+            "title_similarity"
+          ]
+        }
+      ],
+      "unmatched": [],
+      "errors": [],
+      "reference_title": "Placa de Vídeo MSI Shadow 3X OC 12GB GeForce RTX5070 GDDR7 - 912-V532-232",
+      "reference_price": "889.00"
+    },
+    {
+      "store": "amazon_us",
+      "secs": 149.6,
+      "matches": [],
+      "unmatched": [
+        "amazon_us"
+      ],
+      "errors": [],
+      "reference_title": "Placa de Vídeo MSI Shadow 3X OC 12GB GeForce RTX5070 GDDR7 - 912-V532-232",
+      "reference_price": "889.00"
+    },
+    {
+      "store": "bestbuy",
+      "secs": 121.7,
+      "matches": [
+        {
+          "decision": "auto_match",
+          "confidence": "0.92",
+          "title": "MSI - NVIDIA GeForce RTX 5070 12G GAMING TRIO OC 12GB GDDR7 PCI Express Gen 5 Graphics Card - Black",
+          "price": "849.99",
+          "currency": "USD",
+          "brand": "MSI",
+          "model": "G5070-12GTC",
+          "sku": "6619436",
+          "url": "https://www.bestbuy.com/product/msi-nvidia-geforce-rtx-5070-12g-gaming-trio-oc-12gb-gddr7-pci-express-gen-5-graphics-card-black/J3P7TX65JH?intl=nosplash",
+          "reasons": [
+            "brand_match",
+            "brand_model_exact",
+            "title_similarity"
+          ]
+        }
+      ],
+      "unmatched": [],
+      "errors": [],
+      "reference_title": "Placa de Vídeo MSI Shadow 3X OC 12GB GeForce RTX5070 GDDR7 - 912-V532-232",
+      "reference_price": "889.00"
+    },
+    {
+      "store": "nissei",
+      "secs": 93.4,
+      "matches": [
+        {
+          "decision": "auto_match",
+          "confidence": "0.92",
+          "title": "Placa de Video MSI GeForce RTX 5070 Ventus 2X OC Edition 12 GB GDDR7",
+          "price": "7678000",
+          "currency": "PYG",
+          "brand": "MSI",
+          "model": null,
+          "sku": "139810",
+          "url": "https://nissei.com/py/vga-msi-rtx5070-rtx5070-ventus-2x-oc-12gb-gddr-22542mhz-2fan-912-v532-009",
+          "reasons": [
+            "brand_match",
+            "brand_model_exact",
+            "title_similarity"
+          ]
+        }
+      ],
+      "unmatched": [],
+      "errors": [],
+      "reference_title": "Placa de Vídeo MSI Shadow 3X OC 12GB GeForce RTX5070 GDDR7 - 912-V532-232",
+      "reference_price": "889.00"
+    },
+    {
+      "store": "shoppingchina",
+      "secs": 6.2,
+      "matches": [],
+      "unmatched": [
+        "shoppingchina"
+      ],
+      "errors": [],
+      "reference_title": "Placa de Vídeo MSI Shadow 3X OC 12GB GeForce RTX5070 GDDR7 - 912-V532-232",
+      "reference_price": "889.00"
+    }
+  ]
+}

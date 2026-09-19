@@ -36,6 +36,54 @@ def test_kabum_parse_search_results() -> None:
     assert "kabum.com.br/produto/" in results[0].url
 
 
+def test_kabum_parse_search_next_data_catalog() -> None:
+    """Modern KaBuM SERP embeds catalog cards in __NEXT_DATA__, not anchors."""
+    import json
+
+    payload = {
+        "props": {
+            "pageProps": {
+                "data": {
+                    "catalogServer": {
+                        "data": [
+                            {
+                                "code": 777166,
+                                "name": (
+                                    "Placa de Vídeo MSI RTX 5070 12G Shadow 3X OC "
+                                    "NVIDIA GeForce 12GB GDDR7"
+                                ),
+                                "friendlyName": (
+                                    "placa-de-video-msi-rtx-5070-12g-shadow-3x-oc-"
+                                    "nvidia-geforce-12gb-gddr7"
+                                ),
+                            },
+                            {
+                                "code": 111,
+                                "name": "Outro produto",
+                                "friendlyName": "outro-produto",
+                            },
+                        ]
+                    }
+                }
+            }
+        }
+    }
+    html = f"""
+    <html><body>
+      <script id="__NEXT_DATA__" type="application/json">{json.dumps(payload)}</script>
+    </body></html>
+    """
+    spider = KabumSpider()
+    results = spider.parse_search_results(
+        _response("https://www.kabum.com.br/busca/msi%20rtx%205070", html)
+    )
+    assert len(results) == 2
+    assert results[0].product_id == "777166"
+    assert "777166" in results[0].url
+    assert results[0].title and "Shadow 3X" in results[0].title
+    assert results[0].metadata.get("source") == "kabum-search-next-data"
+
+
 def test_magalu_parse_search_results() -> None:
     html = """
     <html><body>

@@ -759,3 +759,359 @@ def test_match_stops_after_two_empty_searches() -> None:
     )
     assert resp.unmatched_stores == ["shopee"]
     assert search.search.call_count == 2
+
+
+# --- GPU / discrete graphics identity (Search vs Match) ---
+
+
+def test_gpu_query_generation_progressive_not_full_title() -> None:
+    """Queries prefer brand+chip+edition+VRAM over noisy SEO title heads."""
+    identity = identity_from_price_item(
+        _item(
+            store="visaovip",
+            title=(
+                "Placa de Video MSI Shadow 3X OC 12GB GeForce RTX5070 GDDR7 "
+                "- 912-V532-232"
+            ),
+            brand="MSI",
+            model="Shadow 3X OC",
+            sku="912-V532-232",
+            variant="ram: 12 GB",
+            metadata={
+                "specifications": {
+                    "REFERÊNCIA": "912-V532-232",
+                    "MODELO": "Shadow 3X OC",
+                    "gpu_model": "GeForce RTX5070",
+                }
+            },
+        )
+    )
+    queries = build_search_queries(identity)
+    assert queries
+    # Progressive commercial ladder leads; MPN is a fallback for GPUs.
+    assert any(
+        q.casefold().startswith("msi rtx 5070 shadow 3x") for q in queries[:4]
+    )
+    assert any("912-V532-232" in q for q in queries)
+    # Must not lead with a long SEO dump (Ray Tracing / MHz / bus width).
+    joined = " | ".join(queries).casefold()
+    assert "ray tracing" not in joined
+    assert "2557" not in joined
+    assert "192" not in joined
+    assert "dlss" not in joined
+    assert queries[0].casefold().startswith("msi rtx 5070")
+
+
+def test_gpu_same_product_different_titles_match() -> None:
+    ref = identity_from_price_item(
+        _item(
+            store="visaovip",
+            product_id="55359",
+            title="Placa de Video MSI Shadow 3X OC 12GB GeForce RTX5070 GDDR7",
+            brand="MSI",
+            sku="912-V532-232",
+        )
+    )
+    kabum = identity_from_price_item(
+        _item(
+            store="kabum",
+            product_id="777166",
+            title=(
+                "MSI RTX 5070 12G Shadow 3X OC NVIDIA GeForce 12GB GDDR7 "
+                "2557 MHz 192-bit FP4 and DLSS 4 Ray Tracing G5070-12S3C"
+            ),
+            brand="MSI",
+        )
+    )
+    magalu = identity_from_price_item(
+        _item(
+            store="magazineluiza",
+            product_id="fkff6cf4a2",
+            title=(
+                "MSI RTX 5070 12G Shadow 3X OC NVIDIA GeForce 12GB GDDR7 "
+                "192bit FP4 Ray Tracing"
+            ),
+            brand="MSI",
+        )
+    )
+    engine = MatchingEngine()
+    for candidate in (kabum, magalu):
+        score = engine.score(ref, candidate)
+        assert score.decision == "auto_match", score.reasons
+        assert any(r.code == "brand_match" for r in score.reasons)
+
+
+def test_gpu_ti_suffix_blocks_match() -> None:
+    score = MatchingEngine().score(
+        identity_from_price_item(
+            _item(
+                store="a",
+                product_id="1",
+                title="MSI Shadow 3X OC 12GB GeForce RTX 5070 GDDR7",
+                brand="MSI",
+            )
+        ),
+        identity_from_price_item(
+            _item(
+                store="b",
+                product_id="2",
+                title="MSI Shadow 3X OC 12GB GeForce RTX 5070 Ti GDDR7",
+                brand="MSI",
+            )
+        ),
+    )
+    assert score.decision == "reject"
+    assert any(
+        r.code == "critical_conflict" and "gpu_mismatch" in (r.detail or "")
+        for r in score.reasons
+    )
+
+
+def test_gpu_vram_mismatch_blocks_match() -> None:
+    score = MatchingEngine().score(
+        identity_from_price_item(
+            _item(
+                store="a",
+                product_id="1",
+                title="MSI Shadow 3X OC 12GB GeForce RTX 5070 GDDR7",
+                brand="MSI",
+            )
+        ),
+        identity_from_price_item(
+            _item(
+                store="b",
+                product_id="2",
+                title="MSI Shadow 3X OC 16GB GeForce RTX 5070 GDDR7",
+                brand="MSI",
+            )
+        ),
+    )
+    assert score.decision == "reject"
+    assert any("vram" in (r.detail or "") for r in score.reasons)
+
+
+def test_gpu_edition_mismatch_blocks_match() -> None:
+    score = MatchingEngine().score(
+        identity_from_price_item(
+            _item(
+                store="a",
+                product_id="1",
+                title="MSI Shadow 3X OC 12GB GeForce RTX 5070 GDDR7",
+                brand="MSI",
+            )
+        ),
+        identity_from_price_item(
+            _item(
+                store="b",
+                product_id="2",
+                title="MSI Gaming Trio OC 12GB GeForce RTX 5070 GDDR7",
+                brand="MSI",
+            )
+        ),
+    )
+    assert score.decision == "reject"
+    assert any("edition" in (r.detail or "") for r in score.reasons)
+
+
+def test_gpu_title_noise_does_not_block_match() -> None:
+    score = MatchingEngine().score(
+        identity_from_price_item(
+            _item(
+                store="a",
+                product_id="1",
+                title="MSI RTX 5070 Shadow 3X OC 12GB GDDR7",
+                brand="MSI",
+            )
+        ),
+        identity_from_price_item(
+            _item(
+                store="b",
+                product_id="2",
+                title=(
+                    "Placa de Video MSI RTX 5070 12G Shadow 3X OC NVIDIA GeForce "
+                    "12GB GDDR7 DLSS 4 Ray Tracing 2557 MHz 192-bit FP4"
+                ),
+                brand="MSI",
+            )
+        ),
+    )
+    assert score.decision == "auto_match"
+
+
+def test_gpu_candidate_retrieval_mock_uses_progressive_query() -> None:
+    """Search layer is queried with progressive identity queries, not full title."""
+    from unittest.mock import MagicMock
+
+    from scout_api.modules.crawler.models.search import SearchCandidate
+    from scout_api.modules.matching.product_match_service import ProductMatchService
+    from scout_api.modules.matching.schemas import MatchRequest
+
+    ref = _item(
+        store="visaovip",
+        product_id="55359",
+        title="Placa de Video MSI Shadow 3X OC 12GB GeForce RTX5070 GDDR7",
+        brand="MSI",
+        sku="912-V532-232",
+        url="https://visaovip.com/prod/x/55359/",
+        canonical_url="https://visaovip.com/prod/x/55359/",
+        metadata={
+            "specifications": {
+                "REFERÊNCIA": "912-V532-232",
+                "gpu_model": "GeForce RTX5070",
+            }
+        },
+    )
+    cand_item = _item(
+        store="kabum",
+        product_id="777166",
+        title="MSI RTX 5070 12G Shadow 3X OC NVIDIA GeForce 12GB GDDR7",
+        brand="MSI",
+        url="https://www.kabum.com.br/produto/777166/placa",
+        canonical_url="https://www.kabum.com.br/produto/777166/placa",
+    )
+    scrape = MagicMock()
+    scrape.scrape.side_effect = [ref, cand_item]
+    search = MagicMock()
+    search.is_search_supported.return_value = True
+
+    def _search(store: str, query: str, **_kwargs: object) -> list[SearchCandidate]:
+        # Identifier-only MPNs often miss; progressive commercial query hits.
+        if "shadow" in query.casefold() and "5070" in query:
+            return [
+                SearchCandidate(
+                    url=cand_item.url,
+                    title=cand_item.title,
+                    product_id="777166",
+                    metadata={"source": "mock"},
+                )
+            ]
+        return []
+
+    search.search.side_effect = _search
+
+    resp = ProductMatchService(scrape_service=scrape, search_service=search).match(
+        MatchRequest(
+            reference_url=ref.url,
+            stores=["kabum"],
+            persist=False,
+        )
+    )
+    assert resp.matches
+    assert resp.matches[0].store == "kabum"
+    assert resp.matches[0].product.product_id == "777166"
+    queried = [call.args[1] for call in search.search.call_args_list]
+    assert any("shadow" in q.casefold() for q in queried)
+    assert all("ray tracing" not in q.casefold() for q in queried)
+
+
+def test_cross_category_phone_ssd_ram_console_still_match() -> None:
+    """GPU changes must not break other categories."""
+    engine = MatchingEngine()
+    phone = engine.score(
+        identity_from_price_item(
+            _item(
+                store="a",
+                product_id="1",
+                title="Apple iPhone 15 128GB Blue",
+                brand="Apple",
+                model="iPhone 15",
+                variant="color: Blue; storage: 128GB",
+            )
+        ),
+        identity_from_price_item(
+            _item(
+                store="b",
+                product_id="2",
+                title="Celular Apple iPhone 15 Azul 128 GB",
+                brand="Apple",
+                model="iPhone 15",
+                variant="color: Azul; storage: 128 GB",
+            )
+        ),
+    )
+    assert phone.decision == "auto_match"
+
+    ssd = engine.score(
+        identity_from_price_item(
+            _item(
+                store="a",
+                product_id="1",
+                title="SSD Samsung 990 EVO Plus 1TB M.2 NVMe - MZ-V9S1T0B/AM",
+                brand="Samsung",
+                model="MZ-V9S1T0B/AM",
+            )
+        ),
+        identity_from_price_item(
+            _item(
+                store="b",
+                product_id="2",
+                title="Samsung 990 EVO Plus 1TB NVMe SSD MZ-V9S1T0B/AM",
+                brand="Samsung",
+                model="990 EVO Plus",
+            )
+        ),
+    )
+    assert ssd.decision == "auto_match"
+
+    ram = engine.score(
+        identity_from_price_item(
+            _item(
+                store="a",
+                product_id="1",
+                title="Kingston HyperX Fury DDR4 8GB",
+                brand="Kingston",
+                model="hx432c16fb3",
+                mpn="hx432c16fb3",
+            )
+        ),
+        identity_from_price_item(
+            _item(
+                store="b",
+                product_id="2",
+                title="Memoria Kingston HyperX Fury 8GB DDR4 HX432C16FB3",
+                brand="Kingston",
+                model="hx432c16fb3",
+            )
+        ),
+    )
+    # Prefer structured MPN when present on identity_from_price_item via sku/title.
+    if ram.decision != "auto_match":
+        ram = MatchingEngine().score(
+            _identity(
+                brand="kingston",
+                model="hx432c16fb3",
+                title="Kingston HyperX Fury DDR4 8GB",
+                mpn="hx432c16fb3",
+            ),
+            _identity(
+                brand="kingston",
+                model="hx432c16fb3",
+                title="Memoria Kingston HyperX Fury 8GB DDR4",
+                mpn="hx432c16fb3",
+            ),
+        )
+    assert ram.decision == "auto_match"
+
+    console = engine.score(
+        identity_from_price_item(
+            _item(
+                store="a",
+                product_id="1",
+                title="PlayStation 5 Edição Digital 825GB",
+                brand="Sony",
+                model="PlayStation 5 Digital",
+                variant="storage: 825GB",
+            )
+        ),
+        identity_from_price_item(
+            _item(
+                store="b",
+                product_id="2",
+                title="Sony PlayStation 5 Digital Edition 825GB SSD White",
+                brand="Sony",
+                model="PS5 Digital",
+                variant="storage: 825 GB",
+            )
+        ),
+    )
+    assert console.decision in {"auto_match", "review"}

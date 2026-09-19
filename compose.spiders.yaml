@@ -9,6 +9,8 @@ services:
       - ./src/scout_api/modules/crawler/core:/app/src/scout_api/modules/crawler/core:ro
       - ./src/scout_api/modules/crawler/spiders:/app/src/scout_api/modules/crawler/spiders:ro
       - ./src/scout_api/modules/crawler/services:/app/src/scout_api/modules/crawler/services:ro
+      - ./src/scout_api/modules/crawler/models:/app/src/scout_api/modules/crawler/models:ro
+      - ./src/scout_api/modules/matching:/app/src/scout_api/modules/matching:ro
     command:
       - uvicorn
       - scout_api.main:app
@@ -23,3 +25,7 @@ services:
       - /app/src/scout_api/modules/crawler/spiders
       - --reload-dir
       - /app/src/scout_api/modules/crawler/services
+      - --reload-dir
+      - /app/src/scout_api/modules/crawler/models
+      - --reload-dir
+      - /app/src/scout_api/modules/matching
