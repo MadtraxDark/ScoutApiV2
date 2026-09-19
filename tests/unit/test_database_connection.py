@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from sqlalchemy.exc import IntegrityError, OperationalError
@@ -13,7 +13,10 @@ from scout_api.core.database import (
     build_connect_args,
     check_database,
     create_db_engine,
+    dispose_database_engine,
     ensure_sslmode,
+    get_engine,
+    get_session_factory,
     is_supabase_host,
     is_transaction_pooler,
     normalize_database_url,
@@ -102,6 +105,76 @@ def test_create_db_engine_uses_queue_pool_for_direct() -> None:
     assert isinstance(engine.pool, QueuePool)
     assert engine.pool.size() == 3
     engine.dispose()
+
+
+def test_get_engine_reuses_cached_instance() -> None:
+    first = MagicMock(name="engine-1")
+    second = MagicMock(name="engine-2")
+    with patch(
+        "scout_api.core.database.create_db_engine",
+        side_effect=[first, second],
+    ) as create:
+        assert get_engine() is first
+        assert get_engine() is first
+        assert create.call_count == 1
+
+
+def test_dispose_database_engine_disposes_and_allows_new_engine() -> None:
+    first = MagicMock(name="engine-1")
+    second = MagicMock(name="engine-2")
+    with patch(
+        "scout_api.core.database.create_db_engine",
+        side_effect=[first, second],
+    ) as create:
+        assert get_engine() is first
+        dispose_database_engine()
+        first.dispose.assert_called_once_with()
+        assert get_engine.cache_info().currsize == 0
+
+        assert get_engine() is second
+        assert create.call_count == 2
+
+        dispose_database_engine()
+        dispose_database_engine()  # idempotent
+        assert first.dispose.call_count == 1
+        second.dispose.assert_called_once_with()
+
+
+def test_dispose_without_engine_does_not_create_or_connect() -> None:
+    with patch("scout_api.core.database.create_db_engine") as create:
+        dispose_database_engine()
+        create.assert_not_called()
+        assert get_engine.cache_info().currsize == 0
+
+
+def test_reset_database_cache_disposes_existing_engine() -> None:
+    engine = MagicMock(name="engine")
+    with patch(
+        "scout_api.core.database.create_db_engine",
+        return_value=engine,
+    ):
+        get_engine()
+        reset_database_cache()
+        engine.dispose.assert_called_once_with()
+        assert get_engine.cache_info().currsize == 0
+        assert get_session_factory.cache_info().currsize == 0
+
+
+def test_session_factory_rebounds_after_dispose() -> None:
+    first = MagicMock(name="engine-1")
+    second = MagicMock(name="engine-2")
+    with patch(
+        "scout_api.core.database.create_db_engine",
+        side_effect=[first, second],
+    ):
+        factory_before = get_session_factory()
+        assert factory_before.kw.get("bind") is first or factory_before.bind is first
+
+        dispose_database_engine()
+        factory_after = get_session_factory()
+        assert factory_after is not factory_before
+        bind = factory_after.kw.get("bind", getattr(factory_after, "bind", None))
+        assert bind is second
 
 
 def test_check_database_not_configured() -> None:

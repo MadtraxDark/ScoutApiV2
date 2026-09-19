@@ -7,6 +7,7 @@ Data API / PostgREST for backend persistence.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Generator
 from functools import lru_cache
 from typing import Any, Literal
@@ -20,6 +21,8 @@ from sqlalchemy.pool import NullPool
 from scout_api.core.config import Settings, get_settings
 
 DatabaseStatus = Literal["ok", "unavailable", "not_configured"]
+
+logger = logging.getLogger(__name__)
 
 
 class Base(DeclarativeBase):
@@ -160,7 +163,23 @@ def check_database() -> DatabaseStatus:
     return "ok"
 
 
-def reset_database_cache() -> None:
-    """Clear cached engine/session factory (tests)."""
-    get_engine.cache_clear()
+def dispose_database_engine() -> None:
+    """Dispose the cached Engine (if any) and clear session/engine caches.
+
+    Idempotent and lazy-safe: does not create an Engine or open a connection
+    when none has been cached yet.
+    """
     get_session_factory.cache_clear()
+    if get_engine.cache_info().currsize == 0:
+        return
+    engine = get_engine()
+    try:
+        engine.dispose()
+        logger.debug("database_engine_disposed")
+    finally:
+        get_engine.cache_clear()
+
+
+def reset_database_cache() -> None:
+    """Dispose pooled connections and clear cached engine/session factory."""
+    dispose_database_engine()

@@ -121,12 +121,56 @@ Regras:
 | Camada | Responsabilidade |
 |---|---|
 | `core/config.py` | Settings / env |
-| `core/database.py` | Engine, pool, SSL, session, health ping |
+| `core/database.py` | Engine, pool, SSL, session, health ping, dispose |
 | `core/db_errors.py` | Classificação de erros para HTTP |
 | `modules/*/models.py` | ORM |
 | `modules/*/repository.py` | Queries SQLAlchemy |
 | `modules/*/services` | Regras de negócio (sem SQL cru) |
 | routers | Traduzem erros de DB para HTTP |
+
+## Lifecycle do Engine
+
+O `Engine` SQLAlchemy é **lazy** e **reutilizado** por processo:
+
+```text
+startup (sem connect)
+    ↓
+primeira necessidade → get_engine() (lru_cache)
+    ↓
+QueuePool (direct/session) ou NullPool (:6543)
+    ↓
+Session request-scoped via get_db_session()
+    ↓
+shutdown (FastAPI lifespan) → dispose_database_engine()
+```
+
+Regras:
+
+- Não há conexão forçada no startup só para fechar depois.
+- `dispose_database_engine()` é idempotente: se nenhum Engine foi
+  cacheado, não cria Engine e não tenta conectar.
+- `reset_database_cache()` (testes) chama o mesmo dispose antes de limpar
+  os caches — não abandona pools abertos.
+- Um processo/worker Python = um Engine = um pool local. Não compartilhe
+  Engine entre workers Uvicorn/Gunicorn.
+
+## Dimensionamento do pool
+
+Para direct/session (`QueuePool`), a capacidade aproximada por processo é:
+
+```text
+conexões máximas ≈ DATABASE_POOL_SIZE + DATABASE_MAX_OVERFLOW
+```
+
+Defaults atuais: `5 + 10 = 15` conexões por processo. Capacidade potencial
+total:
+
+```text
+workers × réplicas × (pool_size + max_overflow)
+```
+
+Em `:6543` (transaction mode) o cliente usa `NullPool`; o limite relevante
+é o do Supavisor, não o QueuePool local. Não rode Alembic em `:6543`.
 
 ## Health
 

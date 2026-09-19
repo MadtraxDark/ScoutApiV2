@@ -1,5 +1,6 @@
 import logging
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
+from contextlib import asynccontextmanager
 from typing import cast
 
 from fastapi import FastAPI
@@ -11,6 +12,7 @@ from starlette.responses import Response
 
 from scout_api.api.router import api_router
 from scout_api.core.config import get_settings
+from scout_api.core.database import dispose_database_engine
 from scout_api.core.http_errors import (
     http_exception_handler,
     unhandled_exception_handler,
@@ -30,12 +32,21 @@ _docs_url: str | None = None if _is_production else "/docs"
 _redoc_url: str | None = None if _is_production else "/redoc"
 _openapi_url: str | None = None if _is_production else "/openapi.json"
 
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    # Engine stays lazy: do not connect to PostgreSQL on startup.
+    yield
+    dispose_database_engine()
+
+
 app = FastAPI(
     title=settings.app_name,
     debug=settings.debug and not _is_production,
     docs_url=_docs_url,
     redoc_url=_redoc_url,
     openapi_url=_openapi_url,
+    lifespan=lifespan,
     openapi_tags=[
         {
             "name": "Saúde da API",
