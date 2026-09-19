@@ -16,5 +16,13 @@ class SearchCandidate(BaseModel):
     url: str
     title: str | None = None
     product_id: str | None = None
-    snippet_price: Decimal | None = None
-    metadata: dict[str, Any] = Field(default_factory=dict)
+    snippet_price: Decimal | None = Field(
+        default=None,
+        description="Preço exibido no resultado de busca, quando disponível.",
+        examples=["4799.00"],
+    )
+    metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Metadados auxiliares do resultado de busca.",
+        examples=[{"source": {"snippet_price": "serp-card"}}],
+    )

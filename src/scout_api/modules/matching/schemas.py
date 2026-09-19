@@ -96,7 +96,10 @@ class MatchHit(BaseModel):
     country: str
     listing_id: UUID | None = None
     decision: MatchDecision
-    confidence: Decimal
+    confidence: Decimal = Field(
+        description="Confiança do match entre 0 e 1.",
+        examples=["0.9700"],
+    )
     reasons: list[MatchReason] = Field(default_factory=list)
     product: ProductPriceItem
     search_query: str | None = None
@@ -139,13 +142,25 @@ class OfferRefreshRequest(BaseModel):
 
 
 class OfferSnapshotView(BaseModel):
-    price: Decimal | None = None
-    currency: str | None = None
-    seller: str | None = None
-    availability: str | None = None
-    available: bool | None = None
-    scraped_at: datetime | None = None
-    fingerprint: str | None = None
+    price: Decimal | None = Field(
+        default=None,
+        description="Preço registrado no snapshot.",
+        examples=["4799.00"],
+    )
+    currency: str | None = Field(default=None, description="Moeda ISO do snapshot.")
+    seller: str | None = Field(default=None, description="Vendedor no snapshot.")
+    availability: str | None = Field(
+        default=None, description="Disponibilidade normalizada no snapshot."
+    )
+    available: bool | None = Field(
+        default=None, description="Indicação booleana de disponibilidade."
+    )
+    scraped_at: datetime | None = Field(
+        default=None, description="Momento da coleta do snapshot."
+    )
+    fingerprint: str | None = Field(
+        default=None, description="Fingerprint do estado comercial."
+    )
 
 
 class OfferEventView(BaseModel):
@@ -237,7 +252,10 @@ class ProductListingView(BaseModel):
     status: str
     title: str | None = None
     match_decision: str
-    confidence: Decimal
+    confidence: Decimal = Field(
+        description="Confiança do match entre 0 e 1.",
+        examples=["0.9700"],
+    )
     created_at: datetime
     updated_at: datetime
 

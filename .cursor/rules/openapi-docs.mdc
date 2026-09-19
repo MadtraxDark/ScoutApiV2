@@ -19,6 +19,17 @@ Documentação exibida em `/docs` deve estar em **português-BR**, curta e fiel 
 
 Exemplos: `Cadastrar produto`, `Buscar oferta de produto`, `Executar scraping completo`.
 
+## Campos Decimal
+
+No OpenAPI de serialização, `Decimal` vira `string` com pattern amplo. Sem
+`Field(examples=[...])` (ou `json_schema_extra` no model), o Swagger UI inventa
+exemplos absurdos a partir do regex.
+
+- Preserve `Decimal` no domínio — **não** troque por `float` só para `/docs`.
+- Defina exemplos curtos e realistas nos models de resposta reutilizados
+  (`ProductOffer`, `ProductPriceItem`, etc.).
+- Valores monetários no exemplo devem ser strings legíveis (`"4799.00"`).
+
 ## Ao criar ou alterar endpoints
 
 1. Preencha `summary`, `description` e `tags` (tags em pt-BR).

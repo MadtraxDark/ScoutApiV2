@@ -6,80 +6,227 @@ from pydantic import BaseModel, ConfigDict, Field
 
 Availability = Literal["available", "out_of_stock", "unavailable"]
 
+# OpenAPI /docs: Pydantic serializes Decimal as string + unbounded pattern;
+# Swagger invents absurd examples from that pattern unless examples are explicit.
+_METADATA_EXAMPLE: dict[str, Any] = {
+    "source": {
+        "price": "structured-data",
+        "original_price": "list-price",
+        "pix_price": "payment-method-pix",
+    }
+}
+
+_PRODUCT_OFFER_EXAMPLE: dict[str, Any] = {
+    "store": "magazineluiza",
+    "country": "BR",
+    "product_id": "238803400",
+    "sku": "238803400",
+    "seller": "Magazine Luiza",
+    "url": "https://www.magazineluiza.com.br/apple-iphone-16-128gb/p/238803400",
+    "canonical_url": "https://www.magazineluiza.com.br/apple-iphone-16-128gb/p/238803400",
+    "currency": "BRL",
+    "price": "4799.00",
+    "original_price": "5299.00",
+    "discount_percentage": "9.44",
+    "pix_price": "4559.05",
+    "installment_price": "479.90",
+    "installment_count": 10,
+    "availability": "available",
+    "available": True,
+    "scraped_at": "2026-03-19T15:30:00Z",
+    "metadata": _METADATA_EXAMPLE,
+}
+
+_PRODUCT_PRICE_ITEM_EXAMPLE: dict[str, Any] = {
+    **_PRODUCT_OFFER_EXAMPLE,
+    "gtin": "0195949821482",
+    "title": "Apple iPhone 16 128GB Preto",
+    "brand": "Apple",
+    "model": "iPhone 16",
+    "variant": "128 GB Preto",
+    "shipping_price": "0.00",
+    "images": [],
+    "last_changed_at": None,
+}
+
 
 class ProductOffer(BaseModel):
-    """Commercial snapshot used for lightweight price/availability checks."""
+    """Instantâneo comercial para checagem leve de preço/disponibilidade."""
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        json_schema_extra={"examples": [_PRODUCT_OFFER_EXAMPLE]},
+    )
 
-    store: str
-    country: str
-    product_id: str
-    sku: str | None = None
-    seller: str | None = None
-    url: str
-    canonical_url: str
-    currency: str
-    price: Decimal = Field(gt=0)
-    original_price: Decimal | None = None
-    discount_percentage: Decimal | None = None
-    pix_price: Decimal | None = None
-    installment_price: Decimal | None = None
-    installment_count: int | None = None
-    availability: Availability = "available"
-    available: bool = True
-    scraped_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    metadata: dict[str, Any] = Field(default_factory=dict)
+    store: str = Field(description="Identificador da loja.")
+    country: str = Field(description="Código do país da oferta.")
+    product_id: str = Field(description="Identificador do produto na loja.")
+    sku: str | None = Field(default=None, description="SKU na loja, quando disponível.")
+    seller: str | None = Field(default=None, description="Nome do vendedor da oferta.")
+    url: str = Field(description="URL da página da oferta.")
+    canonical_url: str = Field(description="URL canônica da oferta.")
+    currency: str = Field(description="Moeda ISO da oferta (ex.: BRL, USD).")
+    price: Decimal = Field(
+        gt=0,
+        description="Preço atual da oferta.",
+        examples=["4799.00"],
+    )
+    original_price: Decimal | None = Field(
+        default=None,
+        description="Preço original antes do desconto, quando disponível.",
+        examples=["5299.00"],
+    )
+    discount_percentage: Decimal | None = Field(
+        default=None,
+        description="Percentual de desconto em relação ao preço original.",
+        examples=["9.44"],
+    )
+    pix_price: Decimal | None = Field(
+        default=None,
+        description="Preço no Pix quando a loja o expõe; null se inexistente.",
+        examples=["4559.05"],
+    )
+    installment_price: Decimal | None = Field(
+        default=None,
+        description="Valor de cada parcela, quando disponível.",
+        examples=["479.90"],
+    )
+    installment_count: int | None = Field(
+        default=None,
+        description="Número de parcelas, quando disponível.",
+        examples=[10],
+    )
+    availability: Availability = Field(
+        default="available",
+        description="Disponibilidade normalizada da oferta.",
+    )
+    available: bool = Field(
+        default=True,
+        description="Indicação booleana de disponibilidade.",
+    )
+    scraped_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        description="Momento em que a oferta foi coletada.",
+    )
+    metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Metadados auxiliares (origens de campos, flags de coleta).",
+        examples=[_METADATA_EXAMPLE],
+    )
 
 
 class ProductDetails(BaseModel):
-    """Catalog identity and descriptive fields for the full product scrape."""
+    """Identidade de catálogo e campos descritivos do scrape completo."""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    product_id: str
-    sku: str | None = None
-    gtin: str | None = None
-    title: str
-    brand: str | None = None
-    model: str | None = None
-    variant: str | None = None
-    description: str | None = None
-    specifications: dict[str, Any] = Field(default_factory=dict)
-    images: list[str] = Field(default_factory=list)
-    metadata: dict[str, Any] = Field(default_factory=dict)
+    product_id: str = Field(description="Identificador do produto na loja.")
+    sku: str | None = Field(default=None, description="SKU na loja, quando disponível.")
+    gtin: str | None = Field(default=None, description="GTIN/EAN/UPC quando conhecido.")
+    title: str = Field(description="Título do produto.")
+    brand: str | None = Field(default=None, description="Marca.")
+    model: str | None = Field(default=None, description="Modelo.")
+    variant: str | None = Field(
+        default=None, description="Variante legível (cor, capacidade, etc.)."
+    )
+    description: str | None = Field(
+        default=None, description="Descrição textual do produto."
+    )
+    specifications: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Especificações estruturadas quando disponíveis.",
+    )
+    images: list[str] = Field(
+        default_factory=list, description="URLs de imagens do produto."
+    )
+    metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Metadados auxiliares (origens de campos, flags de coleta).",
+        examples=[_METADATA_EXAMPLE],
+    )
 
 
 class ProductPriceItem(BaseModel):
-    """Normalized full product scrape; monetary values are always Decimal."""
+    """Item completo normalizado; valores monetários são sempre Decimal."""
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-    store: str
-    country: str
-    product_id: str
-    sku: str | None = None
-    gtin: str | None = None
-    title: str
-    brand: str | None = None
-    model: str | None = None
-    variant: str | None = None
-    seller: str | None = None
-    url: str
-    canonical_url: str
-    currency: str
-    price: Decimal = Field(gt=0)
-    original_price: Decimal | None = None
-    discount_percentage: Decimal | None = None
-    pix_price: Decimal | None = None
-    availability: Availability = "available"
-    installment_price: Decimal | None = None
-    installment_count: int | None = None
-    shipping_price: Decimal | None = None
-    available: bool = True
-    images: list[str] = Field(default_factory=list)
-    scraped_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    last_changed_at: datetime | None = None
-    metadata: dict[str, Any] = Field(default_factory=dict)
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        json_schema_extra={"examples": [_PRODUCT_PRICE_ITEM_EXAMPLE]},
+    )
+    store: str = Field(description="Identificador da loja.")
+    country: str = Field(description="Código do país da oferta.")
+    product_id: str = Field(description="Identificador do produto na loja.")
+    sku: str | None = Field(default=None, description="SKU na loja, quando disponível.")
+    gtin: str | None = Field(default=None, description="GTIN/EAN/UPC quando conhecido.")
+    title: str = Field(description="Título do produto.")
+    brand: str | None = Field(default=None, description="Marca.")
+    model: str | None = Field(default=None, description="Modelo.")
+    variant: str | None = Field(
+        default=None, description="Variante legível (cor, capacidade, etc.)."
+    )
+    seller: str | None = Field(default=None, description="Nome do vendedor da oferta.")
+    url: str = Field(description="URL da página da oferta.")
+    canonical_url: str = Field(description="URL canônica da oferta.")
+    currency: str = Field(description="Moeda ISO da oferta (ex.: BRL, USD).")
+    price: Decimal = Field(
+        gt=0,
+        description="Preço atual da oferta.",
+        examples=["4799.00"],
+    )
+    original_price: Decimal | None = Field(
+        default=None,
+        description="Preço original antes do desconto, quando disponível.",
+        examples=["5299.00"],
+    )
+    discount_percentage: Decimal | None = Field(
+        default=None,
+        description="Percentual de desconto em relação ao preço original.",
+        examples=["9.44"],
+    )
+    pix_price: Decimal | None = Field(
+        default=None,
+        description="Preço no Pix quando a loja o expõe; null se inexistente.",
+        examples=["4559.05"],
+    )
+    availability: Availability = Field(
+        default="available",
+        description="Disponibilidade normalizada da oferta.",
+    )
+    installment_price: Decimal | None = Field(
+        default=None,
+        description="Valor de cada parcela, quando disponível.",
+        examples=["479.90"],
+    )
+    installment_count: int | None = Field(
+        default=None,
+        description="Número de parcelas, quando disponível.",
+        examples=[10],
+    )
+    shipping_price: Decimal | None = Field(
+        default=None,
+        description="Preço do frete quando disponível; pode ser 0.00.",
+        examples=["0.00"],
+    )
+    available: bool = Field(
+        default=True,
+        description="Indicação booleana de disponibilidade.",
+    )
+    images: list[str] = Field(
+        default_factory=list, description="URLs de imagens do produto."
+    )
+    scraped_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        description="Momento em que a oferta foi coletada.",
+    )
+    last_changed_at: datetime | None = Field(
+        default=None,
+        description="Última mudança relevante detectada no histórico da oferta.",
+    )
+    metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Metadados auxiliares (origens de campos, flags de coleta).",
+        examples=[_METADATA_EXAMPLE],
+    )
 
 
 def compose_product_price_item(
