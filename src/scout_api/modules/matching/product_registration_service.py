@@ -9,13 +9,22 @@ from sqlalchemy.orm import Session
 
 from scout_api.modules.auth.schemas import AuthenticatedPrincipal, UserRole
 from scout_api.modules.crawler.core.exceptions import RequestError
-from scout_api.modules.matching.identity import normalize_gtin, variant_key
+from scout_api.modules.crawler.utils.product_identity import (
+    canonical_model_key,
+    canonical_variant_key,
+)
+from scout_api.modules.matching.identity import (
+    normalize_brand,
+    normalize_gtin,
+    variant_key,
+)
 from scout_api.modules.matching.models import CanonicalProduct, StoreListing
 from scout_api.modules.matching.repository import MatchingRepository
 from scout_api.modules.matching.schemas import (
     ProductListingView,
     ProductRegisterRequest,
     ProductRegisterResponse,
+    ProductSearchResponse,
     ProductView,
 )
 
@@ -102,6 +111,14 @@ class ProductRegistrationService:
         attrs = dict(request.attributes or {})
         if request.variant:
             attrs.setdefault("variant", request.variant)
+        if "category" not in attrs:
+            from scout_api.modules.crawler.utils.product_attributes import (
+                detect_product_category,
+            )
+
+            detected = detect_product_category(request.title)
+            if detected:
+                attrs["category"] = detected
         string_attrs = {k: str(v) for k, v in attrs.items() if isinstance(v, str)}
         vkey = request.variant_key or variant_key(string_attrs)
 
@@ -193,6 +210,99 @@ class ProductRegistrationService:
             listings = repo.list_listings_for_canonical(canonical.id)
         return _to_product_view(canonical, listings)
 
+    def search_products(
+        self,
+        *,
+        viewer: AuthenticatedPrincipal,
+        brand: str | None = None,
+        model: str | None = None,
+        variant: str | None = None,
+        category: str | None = None,
+        attribute_filters: dict[str, str] | None = None,
+        limit: int = 50,
+    ) -> ProductSearchResponse:
+        """Filter canonical products by optional brand / model / variant / attrs.
+
+        ``model`` matches the base identity (``GeForce RTX 5070`` ≡ ``rtx5070``).
+        ``variant`` is optional: omitted returns every commercial implementation
+        of that model; when set, only that cooler line / refinement is kept.
+        Missing variant on a stored product is not treated as a conflict.
+        Extra ``attribute_filters`` match keys inside ``attributes`` JSON
+        (normalized when a CategoryProfile normalizer applies).
+        """
+        from scout_api.modules.crawler.utils.category_profiles.common import (
+            normalize_attribute_value,
+        )
+
+        brand_q = brand.strip() if brand and brand.strip() else None
+        model_q = model.strip() if model and model.strip() else None
+        variant_q = variant.strip() if variant and variant.strip() else None
+        category_q = (
+            category.strip().casefold() if category and category.strip() else None
+        )
+        attr_filters = {
+            key.casefold(): str(value).strip()
+            for key, value in (attribute_filters or {}).items()
+            if value is not None and str(value).strip()
+        }
+        if not any((brand_q, model_q, variant_q, category_q, attr_filters)):
+            raise RequestError(
+                "Informe brand, model, variant, category ou um filtro de atributo",
+                code="INVALID_REQUEST",
+            )
+        cap = max(1, min(limit, 100))
+        repo = MatchingRepository(self._session)
+        rows = repo.search_canonical_products(
+            viewer_id=viewer.id,
+            is_admin=viewer.role == UserRole.ADMIN,
+            brand=brand_q,
+            limit=max(cap * 8, 200),
+        )
+        wanted_model = canonical_model_key(model_q) if model_q else None
+        wanted_variant = canonical_variant_key(variant_q) if variant_q else None
+        wanted_brand = normalize_brand(brand_q) if brand_q else None
+        items: list[ProductView] = []
+        for product in rows:
+            if wanted_brand:
+                stored_brand = normalize_brand(product.brand)
+                if stored_brand != wanted_brand:
+                    continue
+            if wanted_model:
+                stored_model = canonical_model_key(product.model, title=product.title)
+                if stored_model != wanted_model:
+                    continue
+            if wanted_variant:
+                if wanted_variant not in _product_variant_keys(product):
+                    continue
+            attrs = {
+                str(k).casefold(): v
+                for k, v in (product.attributes or {}).items()
+                if v not in (None, "")
+            }
+            if category_q:
+                stored_cat = str(attrs.get("category") or "").casefold()
+                if stored_cat != category_q:
+                    continue
+            if attr_filters:
+                matched = True
+                for key, wanted in attr_filters.items():
+                    raw = attrs.get(key)
+                    if raw is None:
+                        matched = False
+                        break
+                    left = normalize_attribute_value(key, str(raw)) or str(raw)
+                    right = normalize_attribute_value(key, wanted) or wanted
+                    if left.casefold() != right.casefold():
+                        matched = False
+                        break
+                if not matched:
+                    continue
+            view = _to_product_view(product, list(product.listings or []))
+            items.append(view)
+            if len(items) >= cap:
+                break
+        return ProductSearchResponse(items=items, count=len(items))
+
     @staticmethod
     def _attach_listing(
         repo: MatchingRepository,
@@ -252,6 +362,32 @@ def _to_product_view(
         updated_at=product.updated_at,
         listings=[_to_listing_view(item) for item in listings],
     )
+
+
+def _product_variant_keys(product: CanonicalProduct) -> set[str]:
+    """Comparable commercial-variant keys stored on a canonical product."""
+    keys: set[str] = set()
+    attrs = product.attributes or {}
+    candidates: list[object] = [
+        attrs.get("edition"),
+        attrs.get("variant"),
+        product.variant_key,
+    ]
+    for raw in candidates:
+        if raw in (None, ""):
+            continue
+        text = str(raw)
+        compact = canonical_variant_key(text)
+        if compact:
+            keys.add(compact)
+        if "=" in text:
+            for part in text.split("|"):
+                if "edition=" in part.casefold():
+                    _, _, value = part.partition("=")
+                    compact = canonical_variant_key(value)
+                    if compact:
+                        keys.add(compact)
+    return keys
 
 
 def _to_listing_view(listing: StoreListing) -> ProductListingView:

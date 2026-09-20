@@ -20,6 +20,13 @@ from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
+from .product_identity import (
+    canonicalize_model_display,
+    looks_like_base_model,
+    looks_like_opaque_code,
+    parse_title_identity,
+)
+
 SOURCE_SPECIFICATIONS = "product-specifications"
 SOURCE_STRUCTURED = "structured-data"
 SOURCE_TITLE = "product-title-fallback"
@@ -64,6 +71,42 @@ TITLE_SAFE_ATTRIBUTES = frozenset(
         "radiator_size",
         "overclocked",
         "rpm",
+        "edition",
+        # Phase 4–7 profile extractors
+        "pack_count",
+        "port_count",
+        "port_speed",
+        "poe",
+        "managed",
+        "bluetooth",
+        "fps",
+        "channels",
+        "power",
+        "case_size",
+        "mount",
+        "kit",
+        "focal_length",
+        "bay_count",
+        "included_storage",
+        "va",
+        "outlet_count",
+        "usb_pd",
+        "thunderbolt",
+        "usb_generation",
+        "connector_a",
+        "connector_b",
+        "length",
+        "standard",
+        "ethernet_category",
+        "vesa",
+        "arm_count",
+        "fan_size",
+        "fan_count",
+        "switch_type",
+        "layout",
+        "platform",
+        "width",
+        "depth",
     }
 )
 
@@ -104,6 +147,41 @@ DEFAULT_IDENTITY_ATTRIBUTES: tuple[str, ...] = (
     "radiator_size",
     "overclocked",
     "rpm",
+    "edition",
+    "pack_count",
+    "port_count",
+    "port_speed",
+    "poe",
+    "managed",
+    "bluetooth",
+    "fps",
+    "channels",
+    "power",
+    "case_size",
+    "mount",
+    "kit",
+    "focal_length",
+    "bay_count",
+    "included_storage",
+    "va",
+    "outlet_count",
+    "usb_pd",
+    "thunderbolt",
+    "usb_generation",
+    "connector_a",
+    "connector_b",
+    "length",
+    "standard",
+    "ethernet_category",
+    "vesa",
+    "arm_count",
+    "fan_size",
+    "fan_count",
+    "switch_type",
+    "layout",
+    "platform",
+    "width",
+    "depth",
 )
 
 _SPEC_ALIASES: dict[str, frozenset[str]] = {
@@ -199,6 +277,16 @@ _SPEC_ALIASES: dict[str, frozenset[str]] = {
     "radiator_size": frozenset({"radiator", "radiador"}),
     "overclocked": frozenset({"overclock", "oc"}),
     "rpm": frozenset({"rpm", "rotacao", "rotação"}),
+    "edition": frozenset(
+        {
+            "edition",
+            "edicao",
+            "edição",
+            "product line",
+            "linha do produto",
+            "cooler line",
+        }
+    ),
 }
 
 _CATEGORY_PREFIXES = frozenset(
@@ -213,6 +301,7 @@ _CATEGORY_PREFIXES = frozenset(
         "perfume",
         "kit",
         "placa",
+        "gpu",
         "placa-mae",
         "placa-mãe",
         "motherboard",
@@ -486,58 +575,20 @@ class ProductAttributeBundle:
 
 
 def detect_product_category(title: str | None) -> str | None:
-    """Best-effort category hint from title tokens (never required)."""
+    """Best-effort category hint from CategoryProfile registry (never required)."""
+    from scout_api.modules.crawler.utils.category_profiles.registry import (
+        detect_category,
+        ensure_profiles_loaded,
+    )
+
+    ensure_profiles_loaded()
+    detected = detect_category(title)
+    if detected:
+        return detected
+    # Legacy motherboard chipset heuristic when needles miss.
     if not title:
         return None
     text = title.casefold()
-    # More specific product classes first so shared tokens (DDR/RTX) do not win.
-    checks: tuple[tuple[str, tuple[str, ...]], ...] = (
-        ("notebook", ("notebook", "laptop", "ultrabook", "macbook")),
-        (
-            "smartphone",
-            ("iphone", "galaxy", "celular", "smartphone", "pixel", "xiaomi", "redmi"),
-        ),
-        (
-            "motherboard",
-            (
-                "placa-mãe",
-                "placa-mae",
-                "placa mae",
-                "motherboard",
-                "b650",
-                "z790",
-                "x870",
-                "a620",
-            ),
-        ),
-        ("cooler", ("water cooler", "aio", "liquid cooler", "air cooler")),
-        ("console", ("playstation", "xbox series", "nintendo switch", "ps5", "ps4")),
-        ("monitor", ("monitor", "ultragear")),
-        ("tv", ("smart tv", " oled ", " qled ")),
-        ("cpu", ("ryzen", "core i3", "core i5", "core i7", "core i9", "processador")),
-        ("psu", ("fonte ", " fonte", "psu", "80 plus", "full modular", "semi modular")),
-        ("ssd", ("nvme", " m.2", "ssd", "hdd", "barracuda", "980 pro", "990 pro")),
-        (
-            "gpu",
-            ("rtx", "gtx", "radeon", "geforce", "placa de vídeo", "placa de video"),
-        ),
-        (
-            "ram",
-            (
-                "ddr4",
-                "ddr5",
-                "dimm",
-                "sodimm",
-                "fury",
-                "vengeance",
-                "memoria ram",
-                "memória ram",
-            ),
-        ),
-    )
-    for category, needles in checks:
-        if any(needle in text for needle in needles):
-            return category
     if re.search(r"\b[abzhx]\d{3}m?\b", text) and (
         "am4" in text or "am5" in text or "lga" in text or "ddr" in text
     ):
@@ -594,6 +645,7 @@ def resolve_attributes(
             if from_title
             else ResolvedAttribute(None, SOURCE_NOT_FOUND)
         )
+    _apply_category_identity(values, title, detected)
     return ProductAttributeBundle(values=values, category=detected)
 
 
@@ -636,6 +688,135 @@ def format_variant_dimensions(
         f"{key}: {mapping[key]}" for key in keys if mapping.get(key) not in (None, "")
     ]
     return "; ".join(parts) or None
+
+
+def format_identity_variant(
+    values: Mapping[str, str | None] | ProductAttributeBundle,
+) -> str | None:
+    """Public ``variant`` string: commercial edition for GPUs, dimensions otherwise.
+
+    GPU cooler lines (Dual OC Edition, Shadow 3X OC) are the searchable refinement
+    of the base chip in ``model``. Other categories keep ``color: …; storage: …``.
+    CategoryProfile.variant_from can override the dimension key set.
+    """
+    category = values.category if isinstance(values, ProductAttributeBundle) else None
+    edition = (
+        values.value("edition")
+        if isinstance(values, ProductAttributeBundle)
+        else (values.get("edition") if values else None)
+    )
+    if category == "gpu":
+        return edition or None
+    if category == "console" and edition:
+        return edition
+    from scout_api.modules.crawler.utils.category_profiles.registry import (
+        ensure_profiles_loaded,
+        get_profile,
+    )
+
+    ensure_profiles_loaded()
+    profile = get_profile(category)
+    if profile is not None and profile.variant_from:
+        if profile.variant_from == ("edition",) and edition:
+            return edition
+        if set(profile.variant_from) <= {
+            "color",
+            "storage",
+            "ram",
+            "size",
+            "capacity",
+            "screen_size",
+            "connectivity",
+        }:
+            return format_variant_dimensions(values, keys=profile.variant_from)
+    return format_variant_dimensions(values)
+
+
+def _apply_category_identity(
+    values: dict[str, ResolvedAttribute],
+    title: str | None,
+    category: str | None,
+) -> None:
+    """Fill / reclassify brand, model, edition using category-aware title parsers.
+
+    Structured values that already look like a base model are only canonicalized.
+    Opaque codes and cooler-line labels are not treated as ``model``.
+    """
+    if not title:
+        return
+    parsed = parse_title_identity(title, category=category)
+    current_brand = values.get("brand")
+    title_brand_is_noise = bool(
+        current_brand is not None
+        and current_brand.found
+        and current_brand.source == SOURCE_TITLE
+        and _is_noise_brand(current_brand.value)
+    )
+    if parsed.brand and (
+        current_brand is None
+        or not current_brand.found
+        or title_brand_is_noise
+        or (
+            current_brand.source == SOURCE_TITLE
+            and parsed.confidence in {"exact_title", "contextual"}
+        )
+    ):
+        values["brand"] = ResolvedAttribute(parsed.brand, SOURCE_TITLE)
+    elif title_brand_is_noise and not parsed.brand:
+        values.pop("brand", None)
+
+    current_model = values.get("model")
+    structured_model = bool(
+        current_model is not None
+        and current_model.found
+        and current_model.source in {SOURCE_SPECIFICATIONS, SOURCE_STRUCTURED}
+        and current_model.value is not None
+    )
+    if structured_model:
+        assert current_model is not None
+        if looks_like_base_model(category, current_model.value):
+            canonical = canonicalize_model_display(category, current_model.value)
+            if canonical and canonical != current_model.value:
+                values["model"] = ResolvedAttribute(canonical, current_model.source)
+            parsed_model_usable = False
+        else:
+            parsed_model_usable = bool(parsed.model)
+    else:
+        parsed_model_usable = bool(parsed.model)
+
+    if parsed.model and (not structured_model or parsed_model_usable):
+        displaced = current_model.value if structured_model and current_model else None
+        if not structured_model or not looks_like_base_model(category, displaced):
+            values["model"] = ResolvedAttribute(parsed.model, SOURCE_TITLE)
+            if parsed.variant:
+                values["edition"] = ResolvedAttribute(parsed.variant, SOURCE_TITLE)
+            elif displaced and not looks_like_opaque_code(displaced):
+                if not looks_like_base_model(category, displaced):
+                    values["edition"] = ResolvedAttribute(
+                        displaced,
+                        current_model.source if current_model else SOURCE_TITLE,
+                    )
+
+    current_edition = values.get("edition")
+    if parsed.variant and (current_edition is None or not current_edition.found):
+        values["edition"] = ResolvedAttribute(parsed.variant, SOURCE_TITLE)
+
+    if parsed.model and category == "gpu":
+        gpu_model = values.get("gpu_model")
+        if gpu_model is None or not gpu_model.found:
+            values["gpu_model"] = ResolvedAttribute(parsed.model, SOURCE_TITLE)
+
+
+def _is_noise_brand(value: str | None) -> bool:
+    if not value:
+        return True
+    lower = value.casefold()
+    return lower in _CATEGORY_PREFIXES or lower in {
+        "gpu",
+        "nvidia",
+        "geforce",
+        "radeon",
+    }
 
 
 def merge_specification_gaps(
@@ -834,6 +1015,18 @@ def _title_fallback_map(title: str, category: str | None) -> dict[str, str]:
     if category == "ssd" and "storage" in result and "capacity" not in result:
         result["capacity"] = result["storage"]
 
+    # CategoryProfile extractors (Phase 4–7): more precise than generic heuristics.
+    from scout_api.modules.crawler.utils.category_profiles.attribute_extractors import (
+        extract_profile_attributes,
+    )
+
+    profile_attrs = extract_profile_attributes(category, text)
+    for key, value in profile_attrs.items():
+        if key == "category":
+            # Reserved for product CategoryProfile id in persisted attributes.
+            continue
+        result[key] = value
+
     return result
 
 
@@ -1007,6 +1200,8 @@ def _brand_from_title(title: str) -> str | None:
     if candidate.casefold() in _STOP_MODEL_TOKENS:
         return None
     if candidate.casefold() in _CATEGORY_PREFIXES:
+        return None
+    if candidate.casefold() in {"nvidia", "geforce", "radeon", "gpu"}:
         return None
     if _CAPACITY.fullmatch(candidate):
         return None
@@ -1234,6 +1429,7 @@ __all__ = [
     "ProductAttributeBundle",
     "ResolvedAttribute",
     "detect_product_category",
+    "format_identity_variant",
     "format_variant_dimensions",
     "merge_specification_gaps",
     "resolve_attribute",

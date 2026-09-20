@@ -17,6 +17,7 @@ from ...core.fingerprints import canonicalize_url
 from ...models.product import ProductDetails, ProductOffer
 from ...models.search import SearchCandidate
 from ...utils.product_attributes import (
+    format_identity_variant,
     merge_specification_gaps,
     resolve_product_identity,
 )
@@ -317,8 +318,8 @@ class ShopeeSpider(BaseStoreSpider):
             gtin=self._gtin(specifications, item),
             title=title,
             brand=brand or resolved.value("brand"),
-            model=model_name or resolved.value("model"),
-            variant=variant,
+            model=resolved.value("model"),
+            variant=variant or format_identity_variant(resolved),
             description=description,
             specifications=specifications,
             metadata={

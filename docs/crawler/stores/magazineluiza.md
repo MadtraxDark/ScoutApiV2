@@ -24,6 +24,8 @@
 ## Details source
 
 - Item catalog fields + specs; color often as Magalu raw label
+- Brand/model/variant via `resolve_product_identity` (ADR 0026); console
+  structured models are kept when no category parser applies
 
 ## Images source
 

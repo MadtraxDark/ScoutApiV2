@@ -39,7 +39,7 @@ def test_kabum_details_and_images_use_product_state_only() -> None:
     assert details.product_id == "1033699"
     assert details.title == "Placa De Vídeo MSI RTX 5060 Ti"
     assert details.brand == "MSI"
-    assert details.model == "RTX 5060 Ti"
+    assert details.model == "GeForce RTX 5060 Ti"
     assert details.gtin == "4711377341394"
     assert details.specifications["Memória"] == "8GB GDDR7"
     assert details.specifications.get("vram") == "8 GB"

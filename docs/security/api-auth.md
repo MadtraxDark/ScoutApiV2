@@ -60,6 +60,7 @@ desabilitados.
 | `POST /match` | `match` | crawler |
 | `POST /offers/refresh` | `offers:refresh` | crawler |
 | `POST /products` | `products:write` | default |
+| `GET /products/search` | `products:read` | default |
 | `GET /products/{id}` | `products:read` | default |
 
 Roles: `user` (permissões de negócio) e `admin` (`AUTH_ADMIN_USER_IDS` ou

@@ -82,7 +82,13 @@ Itens resolvidos **não** ficam no índice ativo.
 | ID | Título | Status | Tipo | Prioridade | Área |
 |---|---|---|---|---|---|
 
-*(nenhuma pendência ativa)*
+*(pendências ativas: nenhuma)*
+
+Resolvida em 2026-09-20:
+
+- PENDING-011 Extratores profundos CategoryProfile Phase 5–7 — arquivo apagado;
+  `attribute_extractors` + `specs_only_critical` (printer/scanner mpn) +
+  benchmark unitário; índices SQL adiados por volume (ADR 0027)
 
 Resolvida em 2026-09-19:
 

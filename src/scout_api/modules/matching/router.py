@@ -6,7 +6,7 @@ from collections.abc import Generator
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Path, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -29,6 +29,7 @@ from scout_api.modules.matching.schemas import (
     OfferRefreshResponse,
     ProductRegisterRequest,
     ProductRegisterResponse,
+    ProductSearchResponse,
     ProductView,
 )
 
@@ -120,6 +121,119 @@ def register_product(
 ) -> ProductRegisterResponse:
     try:
         return service.register(payload, owner=principal)
+    except RequestError as exc:
+        raise HTTPException(
+            status_code=_status_for_request_error(exc),
+            detail={
+                "code": exc.code,
+                "message": str(exc),
+                "retryable": exc.retryable,
+            },
+        ) from exc
+    except SQLAlchemyError as exc:
+        raise _http_for_database_error(exc) from exc
+
+
+@router.get(
+    "/products/search",
+    response_model=ProductSearchResponse,
+    tags=["Produtos"],
+    responses={
+        401: {"model": CrawlErrorResponse, "description": "Não autenticado."},
+        403: {"model": CrawlErrorResponse, "description": "Sem permissão de leitura."},
+        422: {
+            "model": CrawlErrorResponse,
+            "description": "Informe ao menos brand, model ou variant.",
+        },
+        503: {
+            "model": CrawlErrorResponse,
+            "description": "Banco de dados indisponível ou não configurado.",
+        },
+    },
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(require_permission("products:read"))],
+    summary="Buscar produtos",
+    description=(
+        "Filtra o catálogo canônico por brand, model, variant e atributos "
+        "opcionais (category-aware). Model identifica a família base; "
+        "variant só restringe quando informado."
+    ),
+)
+def search_products(
+    service: Annotated[ProductRegistrationService, Depends(get_registration_service)],
+    principal: Annotated[
+        AuthenticatedPrincipal, Depends(require_permission("products:read"))
+    ],
+    brand: Annotated[
+        str | None, Query(description="Marca (opcional, case-insensitive).")
+    ] = None,
+    model: Annotated[
+        str | None,
+        Query(
+            description=(
+                "Modelo base pesquisável (ex.: GeForce RTX 5070). Não exige variant."
+            )
+        ),
+    ] = None,
+    variant: Annotated[
+        str | None,
+        Query(
+            description=(
+                "Refinamento comercial opcional (ex.: Dual OC Edition). "
+                "Quando omitido, retorna todas as implementações do modelo."
+            )
+        ),
+    ] = None,
+    category: Annotated[
+        str | None,
+        Query(description="Categoria do perfil (gpu, ram, smartphone, …)."),
+    ] = None,
+    vram: Annotated[str | None, Query(description="Filtro de VRAM (GPU).")] = None,
+    memory_type: Annotated[
+        str | None, Query(description="DDR5 / GDDR7 / …")
+    ] = None,
+    capacity: Annotated[
+        str | None, Query(description="Capacidade (RAM/SSD/storage).")
+    ] = None,
+    frequency: Annotated[str | None, Query(description="Frequência (RAM).")] = None,
+    chipset: Annotated[str | None, Query(description="Chipset (placa-mãe).")] = None,
+    socket: Annotated[str | None, Query(description="Socket (CPU/MB).")] = None,
+    storage: Annotated[str | None, Query(description="Armazenamento.")] = None,
+    refresh_rate: Annotated[
+        str | None, Query(description="Taxa de atualização (monitor/TV).")
+    ] = None,
+    wattage: Annotated[str | None, Query(description="Potência (PSU/charger).")] = None,
+    panel: Annotated[str | None, Query(description="Painel (OLED/IPS/…).")] = None,
+    limit: Annotated[
+        int, Query(ge=1, le=100, description="Máximo de produtos retornados.")
+    ] = 50,
+) -> ProductSearchResponse:
+    attribute_filters = {
+        key: value
+        for key, value in {
+            "vram": vram,
+            "memory_type": memory_type,
+            "capacity": capacity,
+            "frequency": frequency,
+            "chipset": chipset,
+            "socket": socket,
+            "storage": storage,
+            "refresh_rate": refresh_rate,
+            "wattage": wattage,
+            "panel": panel,
+        }.items()
+        if value
+    }
+    try:
+        return service.search_products(
+            viewer=principal,
+            brand=brand,
+            model=model,
+            variant=variant,
+            category=category,
+            attribute_filters=attribute_filters or None,
+            limit=limit,
+        )
     except RequestError as exc:
         raise HTTPException(
             status_code=_status_for_request_error(exc),

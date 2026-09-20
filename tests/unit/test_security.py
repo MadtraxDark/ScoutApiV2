@@ -73,7 +73,14 @@ def test_health_is_public(auth_settings: str) -> None:
     assert response.status_code == 200
 
 
-def test_crawl_requires_auth(auth_settings: str) -> None:
+def test_product_search_requires_auth(auth_settings: str) -> None:
+    client = TestClient(app)
+    response = client.get(
+        "/products/search",
+        params={"brand": "Asus", "model": "GeForce RTX 5070"},
+    )
+    assert response.status_code == 401
+    assert response.json()["detail"]["code"] == "UNAUTHORIZED"
     client = TestClient(app)
     response = client.post(
         "/crawl",

@@ -14,7 +14,7 @@ from ...models.product import ProductDetails, ProductOffer
 from ...models.search import SearchCandidate
 from ...utils.parsing import parse_money
 from ...utils.product_attributes import (
-    format_variant_dimensions,
+    format_identity_variant,
     merge_specification_gaps,
     resolve_product_identity,
 )
@@ -234,7 +234,7 @@ class KabumSpider(BaseStoreSpider):
         specifications = merge_specification_gaps(specifications, resolved)
         variant = self._string(self._first_value(product, "variant", "color"))
         if not variant:
-            variant = format_variant_dimensions(resolved)
+            variant = format_identity_variant(resolved)
         attribute_sources = resolved.found_sources()
         metadata_source = {
             "title": "product-state" if product.get("title") else "json-ld-or-h1",
@@ -268,7 +268,7 @@ class KabumSpider(BaseStoreSpider):
             gtin=self._string(gtin),
             title=title_text,
             brand=self._string(brand) or resolved.value("brand"),
-            model=self._string(model) or resolved.value("model"),
+            model=resolved.value("model"),
             variant=variant,
             description=self._html_text(description),
             specifications=specifications,

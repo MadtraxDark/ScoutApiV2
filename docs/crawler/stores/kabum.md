@@ -28,7 +28,8 @@
 ## Details source
 
 - Specs from `technicalInformation` (often HTML fragments `- label: value`)
-- Brand/model via product state + `resolve_product_identity`
+- Brand/model via product state + `resolve_product_identity` (ADR 0026:
+  cooler/MPN in specs is reclassified when the title has a base chip)
 
 ## Images source
 

@@ -125,9 +125,17 @@ class ProductDetails(BaseModel):
     gtin: str | None = Field(default=None, description="GTIN/EAN/UPC quando conhecido.")
     title: str = Field(description="Título do produto.")
     brand: str | None = Field(default=None, description="Marca.")
-    model: str | None = Field(default=None, description="Modelo.")
+    model: str | None = Field(
+        default=None,
+        description=(
+            "Modelo base pesquisável (família/chip), sem a implementação comercial."
+        ),
+    )
     variant: str | None = Field(
-        default=None, description="Variante legível (cor, capacidade, etc.)."
+        default=None,
+        description=(
+            "Refinamento opcional (edição, cor, capacidade). Ausente não é conflito."
+        ),
     )
     description: str | None = Field(
         default=None, description="Descrição textual do produto."
@@ -160,9 +168,17 @@ class ProductPriceItem(BaseModel):
     gtin: str | None = Field(default=None, description="GTIN/EAN/UPC quando conhecido.")
     title: str = Field(description="Título do produto.")
     brand: str | None = Field(default=None, description="Marca.")
-    model: str | None = Field(default=None, description="Modelo.")
+    model: str | None = Field(
+        default=None,
+        description=(
+            "Modelo base pesquisável (família/chip), sem a implementação comercial."
+        ),
+    )
     variant: str | None = Field(
-        default=None, description="Variante legível (cor, capacidade, etc.)."
+        default=None,
+        description=(
+            "Refinamento opcional (edição, cor, capacidade). Ausente não é conflito."
+        ),
     )
     seller: str | None = Field(default=None, description="Nome do vendedor da oferta.")
     url: str = Field(description="URL da página da oferta.")

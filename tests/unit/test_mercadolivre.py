@@ -82,6 +82,8 @@ def test_mercadolivre_details_and_images() -> None:
     assert details.product_id == "MLB47363706"
     assert "5070" in details.title
     assert details.brand == "MSI"
+    assert details.model == "GeForce RTX 5070"
+    assert details.variant == "Shadow 3X OC"
     assert details.images == []
     images = spider.extract_images(response())
     assert images

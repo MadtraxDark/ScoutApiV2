@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
@@ -146,6 +146,37 @@ class MatchingRepository:
         if not listing_ids:
             return []
         stmt = select(StoreListing).where(StoreListing.id.in_(listing_ids))
+        return list(self._session.scalars(stmt).all())
+
+    def search_canonical_products(
+        self,
+        *,
+        viewer_id: uuid.UUID,
+        is_admin: bool,
+        brand: str | None = None,
+        limit: int = 200,
+    ) -> list[CanonicalProduct]:
+        """Load catalog rows visible to the viewer, optionally prefiltered by brand.
+
+        Model/variant canonical matching happens in the service (chip keys,
+        cooler-line flags) so SQL does not confuse ``rtx5070`` with ``rtx5070ti``.
+        """
+        stmt = select(CanonicalProduct).options(
+            selectinload(CanonicalProduct.identifiers),
+            selectinload(CanonicalProduct.listings),
+        )
+        if not is_admin:
+            stmt = stmt.where(
+                or_(
+                    CanonicalProduct.owner_user_id.is_(None),
+                    CanonicalProduct.owner_user_id == viewer_id,
+                )
+            )
+        if brand and brand.strip():
+            stmt = stmt.where(
+                func.lower(CanonicalProduct.brand) == brand.strip().casefold()
+            )
+        stmt = stmt.order_by(CanonicalProduct.updated_at.desc()).limit(limit)
         return list(self._session.scalars(stmt).all())
 
     def get_or_create_canonical(

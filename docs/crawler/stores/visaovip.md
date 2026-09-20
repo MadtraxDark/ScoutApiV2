@@ -29,7 +29,10 @@
 - Specs from `productSpecifications[]`
   (`specificationName` / `specificationValue`)
 - Brand from `manufactureName` (+ specs `MARCA`)
-- Model from specs `MODELO`
+- **Base model** from the GPU/phone/CPU parser on the title when specs `MODELO`
+  is a cooler line or opaque code (ADR 0026). Example: specs `Shadow 3X OC` +
+  title `GeForce RTX5070` → `model=GeForce RTX 5070`, `variant=Shadow 3X OC`.
+  Structured chips (`GeForce RTX 5070 Ti`) still win over a weaker title.
 - Description from `productComents` / `productDescription`
 - Attribute gaps filled via global `resolve_product_identity` (title fallback)
 

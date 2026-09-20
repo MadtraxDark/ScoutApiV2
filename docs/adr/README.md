@@ -43,6 +43,8 @@ Política de quando criar/atualizar docs:
 | [0020](0020-distributed-scrape-cache-redis.md) | Cache/single-flight/cooldown distribuídos via Redis | Accepted |
 | [0024](0024-product-match-evidence-cascade.md) | Cascata de evidências do Product Match (MPN + bloqueadores) | Accepted |
 | [0025](0025-mercadolivre-curl-cffi-http-first.md) | Mercado Livre HTTP-first com curl_cffi + Camoufox | Accepted |
+| [0026](0026-product-identity-brand-model-variant.md) | Identidade canônica brand / model / variant + busca opcional | Accepted |
+| [0027](0027-category-profile-product-identity.md) | CategoryProfile registry para identidade e filtros | Accepted |
 
 ## Quando criar ADR
 

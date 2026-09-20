@@ -18,6 +18,7 @@ from ...models.product import (
 from ...models.search import SearchCandidate
 from ...utils.parsing import parse_money
 from ...utils.product_attributes import (
+    format_identity_variant,
     merge_specification_gaps,
     resolve_product_identity,
 )
@@ -233,9 +234,9 @@ class MagazineLuizaSpider(BaseStoreSpider):
             gtin=self._gtin(item, response),
             title=title_text,
             brand=self._string(brand) or resolved.value("brand"),
-            model=self._string(model) or resolved.value("model"),
-            # Keep Magalu's raw color/variant label (tests + catalog shape).
-            variant=self._string(variant) or resolved.value("color"),
+            model=resolved.value("model"),
+            # Keep Magalu's raw color/variant label when present.
+            variant=self._string(variant) or format_identity_variant(resolved),
             description=None,
             specifications=specifications,
             metadata={"source": metadata_source},

@@ -40,6 +40,8 @@
 ## Details source
 
 - Same PDP payload: title, brand, specs, selected model attributes
+- Base chip/model via `resolve_product_identity` (ADR 0026); selected Shopee
+  model label still wins as public `variant` when present
 
 ## Images source
 

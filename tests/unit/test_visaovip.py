@@ -94,7 +94,8 @@ def test_visaovip_details_brand_model_specs_and_title_fallback_reuse() -> None:
     assert details.gtin is None
     assert "MSI Shadow 3X OC" in details.title
     assert details.brand == "MSI"
-    assert details.model == "Shadow 3X OC"
+    assert details.model == "GeForce RTX 5070"
+    assert details.variant == "Shadow 3X OC"
     assert details.specifications["MARCA"] == "MSI"
     assert details.specifications["REFERÊNCIA"] == "912-V532-232"
     assert details.specifications["MEMÓRIA V-RAM"] == "12 GB"

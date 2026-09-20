@@ -69,7 +69,7 @@ def test_palit_details_and_images() -> None:
     details = spider.extract_details(response)
     assert details.title.startswith("Placa de Video")
     assert details.brand == "PALIT"
-    assert details.model == "RTX 5070 Ti"
+    assert details.model == "GeForce RTX 5070 Ti"
     assert details.gtin == "4710568870011"
     assert details.variant == "Modelo: GAMINGPRO OC"
     assert details.images == []

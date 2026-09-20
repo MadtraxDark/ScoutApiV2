@@ -13,7 +13,7 @@ from ...models.search import SearchCandidate
 from ...utils.parsing import parse_money
 from ...utils.product_attributes import (
     SOURCE_NOT_FOUND,
-    format_variant_dimensions,
+    format_identity_variant,
     merge_specification_gaps,
     resolve_product_identity,
 )
@@ -326,7 +326,7 @@ class ShoppingChinaSpider(BaseStoreSpider):
             title=title,
             brand=resolved.value("brand"),
             model=resolved.value("model"),
-            variant=format_variant_dimensions(resolved),
+            variant=format_identity_variant(resolved),
             description=description,
             specifications=specifications,
             metadata={

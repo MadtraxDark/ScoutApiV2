@@ -32,7 +32,8 @@ Fetch (Camoufox / urllib / curl_cffi@ML) → Store Adapter (spider) → Offer | 
 
 ADR: [0011](../adr/0011-offer-vs-product-details.md), [0012](../adr/0012-optional-image-extraction.md),
 [0019](../adr/0019-product-matching.md),
-[0024](../adr/0024-product-match-evidence-cascade.md).
+[0024](../adr/0024-product-match-evidence-cascade.md),
+[0026](../adr/0026-product-identity-brand-model-variant.md).
 
 ### Product Matching (ADR 0019 / 0024)
 
@@ -60,7 +61,9 @@ ADR: [0011](../adr/0011-offer-vs-product-details.md), [0012](../adr/0012-optiona
   nomes de família inferidos do título (iPhone, IdeaPad, séries SSD/GPU). When
   metadata maps RAM into `storage`, identity prefers SSD-sized capacities from
   the title. Placeholder brands (`outros`, Amazon Renewed store) are ignored so
-  title brand can win. Decisions: `auto_match` | `review` | `reject`.
+  title brand can win. GPU **edition** (Dual / Shadow 3X / Gaming Trio) is a
+  variant key: missing on one side is unknown, not a conflict; Dual ≠ Gaming
+  Trio still rejects (ADR 0026). Decisions: `auto_match` | `review` | `reject`.
 - **Search queries:** `GTIN → display MPN (hyphenated) → brand + spaced series
   + storage → color synonyms (preto/black) → progressive drop → compacted MPN
   → título`. Compact tokens like `990evoplus` / `mzv9s1t0bam` are weak on Amazon
@@ -101,6 +104,12 @@ ADR: [0011](../adr/0011-offer-vs-product-details.md), [0012](../adr/0012-optiona
    (Proxy Cost Mode).
 7. **Attribute priority:** specifications → structured fields → conservative
    title fallback → `null`. Ambiguous title inference returns `null`.
+   **Identity (`brand` / `model` / `variant`):** see below. Structured values
+   that already look like a **base model** are only canonicalized — never
+   replaced by a weaker title chip (`RTX 5070 Ti` structured wins over
+   `RTX 5070` in the title). Cooler lines / opaque MPNs in the store's
+   `modelo` field are reclassified to `variant` (or kept as MPN) only when
+   a category parser extracts a real base model from the title.
 8. **Identifiers** (GTIN/EAN/UPC/SKU/`product_id`) are **never** inferred from
    arbitrary title numbers (`utils/product_attributes.py`).
 9. **Foreign stores as price reference:** stock ≠ shipping to Brazil
@@ -154,6 +163,43 @@ Auth wall bypass: ADR 0018 + `.cursor/rules/auth-wall-resolution.mdc`.
 - Never mix price/seller/images from different variants.
 - Prefer the store’s selected/default sellable unit — **not** “cheapest across models”
   unless the store UI itself presents that as the selected offer.
+
+## Brand / model / variant identity (ADR 0026 / 0027)
+
+`model` is the **searchable base identity**. `variant` is an optional commercial
+refinement. Category-specific contracts live in `CategoryProfile` registry
+(`docs/crawler/product-identity.md`, ADR 0027).
+
+This split is what lets Product Search query `brand=Asus&model=GeForce RTX 5070`
+and return Dual / Prime / TUF implementations, then restrict only when
+`variant` is sent.
+
+| Field | Meaning | GPU example | Phone example | CPU example |
+|---|---|---|---|---|
+| `brand` | Manufacturer / board partner | ASUS | Apple | AMD |
+| `model` | Base identity that exists in multiple implementations | `GeForce RTX 5070` (not Dual; `Ti`/`Super` stay here) | `iPhone 16 Pro` | `Ryzen 7 7800X3D` |
+| `variant` | Optional refinement | `Dual OC Edition` | `color: Black; storage: 256 GB` | `null` unless a clear commercial trim exists |
+
+**Priority:** specifications → structured fields → category-aware title parser →
+`null`. Title is fallback. Ambiguous leftover tokens are **not** dumped into
+`variant` (`OC Edition` alone → `null`). Manufacturer PNs
+(`DUAL-RTX5070-O12G`) are extra evidence, not automatic edition aliases.
+
+**Canonical model:** `Geforce RTX5070` / `NVIDIA GeForce RTX 5070` → display
+`GeForce RTX 5070`, comparison key `rtx5070`. `rtx5070` ≠ `rtx5070ti`.
+
+- **Category parsers** (extensible registry, not SKU hardcode): GPU, smartphone,
+  CPU, RAM, SSD. GPU board-partner brands use a manufacturer gazetteer
+  (ASUS/MSI/Gigabyte/Palit/…), not product SKUs. Notebook GPUs stay in
+  `gpu_model`, not product `model`.
+
+**Product Search** (`GET /products/search`): `brand`, `model`, `variant`,
+`category` and hot attribute filters (`vram`, `memory_type`, `capacity`, …)
+are optional (at least one required). Omitting `variant` returns every
+implementation of that base model.
+
+**Product Match:** missing `variant`/`edition` is unknown, not a conflict.
+Explicit Dual ≠ Gaming Trio still rejects (ADR 0024).
 
 ## Source tracking
 

@@ -9,6 +9,11 @@ from decimal import Decimal
 from typing import Any
 
 from scout_api.modules.crawler.models.product import ProductPriceItem
+from scout_api.modules.crawler.utils.product_identity import (
+    canonical_variant_key,
+    extract_gpu_chip,
+    parse_title_identity,
+)
 
 VARIANT_GATE_KEYS = frozenset({"color", "storage", "size", "capacity", "ram", "pack"})
 
@@ -619,51 +624,18 @@ def _gpu_signature(text: str | None) -> str | None:
     return f"{match.group(1)}{match.group(2)}{suffix}"
 
 
-_GPU_EDITION_PATTERNS: tuple[re.Pattern[str], ...] = (
-    re.compile(r"\bshadow\s*(\d+)?\s*x(?:\s*oc)?\b"),
-    re.compile(r"\bventus\s*(\d+)?\s*x(?:\s*oc)?\b"),
-    re.compile(r"\bgaming\s*trio(?:\s*oc)?\b"),
-    re.compile(r"\binspire\s*(\d+)?\s*x(?:\s*oc)?\b"),
-    re.compile(r"\bsuprim\s*(?:liquid|x|soc)?\b"),
-    re.compile(r"\bvanguard\s*(?:soc)?\b"),
-    re.compile(r"\bexpert(?:\s*oc)?\b"),
-    re.compile(r"\baorus\s*(?:master|elite|gaming)?\b"),
-    re.compile(r"\btuf\s*(?:gaming|oc)?\b"),
-    re.compile(r"\brog\s*strix(?:\s*oc)?\b"),
-    re.compile(r"\bprime(?:\s*oc)?\b"),
-    re.compile(r"\bwindforce(?:\s*oc)?\b"),
-    re.compile(r"\beagle(?:\s*oc)?\b"),
-    re.compile(r"\bdual(?:\s*oc)?\b"),
-    re.compile(r"\binfinity\s*(\d+)?(?:\s*oc)?\b"),
-)
-
-
 def _gpu_edition_signature(text: str | None) -> str | None:
     """Commercial cooler/edition line for discrete GPUs (missing ≠ conflict).
 
-    Normalizes ``Shadow 3X OC`` / ``SHADOW 3X`` to a compact token so SERP and
-    critical-identity gates can distinguish sibling RTX cards without treating
-    DLSS / MHz / bus-width marketing noise as identity.
+    Category-aware title parsing keeps cooler lines (Shadow 3X, Dual OC) out of
+    the chip model. Missing edition is unknown, not a mismatch.
     """
-    folded = fold_text(text or "")
-    if not folded:
+    if not text:
         return None
-    # Require GPU / graphics context so "shadow" fashion listings don't fire.
-    if not (
-        _gpu_signature(folded)
-        or re.search(
-            r"\b(?:geforce|radeon|placa\s*de\s*v[ií]deo|graphics?\s*card)\b",
-            folded,
-        )
-    ):
-        return None
-    for pattern in _GPU_EDITION_PATTERNS:
-        match = pattern.search(folded)
-        if not match:
-            continue
-        token = re.sub(r"\s+", "", match.group(0))
-        return token or None
-    return None
+    parsed = parse_title_identity(text, category="gpu")
+    if parsed.variant_key:
+        return parsed.variant_key
+    return canonical_variant_key(parsed.variant) if parsed.variant else None
 
 
 def _gpu_vram_from_text(text: str | None) -> str | None:
@@ -763,7 +735,7 @@ def _ddr_signature(text: str | None) -> str | None:
 
 
 def _edition_token(identity: ProductIdentity) -> str | None:
-    blob = _identity_blob(identity.model, identity.title)
+    blob = identity.title
     from_text = _gpu_edition_signature(blob)
     raw = from_text or identity.variant_attrs.get("edition")
     if not raw:
@@ -773,16 +745,13 @@ def _edition_token(identity: ProductIdentity) -> str | None:
 
 def _edition_search_phrase(identity: ProductIdentity) -> str | None:
     """Spaced commercial edition for SERP (``shadow 3x oc``), not compacted token."""
-    folded = fold_text(_identity_blob(identity.model, identity.title))
-    for pattern in _GPU_EDITION_PATTERNS:
-        match = pattern.search(folded)
-        if match:
-            return re.sub(r"\s+", " ", match.group(0)).strip()
+    parsed = parse_title_identity(identity.title, category="gpu")
+    if parsed.variant:
+        return re.sub(r"\s+", " ", parsed.variant).strip().casefold()
     raw = identity.variant_attrs.get("edition")
     if not raw:
         return None
     token = fold_text(str(raw))
-    # Best-effort expand compacted tokens like shadow3xoc → shadow 3x oc.
     token = re.sub(r"(\d+)x", r" \1x ", token)
     token = re.sub(r"oc$", " oc", token)
     token = re.sub(r"([a-z])(\d)", r"\1 \2", token)
@@ -1138,9 +1107,7 @@ def normalize_variant_value(key: str, value: str) -> str:
             return f"{match.group(1)}{unit}"
         return compacted
     if key == "edition":
-        # Trailing OC is a marketing boost flag, not a distinct SKU line.
-        compacted = re.sub(r"[^a-z0-9]+", "", text)
-        return re.sub(r"oc$", "", compacted) or compacted
+        return canonical_variant_key(text) or re.sub(r"[^a-z0-9]+", "", text)
     if key == "color":
         return _canonical_color(text)
     return text
@@ -1395,8 +1362,12 @@ def identity_from_price_item(item: ProductPriceItem) -> ProductIdentity:
             extra[key] = value
     # Bare Magalu-style variant ("Preto") → treat as color when no key:value form.
     variant = item.variant
-    if variant and ":" not in variant and "color" not in extra:
-        extra["color"] = variant
+    if variant and ":" not in variant:
+        gpu_blob = _identity_blob(item.model, item.title)
+        if extract_gpu_chip(gpu_blob) is not None or extract_gpu_chip(variant):
+            extra.setdefault("edition", variant)
+        elif "color" not in extra:
+            extra["color"] = variant
     # Pull storage tokens from title when structured variant lacks them.
     attrs = parse_variant_attributes(
         variant if variant and ":" in variant else None,
@@ -1425,7 +1396,7 @@ def identity_from_price_item(item: ProductPriceItem) -> ProductIdentity:
         ) == normalize_variant_value("vram", str(attrs["vram"])):
             attrs.pop("ram", None)
         if "edition" not in attrs:
-            edition = _gpu_edition_signature(blob) or _gpu_edition_signature(
+            edition = _gpu_edition_signature(item.title) or _gpu_edition_signature(
                 " ".join(str(v) for v in specs.values() if v)
             )
             if edition:
@@ -1451,9 +1422,7 @@ def identity_from_price_item(item: ProductPriceItem) -> ProductIdentity:
             "manufacturer code",
         }
     ]
-    mpn_forms = extract_all_mpn_forms(
-        item.model, item.sku, item.title, *spec_mpn_bits
-    )
+    mpn_forms = extract_all_mpn_forms(item.model, item.sku, item.title, *spec_mpn_bits)
     mpn = mpn_forms[0][0] if mpn_forms else None
     mpn_display = mpn_forms[0][1] if mpn_forms else None
     mpn_aliases = frozenset(norm for norm, _disp in mpn_forms)

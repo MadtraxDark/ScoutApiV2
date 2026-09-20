@@ -17,7 +17,10 @@ from ...models.product import (
 )
 from ...models.search import SearchCandidate
 from ...utils.parsing import parse_money
-from ...utils.product_attributes import resolve_product_identity
+from ...utils.product_attributes import (
+    format_identity_variant,
+    resolve_product_identity,
+)
 from ..base import BaseStoreSpider
 
 Availability = Literal["available", "out_of_stock", "unavailable"]
@@ -161,6 +164,7 @@ class MercadoLivreSpider(BaseStoreSpider):
             title=title,
             brand=brand or resolved.value("brand"),
             model=resolved.value("model"),
+            variant=format_identity_variant(resolved),
             gtin=resolved.value("gtin"),
             specifications=dict(specifications),
             images=[],

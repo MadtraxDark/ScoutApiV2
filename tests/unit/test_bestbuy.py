@@ -115,7 +115,8 @@ def test_bestbuy_details_identity_variants_and_images() -> None:
     assert details.sku == "6418059"
     assert details.gtin == "195950690200"
     assert details.brand == "Apple"
-    assert details.model == "MG4J4LL/A"
+    assert details.model == "iPhone 17"
+    assert details.metadata.get("structured_model") == "MG4J4LL/A"
     assert details.variant == "color: Lavender; storage: 512GB"
     assert "carrier" not in (details.variant or "").casefold()
     assert "at&t" not in (details.variant or "").casefold()

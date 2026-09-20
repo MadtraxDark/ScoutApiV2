@@ -18,7 +18,7 @@ from ...core.fingerprints import canonicalize_url
 from ...models.product import ProductDetails, ProductOffer
 from ...utils.parsing import parse_money
 from ...utils.product_attributes import (
-    format_variant_dimensions,
+    format_identity_variant,
     merge_specification_gaps,
     resolve_product_identity,
 )
@@ -232,7 +232,7 @@ def extract_amazon_details(
             f"{key}: {value}" for key, value in variants.items()
         )
     else:
-        variant = format_variant_dimensions(resolved) or None
+        variant = format_identity_variant(resolved)
 
     parent_asin = extract_parent_asin(response.text or "", asin)
     attribute_sources = resolved.found_sources()
@@ -263,7 +263,7 @@ def extract_amazon_details(
         gtin=gtin,
         title=title,
         brand=_string(brand),
-        model=_string(model) or _string(resolved.value("model")),
+        model=_string(resolved.value("model")),
         variant=variant or None,
         description=_string(description),
         specifications=specifications,

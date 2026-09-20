@@ -21,7 +21,7 @@ from ...core.fingerprints import canonicalize_url
 from ...models.product import ProductDetails, ProductOffer
 from ...models.search import SearchCandidate
 from ...utils.parsing import parse_money
-from ...utils.product_attributes import resolve_attributes
+from ...utils.product_attributes import resolve_attributes, resolve_product_identity
 from ..base import BaseStoreSpider
 
 Availability = Literal["available", "out_of_stock", "unavailable"]
@@ -253,15 +253,29 @@ class BestBuySpider(BaseStoreSpider):
             "variant": variants,
         }
         details_metadata.update(carrier_meta)
+        raw_model = self._clean_short(
+            self._first_value(product, "model", "modelNumber", "mpn")
+        )
+        resolved = resolve_product_identity(
+            specifications=self._specifications(product),
+            structured={
+                "brand": self._brand(product),
+                "model": raw_model,
+                "color": variants.get("color"),
+                "storage": variants.get("storage"),
+            },
+            title=title,
+        )
+        model = resolved.value("model") or raw_model
+        if raw_model and model != raw_model:
+            details_metadata.setdefault("structured_model", raw_model)
         return ProductDetails(
             product_id=product_id,
             sku=self._string(self._first_value(product, "sku", "skuId", "productSku")),
             gtin=gtin,
             title=title,
-            brand=self._brand(product),
-            model=self._clean_short(
-                self._first_value(product, "model", "modelNumber", "mpn")
-            ),
+            brand=self._brand(product) or resolved.value("brand"),
+            model=model,
             variant="; ".join(f"{key}: {value}" for key, value in variants.items())
             or None,
             description=self._description(product),

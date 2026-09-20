@@ -55,6 +55,7 @@ __all__ = [
     "ProductListingView",
     "ProductView",
     "ProductRegisterResponse",
+    "ProductSearchResponse",
 ]
 
 
@@ -279,3 +280,8 @@ class ProductRegisterResponse(BaseModel):
     listing_created: bool = False
     product: ProductView
     listing: ProductListingView | None = None
+
+
+class ProductSearchResponse(BaseModel):
+    items: list[ProductView] = Field(default_factory=list)
+    count: int = Field(description="Número de produtos retornados.")

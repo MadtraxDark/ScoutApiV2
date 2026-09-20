@@ -15,7 +15,7 @@ from ...core.exceptions import ParseError
 from ...core.fingerprints import canonicalize_url
 from ...models.product import ProductDetails, ProductOffer
 from ...utils.product_attributes import (
-    format_variant_dimensions,
+    format_identity_variant,
     merge_specification_gaps,
     resolve_product_identity,
 )
@@ -162,7 +162,7 @@ class VisaoVipSpider(BaseStoreSpider):
         specifications = merged
         variant = self._string(color)
         if not variant:
-            variant = format_variant_dimensions(resolved) or None
+            variant = format_identity_variant(resolved)
 
         attribute_sources = resolved.found_sources()
         metadata_source = {
@@ -199,7 +199,7 @@ class VisaoVipSpider(BaseStoreSpider):
             gtin=gtin,
             title=title_text,
             brand=self._string(brand) or resolved.value("brand"),
-            model=self._string(model) or resolved.value("model"),
+            model=resolved.value("model"),
             variant=variant,
             description=description,
             specifications=specifications,

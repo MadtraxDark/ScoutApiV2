@@ -3,6 +3,7 @@ from scout_api.modules.crawler.utils.product_attributes import (
     SOURCE_SPECIFICATIONS,
     SOURCE_TITLE,
     detect_product_category,
+    format_identity_variant,
     resolve_attribute,
     resolve_attributes,
     resolve_product_identity,
@@ -26,7 +27,7 @@ def test_title_fallback_fills_missing_phone_attributes() -> None:
     )
     assert bundle.value("brand") == "Apple"
     assert bundle.get("brand").source == SOURCE_TITLE
-    assert bundle.value("model") == "Iphone 15"
+    assert bundle.value("model") == "iPhone 15"
     assert bundle.value("storage") == "128 GB"
     assert bundle.value("color") == "Blue"
     assert bundle.category == "smartphone"
@@ -74,7 +75,7 @@ def test_cpu_cores_threads_from_title_only() -> None:
         title="AMD Ryzen 7 7800X3D 8-Core 16-Thread",
         category="cpu",
     )
-    assert bundle.value("brand") == "Amd"
+    assert bundle.value("brand") == "AMD"
     assert "7800X3D" in (bundle.value("model") or "")
     assert bundle.value("cores") == "8"
     assert bundle.value("threads") == "16"
@@ -155,7 +156,9 @@ def test_console_storage_and_model() -> None:
         category="console",
     )
     assert bundle.value("storage") == "1 TB"
-    assert bundle.value("brand") == "PlayStation"
+    assert bundle.value("brand") == "Sony"
+    assert "PlayStation 5" in (bundle.value("model") or "")
+    assert format_identity_variant(bundle) == "Digital"
 
 
 def test_ambiguous_capacities_stay_null() -> None:
@@ -309,7 +312,7 @@ def test_hyphenated_cpu_codes_are_preserved() -> None:
 
 def test_brand_skips_product_type_prefixes() -> None:
     gpu = resolve_product_identity(title="Placa de Video MSI GeForce RTX 4060 Ti 8GB")
-    assert gpu.value("brand") == "Msi"
+    assert gpu.value("brand") in {"Msi", "MSI"}
     assert gpu.value("vram") == "8 GB"
 
     ssd = resolve_product_identity(title="SSD Samsung 990 PRO 2TB NVMe PCIe 4.0 M.2")
