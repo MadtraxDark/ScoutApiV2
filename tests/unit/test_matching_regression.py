@@ -1369,3 +1369,115 @@ def test_match_from_item_identity_only_discovers_without_reference_url() -> None
         "scout://identity" not in str(call.args[0])
         for call in scrape.scrape.call_args_list
     )
+
+
+def test_match_early_stops_scraping_after_auto_match() -> None:
+    """Once a store auto_matches, do not scrape remaining SERP candidates."""
+    from unittest.mock import MagicMock
+
+    from scout_api.modules.crawler.models.search import SearchCandidate
+    from scout_api.modules.matching.identity import identity_reference_item
+    from scout_api.modules.matching.product_match_service import ProductMatchService
+
+    reference = identity_reference_item(
+        "Placa de Vídeo Gigabyte GeForce RTX 5060 Windforce OC 8GB",
+        category="gpu",
+    )
+    good = _item(
+        store="kabum",
+        product_id="good-1",
+        title="Placa de Vídeo Gigabyte GeForce RTX 5060 Windforce OC 8GB GDDR7",
+        brand="Gigabyte",
+        model="GeForce RTX 5060",
+        url="https://www.kabum.com.br/produto/good-1/placa",
+        canonical_url="https://www.kabum.com.br/produto/good-1/placa",
+    )
+    scrape = MagicMock()
+    scrape.scrape.return_value = good
+    search = MagicMock()
+    search.is_search_supported.return_value = True
+    search.search.return_value = [
+        SearchCandidate(
+            url=good.url,
+            title=good.title,
+            product_id="good-1",
+        ),
+        SearchCandidate(
+            url="https://www.kabum.com.br/produto/noise-2/placa",
+            title="Placa de Vídeo Gigabyte GeForce RTX 5060 Gaming OC 8GB",
+            product_id="noise-2",
+        ),
+        SearchCandidate(
+            url="https://www.kabum.com.br/produto/noise-3/placa",
+            title="Placa de Vídeo Gigabyte GeForce RTX 5060 Eagle OC 8GB",
+            product_id="noise-3",
+        ),
+    ]
+
+    resp = ProductMatchService(
+        scrape_service=scrape, search_service=search
+    ).match_from_item(
+        reference,
+        stores=["kabum"],
+        persist=False,
+        max_candidates_per_store=5,
+        clear_reference_price=True,
+    )
+    assert resp.matches
+    assert resp.matches[0].decision == "auto_match"
+    assert scrape.scrape.call_count == 1
+
+
+def test_match_skips_scrape_when_serp_title_clearly_conflicts() -> None:
+    """Notebook SERP titles must not trigger a discrete-GPU PDP scrape."""
+    from unittest.mock import MagicMock
+
+    from scout_api.modules.crawler.models.search import SearchCandidate
+    from scout_api.modules.matching.identity import identity_reference_item
+    from scout_api.modules.matching.product_match_service import ProductMatchService
+
+    reference = identity_reference_item(
+        "Placa de Vídeo Gigabyte GeForce RTX 5060 8GB GDDR7",
+        category="gpu",
+    )
+    scrape = MagicMock()
+    search = MagicMock()
+    search.is_search_supported.return_value = True
+    search.search.return_value = [
+        SearchCandidate(
+            url="https://www.bestbuy.com/site/laptop-rtx-5060/123.p",
+            title="ASUS TUF Gaming A15 Laptop with GeForce RTX 5060 16GB RAM",
+            product_id="123",
+        ),
+        SearchCandidate(
+            url="https://www.bestbuy.com/site/gpu-rtx-5060/456.p",
+            title="Gigabyte GeForce RTX 5060 WINDFORCE OC 8G Graphics Card",
+            product_id="456",
+        ),
+    ]
+    good = _item(
+        store="bestbuy",
+        product_id="456",
+        title="Gigabyte GeForce RTX 5060 WINDFORCE OC 8G Graphics Card",
+        brand="Gigabyte",
+        model="GeForce RTX 5060",
+        url="https://www.bestbuy.com/site/gpu-rtx-5060/456.p",
+        canonical_url="https://www.bestbuy.com/site/gpu-rtx-5060/456.p",
+        country="US",
+        currency="USD",
+    )
+    scrape.scrape.return_value = good
+
+    resp = ProductMatchService(
+        scrape_service=scrape, search_service=search
+    ).match_from_item(
+        reference,
+        stores=["bestbuy"],
+        persist=False,
+        max_candidates_per_store=5,
+        clear_reference_price=True,
+    )
+    assert scrape.scrape.call_count == 1
+    assert scrape.scrape.call_args.args[0] == good.url
+    assert resp.matches
+    assert resp.matches[0].product.product_id == "456"

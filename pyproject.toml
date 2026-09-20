@@ -42,7 +42,10 @@ addopts = "--strict-markers --strict-config"
 testpaths = ["tests"]
 pythonpath = ["src"]
 markers = [
-    "integration: tests that require external services (e.g. Redis)",
+    "integration: tests that require external services (e.g. Redis, Postgres)",
+    "live: tests that hit real storefronts / network (slow, non-deterministic)",
+    "slow: intentionally expensive tests (keep out of the default fast loop)",
+    "e2e: end-to-end flows spanning multiple layers",
 ]
 
 [tool.ruff]

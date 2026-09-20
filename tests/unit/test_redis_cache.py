@@ -57,10 +57,12 @@ def _gateway(fake: FakeRedis | None = None) -> RedisGateway:
 
 def test_serialize_roundtrip_product_and_offer() -> None:
     url = "https://nissei.com/py/a"
-    raw_item = serialize_cache_value(_item(url))
-    raw_offer = serialize_cache_value(_offer(url))
-    assert deserialize_cache_value(raw_item) == _item(url)
-    assert deserialize_cache_value(raw_offer) == _offer(url)
+    item = _item(url)
+    offer = _offer(url)
+    raw_item = serialize_cache_value(item)
+    raw_offer = serialize_cache_value(offer)
+    assert deserialize_cache_value(raw_item) == item
+    assert deserialize_cache_value(raw_offer) == offer
     assert KIND_PRODUCT in raw_item.decode()
     assert KIND_OFFER in raw_offer.decode()
     assert f'"schema_version":{SCHEMA_VERSION}' in raw_item.decode()

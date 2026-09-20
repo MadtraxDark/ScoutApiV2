@@ -6,6 +6,7 @@ import threading
 import time
 from decimal import Decimal
 
+import pytest
 from tests.unit.fakes.fake_redis import FakeRedis
 
 from scout_api.modules.crawler.core.cache import ResponseCache, build_cache_backend
@@ -130,13 +131,18 @@ def test_lock_has_ttl_and_owner_only_release() -> None:
     assert fake.get(key) is None
 
 
-def test_owner_crash_lock_expires() -> None:
+def test_owner_crash_lock_expires(monkeypatch: pytest.MonkeyPatch) -> None:
     fake = FakeRedis()
+    clock = {"t": 1_000.0}
+    monkeypatch.setattr(
+        "tests.unit.fakes.fake_redis.time.monotonic",
+        lambda: clock["t"],
+    )
     flight = DistributedSingleFlight(_gateway(fake), lock_ttl_seconds=1)
     url = "https://nissei.com/py/lock-expire"
     acquired = flight.try_acquire(url)
     assert acquired.token is not None
-    time.sleep(1.05)
+    clock["t"] += 1.05
     stolen = flight.try_acquire(url)
     assert stolen.token is not None
     assert stolen.token != acquired.token

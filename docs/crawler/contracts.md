@@ -86,6 +86,11 @@ ADR: [0011](../adr/0011-offer-vs-product-details.md), [0012](../adr/0012-optiona
   then `magazineluiza` / `mercadolivre` / `shopee` / `aliexpress`). If the reference listing has no barcode,
   the reference store itself is deprioritized so a GTIN-rich peer can seed
   queries first (`store_search_order.py`).
+- **Match cost controls:** per store, stop candidate scrapes after the first
+  `auto_match`; cheap-reject SERP titles (accessory/bundle/form-factor/critical
+  identity/brand) before PDP scrape; cap consecutive empty non-identifier
+  searches (`_MAX_EMPTY_SEARCH_QUERIES`). Structured timing logs:
+  `match_store_timing` / `match_total_timing`. Default `include_images=false`.
 - Persistence (PostgreSQL): `CanonicalProduct`, `StoreListing`, `OfferSnapshot`,
   `OfferEvent` — refresh **appends** snapshots/events (never silent overwrite).
 - `UPSTREAM_BLOCKED` on refresh → `scrape_failed` (listing stays active).

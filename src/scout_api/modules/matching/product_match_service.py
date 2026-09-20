@@ -31,7 +31,13 @@ from scout_api.modules.matching.gtin_learning import (
 from scout_api.modules.matching.identity import (
     ProductIdentity,
     build_search_queries,
+    critical_identity_conflict,
+    form_factor_conflict,
     identity_from_price_item,
+    identity_reference_item,
+    looks_like_accessory,
+    looks_like_bundle,
+    normalize_brand,
     normalize_gtin,
 )
 from scout_api.modules.matching.repository import MatchingRepository
@@ -97,6 +103,37 @@ def _is_identifier_only_query(query: str) -> bool:
         }:
             return len(parts[1]) >= 6
     return False
+
+
+def _serp_title_reject_reason(
+    reference: ProductIdentity,
+    *,
+    title: str | None,
+) -> str | None:
+    """Cheap reject from SERP title before spending a full PDP scrape.
+
+    Missing title → unknown (do not reject). Only clear conflicts skip scrape.
+    """
+    if not (title or "").strip():
+        return None
+    title_text = title.strip() if title else ""
+    if looks_like_accessory(title_text, reference_title=reference.title):
+        return "accessory_reject"
+    if looks_like_bundle(title_text, reference_title=reference.title):
+        return "bundle_reject"
+    form = form_factor_conflict(reference.title, title_text)
+    if form:
+        return form
+    probe = identity_from_price_item(identity_reference_item(title_text))
+    critical = critical_identity_conflict(reference, probe)
+    if critical:
+        return critical
+    ref_brand = normalize_brand(reference.brand) if reference.brand else None
+    cand_brand = probe.brand
+    if ref_brand and cand_brand and ref_brand != cand_brand:
+        if ref_brand not in cand_brand and cand_brand not in ref_brand:
+            return f"brand_mismatch:{ref_brand}!={cand_brand}"
+    return None
 
 
 class ProductMatchService:
@@ -186,6 +223,7 @@ class ProductMatchService:
         if ref_identity.gtin:
             learned = TrustedGtin(gtin=ref_identity.gtin, source="reference")
 
+        match_t0 = time.perf_counter()
         for store_key in target_stores:
             if not self._search.is_search_supported(store_key):
                 errors.append(
@@ -198,19 +236,24 @@ class ProductMatchService:
                 unmatched.append(store_key)
                 continue
 
+            store_t0 = time.perf_counter()
             store_matched = False
             last_error: MatchStoreError | None = None
             empty_searches = 0
             candidates_seen = 0
             scrape_failures = 0
+            title_rejects = 0
+            scrapes_done = 0
             last_scrape_error: MatchStoreError | None = None
             for query in queries:
                 try:
+                    search_t0 = time.perf_counter()
                     candidates = self._search.search(
                         store_key,
                         query,
                         limit=max_candidates_per_store,
                     )
+                    search_ms = (time.perf_counter() - search_t0) * 1000
                 except RequestError as exc:
                     last_error = MatchStoreError(
                         store=store_key,
@@ -243,17 +286,43 @@ class ProductMatchService:
                     continue
 
                 empty_searches = 0
+                logger.debug(
+                    "match_store_search",
+                    extra={
+                        "store": store_key,
+                        "query": query,
+                        "candidates": len(candidates),
+                        "search_ms": round(search_ms, 1),
+                    },
+                )
                 for candidate in candidates:
                     if canonicalize_url(candidate.url) == canonicalize_url(
                         reference.canonical_url
                     ):
                         continue
                     candidates_seen += 1
+                    reject = _serp_title_reject_reason(
+                        ref_identity, title=candidate.title
+                    )
+                    if reject is not None:
+                        title_rejects += 1
+                        logger.debug(
+                            "match_serp_title_reject",
+                            extra={
+                                "store": store_key,
+                                "reason": reject,
+                                "title": (candidate.title or "")[:120],
+                            },
+                        )
+                        continue
+                    scrape_t0 = time.perf_counter()
                     product, scrape_error = self._scrape_candidate(
                         candidate.url,
                         store_key=store_key,
                         include_images=include_images,
                     )
+                    scrapes_done += 1
+                    scrape_ms = (time.perf_counter() - scrape_t0) * 1000
                     if product is None:
                         scrape_failures += 1
                         if scrape_error is not None:
@@ -295,9 +364,31 @@ class ProductMatchService:
                                     "source": learned.source,
                                 },
                             )
+                        logger.debug(
+                            "match_auto_match_early_stop",
+                            extra={
+                                "store": store_key,
+                                "query": query,
+                                "scrape_ms": round(scrape_ms, 1),
+                                "confidence": str(hit.confidence),
+                            },
+                        )
+                        break
 
                 if store_matched:
                     break
+
+            logger.info(
+                "match_store_timing",
+                extra={
+                    "store": store_key,
+                    "elapsed_ms": round((time.perf_counter() - store_t0) * 1000, 1),
+                    "candidates_seen": candidates_seen,
+                    "title_rejects": title_rejects,
+                    "scrapes": scrapes_done,
+                    "matched": store_matched,
+                },
+            )
 
             if store_key in best_by_store:
                 matches.append(best_by_store[store_key])
@@ -308,11 +399,20 @@ class ProductMatchService:
                 if last_error is not None:
                     errors.append(last_error)
                 elif (
-                    candidates_seen > 0
-                    and scrape_failures >= candidates_seen
+                    scrapes_done > 0
+                    and scrape_failures >= scrapes_done
                     and last_scrape_error is not None
                 ):
                     errors.append(last_scrape_error)
+
+        logger.info(
+            "match_total_timing",
+            extra={
+                "elapsed_ms": round((time.perf_counter() - match_t0) * 1000, 1),
+                "stores": len(target_stores),
+                "matches": len(matches),
+            },
+        )
 
         # Final consensus across all auto-matches (guards mid-flight conflicts).
         trusted = resolve_trusted_gtin(ref_identity, matches)

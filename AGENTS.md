@@ -91,7 +91,9 @@ Não declare a tarefa completa em silêncio.
 
 Índice: [`docs/README.md`](docs/README.md).
 
-Comandos oficiais: `python -m pytest`, `ruff check .`, `ruff format --check .`, `mypy src`, `uvicorn scout_api.main:app --reload --app-dir src` e `docker compose up --build`.
+Comandos oficiais: `make test` (ciclo rápido; ver `docs/testing.md`),
+`python -m pytest`, `ruff check .`, `ruff format --check .`, `mypy src`,
+`uvicorn scout_api.main:app --reload --app-dir src` e `docker compose up --build`.
 
 ## Skills
 

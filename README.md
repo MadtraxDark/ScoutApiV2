@@ -39,7 +39,16 @@ Execute `python -m venv .venv`, `python -m pip install -e ".[dev]"` e `uvicorn s
 
 ## Validação
 
-Execute `python -m pytest`, `ruff check .`, `ruff format --check .` e `mypy src`.
+```bash
+make test              # ciclo diário (exclui live/slow)
+make test-live         # lojas reais
+make test-full         # tudo
+ruff check .
+ruff format --check .
+mypy src
+```
+
+Detalhes de markers, budgets e regras: [`docs/testing.md`](docs/testing.md).
 
 Para desenvolvimento, atualize somente os spiders sem reconstruir a imagem:
 
