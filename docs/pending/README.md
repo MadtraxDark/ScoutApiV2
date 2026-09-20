@@ -81,8 +81,9 @@ Itens resolvidos **não** ficam no índice ativo.
 
 | ID | Título | Status | Tipo | Prioridade | Área |
 |---|---|---|---|---|---|
+| [PENDING-012](PENDING-012-mercadolivre-serp-account-verification.md) | Mercado Livre SERP account-verification (auth wall) | OPEN | INCOMPLETE | P1 | crawler/mercadolivre |
 
-*(pendências ativas: nenhuma)*
+*(pendências ativas: 1)*
 
 Resolvida em 2026-09-20:
 

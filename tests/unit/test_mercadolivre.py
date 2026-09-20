@@ -3,9 +3,10 @@
 from decimal import Decimal
 from pathlib import Path
 
+import pytest
 from scrapy.http import HtmlResponse, Request
 
-from scout_api.modules.crawler.core.exceptions import ParseError
+from scout_api.modules.crawler.core.exceptions import ParseError, RequestError
 from scout_api.modules.crawler.spiders.brazil.mercadolivre import MercadoLivreSpider
 from scout_api.modules.crawler.spiders.registry import resolve_store_spider
 
@@ -74,6 +75,19 @@ def test_mercadolivre_search_url_and_parse() -> None:
     candidates = spider.parse_search_results(serp)
     assert candidates
     assert candidates[0].product_id == "MLB111"
+
+
+def test_mercadolivre_search_rejects_account_verification() -> None:
+    spider = MercadoLivreSpider()
+    verify = HtmlResponse(
+        "https://www.mercadolivre.com.br/gz/account-verification?go=x",
+        body=b"<html><body>Verificacao</body></html>",
+        encoding="utf-8",
+        request=Request("https://lista.mercadolivre.com.br/rtx"),
+    )
+    with pytest.raises(RequestError) as exc:
+        spider.parse_search_results(verify)
+    assert exc.value.code == "AUTH_REQUIRED"
 
 
 def test_mercadolivre_details_and_images() -> None:

@@ -1,0 +1,1194 @@
+{
+  "started_at": "20260920T142423Z",
+  "mode": "identity_only",
+  "source_title": "Placa de Vídeo Gigabyte GeForce RTX 5060",
+  "identity": {
+    "brand": "gigabyte",
+    "model": "rtx5060",
+    "variant_attrs": {},
+    "gtin": null,
+    "mpn": null,
+    "title_normalized": "gigabyte rtx 5060"
+  },
+  "queries": [
+    "gigabyte rtx 5060"
+  ],
+  "stores_ordered": [
+    "kabum",
+    "bestbuy",
+    "nissei",
+    "shoppingchina",
+    "amazon_br",
+    "amazon_us",
+    "magazineluiza",
+    "mercadolivre",
+    "shopee",
+    "aliexpress",
+    "visaovip"
+  ],
+  "ground_truth_stores": [
+    "aliexpress",
+    "kabum",
+    "mercadolivre"
+  ],
+  "match_elapsed_seconds": 893.88,
+  "match_error": null,
+  "retrieval": {
+    "kabum": {
+      "supported": true,
+      "probe_queries": [
+        {
+          "query": "gigabyte rtx 5060",
+          "count": 5,
+          "candidates": [
+            {
+              "title": "Placa de Vídeo Gigabyte RTX 5060 WINDFORCE MAX OC V2 8GB NVIDIA GeForce, 8GB GDDR7, 128bit,  DLSS, Ray Tracing - GV-N5060WF2MAX OCV2-8GD",
+              "url": "https://www.kabum.com.br/produto/1053808/placa-de-video-gigabyte-rtx-5060-windforce-max-oc-v2-8gb-nvidia-geforce-8gb-gddr7-128bit-dlss-ray-tracing-gv-n5060wf2max-ocv2-8gd",
+              "product_id": "1053808"
+            },
+            {
+              "title": "Placa de Vídeo Gigabyte RTX 5060 GAMING OC 8G NVIDIA GeForce, 8GB GDDR7, 128bits, DLSS, Triple Fan, Ray Tracing - GV-N5060GAMING OC-8GD",
+              "url": "https://www.kabum.com.br/produto/777073/placa-de-video-gigabyte-rtx-5060-gaming-oc-8g-nvidia-geforce-8gb-gddr7-128bits-dlss-triple-fan-ray-tracing-gv-n5060gaming-oc-8gd",
+              "product_id": "777073"
+            },
+            {
+              "title": "Placa de Vídeo Gigabyte RTX 5060 EAGLE MAX OC 8GB NVIDIA GeForce, 8GB GDDR7, 128bit, Triple Fan, Ray Tracing - GV-N5060EAGLEMAX OC-8GD",
+              "url": "https://www.kabum.com.br/produto/912220/placa-de-video-gigabyte-rtx-5060-eagle-max-oc-8gb-nvidia-geforce-8gb-gddr7-128bit-triple-fan-ray-tracing-gv-n5060eaglemax-oc-8gd",
+              "product_id": "912220"
+            },
+            {
+              "title": "Placa de Vídeo Gigabyte RTX 5060 AERO OC 8G NVIDIA GeForce, 8GB GDDR7, 128bits, DLSS, Triple Fan, Ray Tracing - GV-N5060AERO OC-8GD",
+              "url": "https://www.kabum.com.br/produto/777072/placa-de-video-gigabyte-rtx-5060-aero-oc-8g-nvidia-geforce-8gb-gddr7-128bits-dlss-triple-fan-ray-tracing-gv-n5060aero-oc-8gd",
+              "product_id": "777072"
+            },
+            {
+              "title": "Placa de Vídeo Gigabyte RTX 5060 EAGLE OC 8G NVIDIA GeForce, 8GB GDDR7, 128bits, DLSS, Ray Tracing - GV-N5060EAGLE OC-8GD",
+              "url": "https://www.kabum.com.br/produto/777075/placa-de-video-gigabyte-rtx-5060-eagle-oc-8g-nvidia-geforce-8gb-gddr7-128bits-dlss-ray-tracing-gv-n5060eagle-oc-8gd",
+              "product_id": "777075"
+            }
+          ]
+        }
+      ],
+      "winning_query": "gigabyte rtx 5060",
+      "candidate_count": 5
+    },
+    "bestbuy": {
+      "supported": true,
+      "probe_queries": [
+        {
+          "query": "gigabyte rtx 5060",
+          "count": 3,
+          "candidates": [
+            {
+              "title": "gigabyte rtx 5060 gaming oc v2 8gb gddr7 pcie 5 0 x8 windforce cooling gv n5060gaming ocv2 8gd",
+              "url": "https://www.bestbuy.com/product/gigabyte-rtx-5060-gaming-oc-v2-8gb-gddr7-pcie-5-0-x8-windforce-cooling-gv-n5060gaming-ocv2-8gd/J3ZW9X7ZCV",
+              "product_id": "J3ZW9X7ZCV"
+            },
+            {
+              "title": "gigabyte aorus geforce rtx 5060 ti 16gb gddr7 graphics aorus rtx 5060 ti ai box",
+              "url": "https://www.bestbuy.com/product/gigabyte-aorus-geforce-rtx-5060-ti-16gb-gddr7-graphics-aorus-rtx-5060-ti-ai-box/J3ZW9X7HFK",
+              "product_id": "J3ZW9X7HFK"
+            },
+            {
+              "title": "gigabyte radeon rx 9070 xt gaming oc 16g gddr6 pci express 5 0 graphics card black",
+              "url": "https://www.bestbuy.com/product/gigabyte-radeon-rx-9070-xt-gaming-oc-16g-gddr6-pci-express-5-0-graphics-card-black/J3ZW9X7JCK",
+              "product_id": "J3ZW9X7JCK"
+            }
+          ]
+        }
+      ],
+      "winning_query": "gigabyte rtx 5060",
+      "candidate_count": 3
+    },
+    "nissei": {
+      "supported": true,
+      "probe_queries": [
+        {
+          "query": "gigabyte rtx 5060",
+          "count": 5,
+          "candidates": [
+            {
+              "title": "Placa de Video Gigabyte GeForce RTX 5060 Eagle ICE OC Edition 8 GB GDDR7 - Blanco (GV-N5060EAGLEOC ICE-8GD)",
+              "url": "https://nissei.com/py/tarjeta-de-video-gigabyte-rtx5060-eagle-oc-ice-8gb-gddr7-2497mhz-2fan-gv-n5060eagleoc-ice-8gd-3gta-br-py",
+              "product_id": null
+            },
+            {
+              "title": "Placa de Video Gigabyte GeForce RTX 5060 Ti Eagle OC Edition 8 GB GDDR7 - Blanco (GV-N506TEAGLEOC ICE-8GD)",
+              "url": "https://nissei.com/py/placa-de-video-gigabyte-rtx5060-ti-eagle-oc-ice-8gb-gddr7-2617mhz-3f-gv-n506teagleoc-ice-8gd-3gta-br-py",
+              "product_id": null
+            },
+            {
+              "title": "Placa de Video Gigabyte GeForce RTX 5060 Ti Eagle OC Edition 8 GB GDDR7 (GV-N506TEAGLE OC-8GD)",
+              "url": "https://nissei.com/py/vga-gigabyte-rtx5060-ti-eagle-oc-8gb-gddr7-2617mhz-3fan-gv-n506teagle-oc-8gd-3gta-br-py",
+              "product_id": null
+            },
+            {
+              "title": "Placa de Video Gigabyte GeForce RTX 5060 Ti WINDFORCE MAX OC 8 GB GDDR7 (GV-N506TWF2MAX-OC-8GD)",
+              "url": "https://nissei.com/py/placa-de-video-gigabyte-geforce-rtx-5060-ti-windforce-max-oc-8-gb-gddr7-gv-n506twf2max-oc-8gd",
+              "product_id": null
+            },
+            {
+              "title": "Notebook Gamer Gigabyte A16 CVHI3US864SH 16\" Intel Core i7-13620H RTX 5060 8 GB - Black Steel",
+              "url": "https://nissei.com/py/notebook-gamer-gigabyte-a16-cvhi3us864sh-16-intel-core-i7-13620h-rtx5060-8-gb-1-tbssd-black-steel-146471",
+              "product_id": null
+            }
+          ]
+        }
+      ],
+      "winning_query": "gigabyte rtx 5060",
+      "candidate_count": 5
+    },
+    "shoppingchina": {
+      "supported": true,
+      "probe_queries": [
+        {
+          "query": "gigabyte rtx 5060",
+          "count": 0,
+          "candidates": []
+        }
+      ],
+      "winning_query": null,
+      "candidate_count": 0
+    },
+    "amazon_br": {
+      "supported": true,
+      "probe_queries": [
+        {
+          "query": "gigabyte rtx 5060",
+          "count": 5,
+          "candidates": [
+            {
+              "title": "Placa de Vídeo Gigabyte RTX 5060 8GB GDDR7 128 BITS WINDFORCE GIGABYTE GV-N5060WF2-8GD",
+              "url": "https://www.amazon.com.br/Placa-Gigabyte-WINDFORCE-GIGABYTE-GV-N5060WF2-8GD/dp/B0F6NKGTR4/ref=sr_1_2?dib=eyJ2IjoiMSJ9.URlqVI-HBkeGgIyUTUQ7QQ78ZgAPqrdMd390xHwL5rq8xB5Pt-F3jYrgSIc7o-7isREjo-4Du1ySywVSMVtlgqJ9-GmdhVH6pJ1xUz9Lkei_jpnQxfy9nC__3Fasf8jGmIobL2DzHfvp_EVad6_WKEo5RiAU8lLMdtuMeXnZfS1tSvVlFEVvn0fLeO3roshuy3ynM3bc7KeJ301M2rOVz_5XmhWutelbpX-2HIAzL29cTtgFyTHdaf2xlJk4sWdS45DQTrVFW6Ts549D8DC9eG0Y5esoF6-H6rSNPpnLqFo.TsQo1PH97AAYAIMi0h0pF6R68llI0zgZkTMdpMJR6z0&dib_tag=se&keywords=gigabyte+rtx+5060&qid=1789914336&sr=8-2&ufe=app_do%3Aamzn1.fos.38059ce3-943c-48af-9fc9-22d85542b02c",
+              "product_id": "B0F6NKGTR4"
+            },
+            {
+              "title": "Gigabyte RTX 5060 Ti Eagle Max OC Placa de Vídeo 8GB GDDR7 NVIDIA GeForce",
+              "url": "https://www.amazon.com.br/Gigabyte-Placa-gr%C3%A1fica-GeForce-WINDFORCE/dp/B0FFVM8LNC/ref=sr_1_5?dib=eyJ2IjoiMSJ9.URlqVI-HBkeGgIyUTUQ7QQ78ZgAPqrdMd390xHwL5rq8xB5Pt-F3jYrgSIc7o-7isREjo-4Du1ySywVSMVtlgqJ9-GmdhVH6pJ1xUz9Lkei_jpnQxfy9nC__3Fasf8jGmIobL2DzHfvp_EVad6_WKEo5RiAU8lLMdtuMeXnZfS1tSvVlFEVvn0fLeO3roshuy3ynM3bc7KeJ301M2rOVz_5XmhWutelbpX-2HIAzL29cTtgFyTHdaf2xlJk4sWdS45DQTrVFW6Ts549D8DC9eG0Y5esoF6-H6rSNPpnLqFo.TsQo1PH97AAYAIMi0h0pF6R68llI0zgZkTMdpMJR6z0&dib_tag=se&keywords=gigabyte+rtx+5060&qid=1789914336&sr=8-5&ufe=app_do%3Aamzn1.fos.38059ce3-943c-48af-9fc9-22d85542b02c",
+              "product_id": "B0FFVM8LNC"
+            },
+            {
+              "title": "Gigabyte RTX 5060 Eagle Max OC Placa de Vídeo 8GB GDDR7 NVIDIA GeForce",
+              "url": "https://www.amazon.com.br/GIGABYTE-Placa-gr%C3%A1fica-GeForce-Eagle/dp/B0FN85QDCD/ref=sr_1_9?dib=eyJ2IjoiMSJ9.URlqVI-HBkeGgIyUTUQ7QQ78ZgAPqrdMd390xHwL5rq8xB5Pt-F3jYrgSIc7o-7isREjo-4Du1ySywVSMVtlgqJ9-GmdhVH6pJ1xUz9Lkei_jpnQxfy9nC__3Fasf8jGmIobL2DzHfvp_EVad6_WKEo5RiAU8lLMdtuMeXnZfS1tSvVlFEVvn0fLeO3roshuy3ynM3bc7KeJ301M2rOVz_5XmhWutelbpX-2HIAzL29cTtgFyTHdaf2xlJk4sWdS45DQTrVFW6Ts549D8DC9eG0Y5esoF6-H6rSNPpnLqFo.TsQo1PH97AAYAIMi0h0pF6R68llI0zgZkTMdpMJR6z0&dib_tag=se&keywords=gigabyte+rtx+5060&qid=1789914336&sr=8-9",
+              "product_id": "B0FN85QDCD"
+            },
+            {
+              "title": "GIGABYTE Placa gráfica GeForce RTX 5060 Eagle OC 8G, 8 GB 128 bits GDDR7, PCIe 5.0, sistema de resfriamento WINDFORCE, placa de vídeo GV-N5060EAGLE OC-8GD (Semi",
+              "url": "https://www.amazon.com.br/GIGABYTE-resfriamento-WINDFORCE-GV-N5060EAGLE-Seminovo/dp/B0HD2F2TCX/ref=sr_1_7?dib=eyJ2IjoiMSJ9.URlqVI-HBkeGgIyUTUQ7QQ78ZgAPqrdMd390xHwL5rq8xB5Pt-F3jYrgSIc7o-7isREjo-4Du1ySywVSMVtlgqJ9-GmdhVH6pJ1xUz9Lkei_jpnQxfy9nC__3Fasf8jGmIobL2DzHfvp_EVad6_WKEo5RiAU8lLMdtuMeXnZfS1tSvVlFEVvn0fLeO3roshuy3ynM3bc7KeJ301M2rOVz_5XmhWutelbpX-2HIAzL29cTtgFyTHdaf2xlJk4sWdS45DQTrVFW6Ts549D8DC9eG0Y5esoF6-H6rSNPpnLqFo.TsQo1PH97AAYAIMi0h0pF6R68llI0zgZkTMdpMJR6z0&dib_tag=se&keywords=gigabyte+rtx+5060&qid=1789914336&sbo=GW1QB%2BmqAsHTPf1jTZRSDA%3D%3D&sr=8-7",
+              "product_id": "B0HD2F2TCX"
+            },
+            {
+              "title": "Gigabyte Placa gráfica GeForce RTX 5060 Ti EAGLE OC ICE 8G - 8GB GDDR7, 128bit, PCI-E 5.0, 2617MHz Core Clock, 3 DisplayPort, 1 x HDMI, GV-N506TEAGLEOC ICE-8GD",
+              "url": "https://www.amazon.com.br/Gigabyte-Placa-gr%C3%A1fica-GeForce-EAGLE/dp/B0F4Z91V5S/ref=sr_1_6?dib=eyJ2IjoiMSJ9.URlqVI-HBkeGgIyUTUQ7QQ78ZgAPqrdMd390xHwL5rq8xB5Pt-F3jYrgSIc7o-7isREjo-4Du1ySywVSMVtlgqJ9-GmdhVH6pJ1xUz9Lkei_jpnQxfy9nC__3Fasf8jGmIobL2DzHfvp_EVad6_WKEo5RiAU8lLMdtuMeXnZfS1tSvVlFEVvn0fLeO3roshuy3ynM3bc7KeJ301M2rOVz_5XmhWutelbpX-2HIAzL29cTtgFyTHdaf2xlJk4sWdS45DQTrVFW6Ts549D8DC9eG0Y5esoF6-H6rSNPpnLqFo.TsQo1PH97AAYAIMi0h0pF6R68llI0zgZkTMdpMJR6z0&dib_tag=se&keywords=gigabyte+rtx+5060&qid=1789914336&sr=8-6&ufe=app_do%3Aamzn1.fos.95de73c3-5dda-43a7-bd1f-63af03b14751",
+              "product_id": "B0F4Z91V5S"
+            }
+          ]
+        }
+      ],
+      "winning_query": "gigabyte rtx 5060",
+      "candidate_count": 5
+    },
+    "amazon_us": {
+      "supported": true,
+      "probe_queries": [
+        {
+          "query": "gigabyte rtx 5060",
+          "count": 5,
+          "candidates": [
+            {
+              "title": "GIGABYTE",
+              "url": "https://www.amazon.com/GIGABYTE-GeForce-WINDFORCE-Graphics-GV-N5060WF2OC-8GD/dp/B0F8LDHQ7Y/ref=sr_1_1?dib=eyJ2IjoiMSJ9.UVqV_34APM_qQb7fS3if8bQT8rT5qL14NXgqDGbFb0UiisrMG8NNhIZD9_Fxwk9A0m46yv_BeRbASUHbWFm0VMMxE2N00QAmax0jO_OST77-yDv45IN7BXuDi4T_hqTnuQA6cdrR4TQHjyfKDhfWXQvnSHs6PvUgLNTIGtQstZpnCGjxvsR_v95Kk8hAZQrD4ZyC4c2_Sqxr5GphscCu_hEwsYY4ezYCXfBsc4-V8uY.4eXpJEzmLfTTsz7O8JFB8rmP1_LijjrAfFkIPn1fPdk&dib_tag=se&keywords=gigabyte+rtx+5060&qid=1789914347&sr=8-1",
+              "product_id": "B0F8LDHQ7Y"
+            },
+            {
+              "title": "GIGABYTE",
+              "url": "https://www.amazon.com/GIGABYTE-GeForce-WINDFORCE-Graphics-GV-N506TWF2OC-8GD/dp/B0F5B8KQJR/ref=sr_1_2?dib=eyJ2IjoiMSJ9.UVqV_34APM_qQb7fS3if8bQT8rT5qL14NXgqDGbFb0UiisrMG8NNhIZD9_Fxwk9A0m46yv_BeRbASUHbWFm0VMMxE2N00QAmax0jO_OST77-yDv45IN7BXuDi4T_hqTnuQA6cdrR4TQHjyfKDhfWXQvnSHs6PvUgLNTIGtQstZpnCGjxvsR_v95Kk8hAZQrD4ZyC4c2_Sqxr5GphscCu_hEwsYY4ezYCXfBsc4-V8uY.4eXpJEzmLfTTsz7O8JFB8rmP1_LijjrAfFkIPn1fPdk&dib_tag=se&keywords=gigabyte+rtx+5060&qid=1789914347&sr=8-2",
+              "product_id": "B0F5B8KQJR"
+            },
+            {
+              "title": "GIGABYTE",
+              "url": "https://www.amazon.com/Gigabyte-GeForce-WINDFORCE-Graphics-GV-N5060WF2OC-8GD/dp/B0F6NLT7M4/ref=sr_1_3?dib=eyJ2IjoiMSJ9.UVqV_34APM_qQb7fS3if8bQT8rT5qL14NXgqDGbFb0UiisrMG8NNhIZD9_Fxwk9A0m46yv_BeRbASUHbWFm0VMMxE2N00QAmax0jO_OST77-yDv45IN7BXuDi4T_hqTnuQA6cdrR4TQHjyfKDhfWXQvnSHs6PvUgLNTIGtQstZpnCGjxvsR_v95Kk8hAZQrD4ZyC4c2_Sqxr5GphscCu_hEwsYY4ezYCXfBsc4-V8uY.4eXpJEzmLfTTsz7O8JFB8rmP1_LijjrAfFkIPn1fPdk&dib_tag=se&keywords=gigabyte+rtx+5060&qid=1789914347&sr=8-3",
+              "product_id": "B0F6NLT7M4"
+            },
+            {
+              "title": "GIGABYTE",
+              "url": "https://www.amazon.com/GIGABYTE-Graphics-WINDFORCE-GV-N5080GAMING-OC-16GD/dp/B0DS2R6948/ref=sr_1_7?dib=eyJ2IjoiMSJ9.UVqV_34APM_qQb7fS3if8bQT8rT5qL14NXgqDGbFb0UiisrMG8NNhIZD9_Fxwk9A0m46yv_BeRbASUHbWFm0VMMxE2N00QAmax0jO_OST77-yDv45IN7BXuDi4T_hqTnuQA6cdrR4TQHjyfKDhfWXQvnSHs6PvUgLNTIGtQstZpnCGjxvsR_v95Kk8hAZQrD4ZyC4c2_Sqxr5GphscCu_hEwsYY4ezYCXfBsc4-V8uY.4eXpJEzmLfTTsz7O8JFB8rmP1_LijjrAfFkIPn1fPdk&dib_tag=se&keywords=gigabyte+rtx+5060&qid=1789914347&sr=8-7",
+              "product_id": "B0DS2R6948"
+            },
+            {
+              "title": "GIGABYTE",
+              "url": "https://www.amazon.com/GIGABYTE-Graphics-WINDFORCE-GV-N506TEAGLEMAX-OC-16GD/dp/B0FFQDD274/ref=sr_1_8?dib=eyJ2IjoiMSJ9.UVqV_34APM_qQb7fS3if8bQT8rT5qL14NXgqDGbFb0UiisrMG8NNhIZD9_Fxwk9A0m46yv_BeRbASUHbWFm0VMMxE2N00QAmax0jO_OST77-yDv45IN7BXuDi4T_hqTnuQA6cdrR4TQHjyfKDhfWXQvnSHs6PvUgLNTIGtQstZpnCGjxvsR_v95Kk8hAZQrD4ZyC4c2_Sqxr5GphscCu_hEwsYY4ezYCXfBsc4-V8uY.4eXpJEzmLfTTsz7O8JFB8rmP1_LijjrAfFkIPn1fPdk&dib_tag=se&keywords=gigabyte+rtx+5060&qid=1789914347&sr=8-8",
+              "product_id": "B0FFQDD274"
+            }
+          ]
+        }
+      ],
+      "winning_query": "gigabyte rtx 5060",
+      "candidate_count": 5
+    },
+    "magazineluiza": {
+      "supported": true,
+      "probe_queries": [
+        {
+          "query": "gigabyte rtx 5060",
+          "count": 5,
+          "candidates": [
+            {
+              "title": "",
+              "url": "https://www.magazineluiza.com.br/placa-de-video-gigabyte-rtx-5060-aero-oc-8g-nvidia-geforce-8gb-gddr7-128bits-dlss-triple-fan-ray-tracing-gv-n5060aero-oc-8gd/p/cbdd9e1ae6/in/pcvd/?seller_id=kabum",
+              "product_id": "cbdd9e1ae6"
+            },
+            {
+              "title": "",
+              "url": "https://www.magazineluiza.com.br/placa-de-video-gigabyte-rtx-5060-eagle-max-oc-8gb-nvidia-geforce-8gb-gddr7-128bit-triple-fan-ray-tracing-gv-n5060eaglemax-oc-8gd/p/gagkc1049a/in/pcvd/?seller_id=kabum",
+              "product_id": "gagkc1049a"
+            },
+            {
+              "title": "",
+              "url": "https://www.magazineluiza.com.br/placa-de-video-gigabyte-rtx-5060-eagle-oc-8g-nvidia-geforce-8gb-gddr7-128bits-dlss-ray-tracing-gv-n5060eagle-oc-8gd/p/aa8d608724/in/pcvd/?seller_id=kabum",
+              "product_id": "aa8d608724"
+            },
+            {
+              "title": "",
+              "url": "https://www.magazineluiza.com.br/placa-de-video-gigabyte-rtx-5060-ti-eagle-oc-8g-nvidia-geforce-8gb-gddr7-128bits-dlss-ray-tracing-gv-n506teagle-oc-8gd/p/bb6kc0g485/in/pcvd/?seller_id=kabum",
+              "product_id": "bb6kc0g485"
+            },
+            {
+              "title": "",
+              "url": "https://www.magazineluiza.com.br/placa-de-video-rtx-5060-ti-windforce-8g-gigabyte-nvidia-geforce-8gb-gddr7-128bits-dlss-ray-tracing-gv-n506twf2-8gd/p/hkf06j0eh0/in/pcvd/?seller_id=kabum",
+              "product_id": "hkf06j0eh0"
+            }
+          ]
+        }
+      ],
+      "winning_query": "gigabyte rtx 5060",
+      "candidate_count": 5
+    },
+    "mercadolivre": {
+      "supported": true,
+      "probe_queries": [
+        {
+          "query": "gigabyte rtx 5060",
+          "count": 0,
+          "candidates": []
+        }
+      ],
+      "winning_query": null,
+      "candidate_count": 0
+    },
+    "shopee": {
+      "supported": true,
+      "probe_queries": [
+        {
+          "query": "gigabyte rtx 5060",
+          "error": {
+            "type": "RequestError",
+            "code": "UPSTREAM_REQUEST_ERROR",
+            "message": "Falha ao renderizar a página: Page.content: Unable to retrieve content because the page is navigating and changing the content."
+          }
+        }
+      ],
+      "winning_query": null,
+      "candidate_count": 0
+    },
+    "aliexpress": {
+      "supported": true,
+      "probe_queries": [
+        {
+          "query": "gigabyte rtx 5060",
+          "count": 5,
+          "candidates": [
+            {
+              "title": "",
+              "url": "https://pt.aliexpress.com/item/1005013057430673.html",
+              "product_id": "1005013057430673"
+            },
+            {
+              "title": "",
+              "url": "https://pt.aliexpress.com/item/1005013048843140.html",
+              "product_id": "1005013048843140"
+            },
+            {
+              "title": "",
+              "url": "https://pt.aliexpress.com/item/1005013091140987.html",
+              "product_id": "1005013091140987"
+            },
+            {
+              "title": "",
+              "url": "https://pt.aliexpress.com/item/1005011935250326.html",
+              "product_id": "1005011935250326"
+            },
+            {
+              "title": "",
+              "url": "https://pt.aliexpress.com/item/1005013064176531.html",
+              "product_id": "1005013064176531"
+            }
+          ]
+        }
+      ],
+      "winning_query": "gigabyte rtx 5060",
+      "candidate_count": 5
+    },
+    "visaovip": {
+      "supported": false,
+      "status": "ERROR",
+      "reason": "SEARCH_UNSUPPORTED"
+    }
+  },
+  "table": [
+    {
+      "store": "kabum",
+      "query": "gigabyte rtx 5060",
+      "candidates": 5,
+      "best_candidate": "Placa de Vídeo Gigabyte RTX 5060 WINDFORCE MAX OC V2 8GB NVIDIA GeForce, 8GB GDDR7, 128bit,  DLSS, Ray Tracing - GV-N5060WF2MAX OCV2-8GD",
+      "best_url": "https://www.kabum.com.br/produto/1053808/placa-de-video-gigabyte-rtx-5060-windforce-max-oc-v2-8gb-nvidia-geforce-8gb-gddr7-128bit-dlss-ray-tracing-gv-n5060wf2max-ocv2-8gd",
+      "match_score": "0.92",
+      "status": "MATCH",
+      "terminal": "MATCH",
+      "reason": "brand_match:gigabyte; brand_model_exact:gigabyte:rtx5060~rtx5060; title_similarity:token_set_ratio=0.214",
+      "ground_truth": true
+    },
+    {
+      "store": "bestbuy",
+      "query": "gigabyte rtx 5060",
+      "candidates": 3,
+      "best_candidate": "GIGABYTE - GAMING A16 - 16\" 165Hz 1920x1200 WUXGA Intel Core i7-13620H - 1TB SSD - 32GB DDR5 RAM - GeForce RTX 5060 - Black Steel",
+      "best_url": "https://www.bestbuy.com/product/gigabyte-gaming-a16-16-165hz-1920x1200-wuxga-intel-core-i7-13620h-1tb-ssd-32gb-ddr5-ram-geforce-rtx-5060-black-steel/J3GWPQC2TJ/sku/6632143?intl=nosplash",
+      "match_score": "0.92",
+      "status": "MATCH",
+      "terminal": "MATCH",
+      "reason": "brand_match:gigabyte; brand_model_exact:gigabyte:rtx5060~rtx5060; title_similarity:token_set_ratio=0.150",
+      "ground_truth": false
+    },
+    {
+      "store": "nissei",
+      "query": "gigabyte rtx 5060",
+      "candidates": 5,
+      "best_candidate": "Placa de Video Gigabyte GeForce RTX 5060 Eagle ICE OC Edition 8 GB GDDR7 - Blanco (GV-N5060EAGLEOC ICE-8GD)",
+      "best_url": "https://nissei.com/py/tarjeta-de-video-gigabyte-rtx5060-eagle-oc-ice-8gb-gddr7-2497mhz-2fan-gv-n5060eagleoc-ice-8gd-3gta-br-py",
+      "match_score": "0.92",
+      "status": "MATCH",
+      "terminal": "MATCH",
+      "reason": "brand_match:gigabyte; brand_model_exact:gigabyte:rtx5060~rtx5060; title_similarity:token_set_ratio=0.231",
+      "ground_truth": false
+    },
+    {
+      "store": "shoppingchina",
+      "query": null,
+      "candidates": 0,
+      "best_candidate": null,
+      "best_url": null,
+      "match_score": null,
+      "status": "NO_MATCH",
+      "terminal": "NO_MATCH",
+      "reason": "NO_MATCH",
+      "ground_truth": false
+    },
+    {
+      "store": "amazon_br",
+      "query": "gigabyte rtx 5060",
+      "candidates": 5,
+      "best_candidate": "Placa de Vídeo Gigabyte RTX 5060 8GB GDDR7 128 BITS WINDFORCE GIGABYTE GV-N5060WF2-8GD",
+      "best_url": "https://www.amazon.com.br/dp/B0F6NKGTR4",
+      "match_score": "0.92",
+      "status": "MATCH",
+      "terminal": "MATCH",
+      "reason": "brand_match:gigabyte; brand_model_exact:gigabyte:rtx5060~rtx5060; title_similarity:token_set_ratio=0.273",
+      "ground_truth": false
+    },
+    {
+      "store": "amazon_us",
+      "query": "gigabyte rtx 5060",
+      "candidates": 5,
+      "best_candidate": "GIGABYTE GeForce RTX 5060 WINDFORCE OC 8G Graphics Card, Cooling System, 8GB 128-bit GDDR7, PCIe 5.0, Manufactured by NVIDIA, DisplayPort & HDMI - Video Output Interface, GV-N5060WF2OC-8GD Video Card",
+      "best_url": "https://www.amazon.com/dp/B0F8LDHQ7Y",
+      "match_score": "0.92",
+      "status": "MATCH",
+      "terminal": "MATCH",
+      "reason": "brand_match:gigabyte; brand_model_exact:gigabyte:rtx5060~rtx5060; title_similarity:token_set_ratio=0.136",
+      "ground_truth": false
+    },
+    {
+      "store": "magazineluiza",
+      "query": "gigabyte rtx 5060",
+      "candidates": 5,
+      "best_candidate": "Placa de Vídeo Gigabyte RTX 5060 AERO OC 8G NVIDIA GeForce, 8GB GDDR7, 128bits, DLSS, Triple Fan, Ray Tracing - GV-N5060AERO OC-8GD",
+      "best_url": "https://www.magazineluiza.com.br/placa-de-video-gigabyte-rtx-5060-aero-oc-8g-nvidia-geforce-8gb-gddr7-128bits-dlss-triple-fan-ray-tracing-gv-n5060aero-oc-8gd/p/cbdd9e1ae6/in/pcvd/?seller_id=kabum",
+      "match_score": "0.92",
+      "status": "MATCH",
+      "terminal": "MATCH",
+      "reason": "brand_match:gigabyte; brand_model_exact:gigabyte:rtx5060~rtx5060; title_similarity:token_set_ratio=0.214",
+      "ground_truth": false
+    },
+    {
+      "store": "mercadolivre",
+      "query": null,
+      "candidates": 0,
+      "best_candidate": null,
+      "best_url": null,
+      "match_score": null,
+      "status": "SEARCH_FAILURE",
+      "terminal": "NO_MATCH",
+      "reason": "SEARCH_FAILURE",
+      "ground_truth": true
+    },
+    {
+      "store": "shopee",
+      "query": null,
+      "candidates": 0,
+      "best_candidate": null,
+      "best_url": null,
+      "match_score": null,
+      "status": "ERROR",
+      "terminal": "ERROR",
+      "reason": "Shopee exige login/sessão autenticada (falta de login). Configure SHOPEE_AUTH_EMAIL e SHOPEE_AUTH_PASSWORD ou execute make seed-shopee-login.",
+      "ground_truth": false
+    },
+    {
+      "store": "aliexpress",
+      "query": "gigabyte rtx 5060",
+      "candidates": 5,
+      "best_candidate": "Placa de Vídeo Gigabyte NVIDIA GeForce RTX 5060 Eagle OC, 8GB, GDDR7, DLSS, Ray Tracing, GV-N5060EAGLE OC-8GD",
+      "best_url": "https://pt.aliexpress.com/item/1005013057430673.html",
+      "match_score": "0.92",
+      "status": "MATCH",
+      "terminal": "MATCH",
+      "reason": "brand_match:gigabyte; brand_model_exact:gigabyte:rtx5060~rtx5060; title_similarity:token_set_ratio=0.300",
+      "ground_truth": true
+    },
+    {
+      "store": "visaovip",
+      "query": null,
+      "candidates": 0,
+      "best_candidate": null,
+      "best_url": null,
+      "match_score": null,
+      "status": "ERROR",
+      "terminal": "ERROR",
+      "reason": "Busca ao vivo não disponível para visaovip",
+      "ground_truth": false
+    }
+  ],
+  "per_store": {
+    "kabum": {
+      "store": "kabum",
+      "query": "gigabyte rtx 5060",
+      "candidates": 5,
+      "best_candidate": "Placa de Vídeo Gigabyte RTX 5060 WINDFORCE MAX OC V2 8GB NVIDIA GeForce, 8GB GDDR7, 128bit,  DLSS, Ray Tracing - GV-N5060WF2MAX OCV2-8GD",
+      "best_url": "https://www.kabum.com.br/produto/1053808/placa-de-video-gigabyte-rtx-5060-windforce-max-oc-v2-8gb-nvidia-geforce-8gb-gddr7-128bit-dlss-ray-tracing-gv-n5060wf2max-ocv2-8gd",
+      "match_score": "0.92",
+      "status": "MATCH",
+      "terminal": "MATCH",
+      "reason": "brand_match:gigabyte; brand_model_exact:gigabyte:rtx5060~rtx5060; title_similarity:token_set_ratio=0.214",
+      "ground_truth": true,
+      "best": {
+        "title": "Placa de Vídeo Gigabyte RTX 5060 WINDFORCE MAX OC V2 8GB NVIDIA GeForce, 8GB GDDR7, 128bit,  DLSS, Ray Tracing - GV-N5060WF2MAX OCV2-8GD",
+        "url": "https://www.kabum.com.br/produto/1053808/placa-de-video-gigabyte-rtx-5060-windforce-max-oc-v2-8gb-nvidia-geforce-8gb-gddr7-128bit-dlss-ray-tracing-gv-n5060wf2max-ocv2-8gd",
+        "product_id": "1053808",
+        "price": "2999.99",
+        "seller": "KaBuM!"
+      },
+      "error": null,
+      "retrieval": {
+        "supported": true,
+        "probe_queries": [
+          {
+            "query": "gigabyte rtx 5060",
+            "count": 5,
+            "candidates": [
+              {
+                "title": "Placa de Vídeo Gigabyte RTX 5060 WINDFORCE MAX OC V2 8GB NVIDIA GeForce, 8GB GDDR7, 128bit,  DLSS, Ray Tracing - GV-N5060WF2MAX OCV2-8GD",
+                "url": "https://www.kabum.com.br/produto/1053808/placa-de-video-gigabyte-rtx-5060-windforce-max-oc-v2-8gb-nvidia-geforce-8gb-gddr7-128bit-dlss-ray-tracing-gv-n5060wf2max-ocv2-8gd",
+                "product_id": "1053808"
+              },
+              {
+                "title": "Placa de Vídeo Gigabyte RTX 5060 GAMING OC 8G NVIDIA GeForce, 8GB GDDR7, 128bits, DLSS, Triple Fan, Ray Tracing - GV-N5060GAMING OC-8GD",
+                "url": "https://www.kabum.com.br/produto/777073/placa-de-video-gigabyte-rtx-5060-gaming-oc-8g-nvidia-geforce-8gb-gddr7-128bits-dlss-triple-fan-ray-tracing-gv-n5060gaming-oc-8gd",
+                "product_id": "777073"
+              },
+              {
+                "title": "Placa de Vídeo Gigabyte RTX 5060 EAGLE MAX OC 8GB NVIDIA GeForce, 8GB GDDR7, 128bit, Triple Fan, Ray Tracing - GV-N5060EAGLEMAX OC-8GD",
+                "url": "https://www.kabum.com.br/produto/912220/placa-de-video-gigabyte-rtx-5060-eagle-max-oc-8gb-nvidia-geforce-8gb-gddr7-128bit-triple-fan-ray-tracing-gv-n5060eaglemax-oc-8gd",
+                "product_id": "912220"
+              },
+              {
+                "title": "Placa de Vídeo Gigabyte RTX 5060 AERO OC 8G NVIDIA GeForce, 8GB GDDR7, 128bits, DLSS, Triple Fan, Ray Tracing - GV-N5060AERO OC-8GD",
+                "url": "https://www.kabum.com.br/produto/777072/placa-de-video-gigabyte-rtx-5060-aero-oc-8g-nvidia-geforce-8gb-gddr7-128bits-dlss-triple-fan-ray-tracing-gv-n5060aero-oc-8gd",
+                "product_id": "777072"
+              },
+              {
+                "title": "Placa de Vídeo Gigabyte RTX 5060 EAGLE OC 8G NVIDIA GeForce, 8GB GDDR7, 128bits, DLSS, Ray Tracing - GV-N5060EAGLE OC-8GD",
+                "url": "https://www.kabum.com.br/produto/777075/placa-de-video-gigabyte-rtx-5060-eagle-oc-8g-nvidia-geforce-8gb-gddr7-128bits-dlss-ray-tracing-gv-n5060eagle-oc-8gd",
+                "product_id": "777075"
+              }
+            ]
+          }
+        ],
+        "winning_query": "gigabyte rtx 5060",
+        "candidate_count": 5
+      }
+    },
+    "bestbuy": {
+      "store": "bestbuy",
+      "query": "gigabyte rtx 5060",
+      "candidates": 3,
+      "best_candidate": "GIGABYTE - GAMING A16 - 16\" 165Hz 1920x1200 WUXGA Intel Core i7-13620H - 1TB SSD - 32GB DDR5 RAM - GeForce RTX 5060 - Black Steel",
+      "best_url": "https://www.bestbuy.com/product/gigabyte-gaming-a16-16-165hz-1920x1200-wuxga-intel-core-i7-13620h-1tb-ssd-32gb-ddr5-ram-geforce-rtx-5060-black-steel/J3GWPQC2TJ/sku/6632143?intl=nosplash",
+      "match_score": "0.92",
+      "status": "MATCH",
+      "terminal": "MATCH",
+      "reason": "brand_match:gigabyte; brand_model_exact:gigabyte:rtx5060~rtx5060; title_similarity:token_set_ratio=0.150",
+      "ground_truth": false,
+      "best": {
+        "title": "GIGABYTE - GAMING A16 - 16\" 165Hz 1920x1200 WUXGA Intel Core i7-13620H - 1TB SSD - 32GB DDR5 RAM - GeForce RTX 5060 - Black Steel",
+        "url": "https://www.bestbuy.com/product/gigabyte-gaming-a16-16-165hz-1920x1200-wuxga-intel-core-i7-13620h-1tb-ssd-32gb-ddr5-ram-geforce-rtx-5060-black-steel/J3GWPQC2TJ/sku/6632143?intl=nosplash",
+        "product_id": "J3GWPQC2TJ",
+        "price": "1299.99",
+        "seller": "Best Buy"
+      },
+      "error": null,
+      "retrieval": {
+        "supported": true,
+        "probe_queries": [
+          {
+            "query": "gigabyte rtx 5060",
+            "count": 3,
+            "candidates": [
+              {
+                "title": "gigabyte rtx 5060 gaming oc v2 8gb gddr7 pcie 5 0 x8 windforce cooling gv n5060gaming ocv2 8gd",
+                "url": "https://www.bestbuy.com/product/gigabyte-rtx-5060-gaming-oc-v2-8gb-gddr7-pcie-5-0-x8-windforce-cooling-gv-n5060gaming-ocv2-8gd/J3ZW9X7ZCV",
+                "product_id": "J3ZW9X7ZCV"
+              },
+              {
+                "title": "gigabyte aorus geforce rtx 5060 ti 16gb gddr7 graphics aorus rtx 5060 ti ai box",
+                "url": "https://www.bestbuy.com/product/gigabyte-aorus-geforce-rtx-5060-ti-16gb-gddr7-graphics-aorus-rtx-5060-ti-ai-box/J3ZW9X7HFK",
+                "product_id": "J3ZW9X7HFK"
+              },
+              {
+                "title": "gigabyte radeon rx 9070 xt gaming oc 16g gddr6 pci express 5 0 graphics card black",
+                "url": "https://www.bestbuy.com/product/gigabyte-radeon-rx-9070-xt-gaming-oc-16g-gddr6-pci-express-5-0-graphics-card-black/J3ZW9X7JCK",
+                "product_id": "J3ZW9X7JCK"
+              }
+            ]
+          }
+        ],
+        "winning_query": "gigabyte rtx 5060",
+        "candidate_count": 3
+      }
+    },
+    "nissei": {
+      "store": "nissei",
+      "query": "gigabyte rtx 5060",
+      "candidates": 5,
+      "best_candidate": "Placa de Video Gigabyte GeForce RTX 5060 Eagle ICE OC Edition 8 GB GDDR7 - Blanco (GV-N5060EAGLEOC ICE-8GD)",
+      "best_url": "https://nissei.com/py/tarjeta-de-video-gigabyte-rtx5060-eagle-oc-ice-8gb-gddr7-2497mhz-2fan-gv-n5060eagleoc-ice-8gd-3gta-br-py",
+      "match_score": "0.92",
+      "status": "MATCH",
+      "terminal": "MATCH",
+      "reason": "brand_match:gigabyte; brand_model_exact:gigabyte:rtx5060~rtx5060; title_similarity:token_set_ratio=0.231",
+      "ground_truth": false,
+      "best": {
+        "title": "Placa de Video Gigabyte GeForce RTX 5060 Eagle ICE OC Edition 8 GB GDDR7 - Blanco (GV-N5060EAGLEOC ICE-8GD)",
+        "url": "https://nissei.com/py/tarjeta-de-video-gigabyte-rtx5060-eagle-oc-ice-8gb-gddr7-2497mhz-2fan-gv-n5060eagleoc-ice-8gd-3gta-br-py",
+        "product_id": "141272",
+        "price": "4067000",
+        "seller": null
+      },
+      "error": null,
+      "retrieval": {
+        "supported": true,
+        "probe_queries": [
+          {
+            "query": "gigabyte rtx 5060",
+            "count": 5,
+            "candidates": [
+              {
+                "title": "Placa de Video Gigabyte GeForce RTX 5060 Eagle ICE OC Edition 8 GB GDDR7 - Blanco (GV-N5060EAGLEOC ICE-8GD)",
+                "url": "https://nissei.com/py/tarjeta-de-video-gigabyte-rtx5060-eagle-oc-ice-8gb-gddr7-2497mhz-2fan-gv-n5060eagleoc-ice-8gd-3gta-br-py",
+                "product_id": null
+              },
+              {
+                "title": "Placa de Video Gigabyte GeForce RTX 5060 Ti Eagle OC Edition 8 GB GDDR7 - Blanco (GV-N506TEAGLEOC ICE-8GD)",
+                "url": "https://nissei.com/py/placa-de-video-gigabyte-rtx5060-ti-eagle-oc-ice-8gb-gddr7-2617mhz-3f-gv-n506teagleoc-ice-8gd-3gta-br-py",
+                "product_id": null
+              },
+              {
+                "title": "Placa de Video Gigabyte GeForce RTX 5060 Ti Eagle OC Edition 8 GB GDDR7 (GV-N506TEAGLE OC-8GD)",
+                "url": "https://nissei.com/py/vga-gigabyte-rtx5060-ti-eagle-oc-8gb-gddr7-2617mhz-3fan-gv-n506teagle-oc-8gd-3gta-br-py",
+                "product_id": null
+              },
+              {
+                "title": "Placa de Video Gigabyte GeForce RTX 5060 Ti WINDFORCE MAX OC 8 GB GDDR7 (GV-N506TWF2MAX-OC-8GD)",
+                "url": "https://nissei.com/py/placa-de-video-gigabyte-geforce-rtx-5060-ti-windforce-max-oc-8-gb-gddr7-gv-n506twf2max-oc-8gd",
+                "product_id": null
+              },
+              {
+                "title": "Notebook Gamer Gigabyte A16 CVHI3US864SH 16\" Intel Core i7-13620H RTX 5060 8 GB - Black Steel",
+                "url": "https://nissei.com/py/notebook-gamer-gigabyte-a16-cvhi3us864sh-16-intel-core-i7-13620h-rtx5060-8-gb-1-tbssd-black-steel-146471",
+                "product_id": null
+              }
+            ]
+          }
+        ],
+        "winning_query": "gigabyte rtx 5060",
+        "candidate_count": 5
+      }
+    },
+    "shoppingchina": {
+      "store": "shoppingchina",
+      "query": null,
+      "candidates": 0,
+      "best_candidate": null,
+      "best_url": null,
+      "match_score": null,
+      "status": "NO_MATCH",
+      "terminal": "NO_MATCH",
+      "reason": "NO_MATCH",
+      "ground_truth": false,
+      "best": null,
+      "error": null,
+      "retrieval": {
+        "supported": true,
+        "probe_queries": [
+          {
+            "query": "gigabyte rtx 5060",
+            "count": 0,
+            "candidates": []
+          }
+        ],
+        "winning_query": null,
+        "candidate_count": 0
+      }
+    },
+    "amazon_br": {
+      "store": "amazon_br",
+      "query": "gigabyte rtx 5060",
+      "candidates": 5,
+      "best_candidate": "Placa de Vídeo Gigabyte RTX 5060 8GB GDDR7 128 BITS WINDFORCE GIGABYTE GV-N5060WF2-8GD",
+      "best_url": "https://www.amazon.com.br/dp/B0F6NKGTR4",
+      "match_score": "0.92",
+      "status": "MATCH",
+      "terminal": "MATCH",
+      "reason": "brand_match:gigabyte; brand_model_exact:gigabyte:rtx5060~rtx5060; title_similarity:token_set_ratio=0.273",
+      "ground_truth": false,
+      "best": {
+        "title": "Placa de Vídeo Gigabyte RTX 5060 8GB GDDR7 128 BITS WINDFORCE GIGABYTE GV-N5060WF2-8GD",
+        "url": "https://www.amazon.com.br/dp/B0F6NKGTR4",
+        "product_id": "B0F6NKGTR4",
+        "price": "2949.90",
+        "seller": "Amazon.com.br"
+      },
+      "error": null,
+      "retrieval": {
+        "supported": true,
+        "probe_queries": [
+          {
+            "query": "gigabyte rtx 5060",
+            "count": 5,
+            "candidates": [
+              {
+                "title": "Placa de Vídeo Gigabyte RTX 5060 8GB GDDR7 128 BITS WINDFORCE GIGABYTE GV-N5060WF2-8GD",
+                "url": "https://www.amazon.com.br/Placa-Gigabyte-WINDFORCE-GIGABYTE-GV-N5060WF2-8GD/dp/B0F6NKGTR4/ref=sr_1_2?dib=eyJ2IjoiMSJ9.URlqVI-HBkeGgIyUTUQ7QQ78ZgAPqrdMd390xHwL5rq8xB5Pt-F3jYrgSIc7o-7isREjo-4Du1ySywVSMVtlgqJ9-GmdhVH6pJ1xUz9Lkei_jpnQxfy9nC__3Fasf8jGmIobL2DzHfvp_EVad6_WKEo5RiAU8lLMdtuMeXnZfS1tSvVlFEVvn0fLeO3roshuy3ynM3bc7KeJ301M2rOVz_5XmhWutelbpX-2HIAzL29cTtgFyTHdaf2xlJk4sWdS45DQTrVFW6Ts549D8DC9eG0Y5esoF6-H6rSNPpnLqFo.TsQo1PH97AAYAIMi0h0pF6R68llI0zgZkTMdpMJR6z0&dib_tag=se&keywords=gigabyte+rtx+5060&qid=1789914336&sr=8-2&ufe=app_do%3Aamzn1.fos.38059ce3-943c-48af-9fc9-22d85542b02c",
+                "product_id": "B0F6NKGTR4"
+              },
+              {
+                "title": "Gigabyte RTX 5060 Ti Eagle Max OC Placa de Vídeo 8GB GDDR7 NVIDIA GeForce",
+                "url": "https://www.amazon.com.br/Gigabyte-Placa-gr%C3%A1fica-GeForce-WINDFORCE/dp/B0FFVM8LNC/ref=sr_1_5?dib=eyJ2IjoiMSJ9.URlqVI-HBkeGgIyUTUQ7QQ78ZgAPqrdMd390xHwL5rq8xB5Pt-F3jYrgSIc7o-7isREjo-4Du1ySywVSMVtlgqJ9-GmdhVH6pJ1xUz9Lkei_jpnQxfy9nC__3Fasf8jGmIobL2DzHfvp_EVad6_WKEo5RiAU8lLMdtuMeXnZfS1tSvVlFEVvn0fLeO3roshuy3ynM3bc7KeJ301M2rOVz_5XmhWutelbpX-2HIAzL29cTtgFyTHdaf2xlJk4sWdS45DQTrVFW6Ts549D8DC9eG0Y5esoF6-H6rSNPpnLqFo.TsQo1PH97AAYAIMi0h0pF6R68llI0zgZkTMdpMJR6z0&dib_tag=se&keywords=gigabyte+rtx+5060&qid=1789914336&sr=8-5&ufe=app_do%3Aamzn1.fos.38059ce3-943c-48af-9fc9-22d85542b02c",
+                "product_id": "B0FFVM8LNC"
+              },
+              {
+                "title": "Gigabyte RTX 5060 Eagle Max OC Placa de Vídeo 8GB GDDR7 NVIDIA GeForce",
+                "url": "https://www.amazon.com.br/GIGABYTE-Placa-gr%C3%A1fica-GeForce-Eagle/dp/B0FN85QDCD/ref=sr_1_9?dib=eyJ2IjoiMSJ9.URlqVI-HBkeGgIyUTUQ7QQ78ZgAPqrdMd390xHwL5rq8xB5Pt-F3jYrgSIc7o-7isREjo-4Du1ySywVSMVtlgqJ9-GmdhVH6pJ1xUz9Lkei_jpnQxfy9nC__3Fasf8jGmIobL2DzHfvp_EVad6_WKEo5RiAU8lLMdtuMeXnZfS1tSvVlFEVvn0fLeO3roshuy3ynM3bc7KeJ301M2rOVz_5XmhWutelbpX-2HIAzL29cTtgFyTHdaf2xlJk4sWdS45DQTrVFW6Ts549D8DC9eG0Y5esoF6-H6rSNPpnLqFo.TsQo1PH97AAYAIMi0h0pF6R68llI0zgZkTMdpMJR6z0&dib_tag=se&keywords=gigabyte+rtx+5060&qid=1789914336&sr=8-9",
+                "product_id": "B0FN85QDCD"
+              },
+              {
+                "title": "GIGABYTE Placa gráfica GeForce RTX 5060 Eagle OC 8G, 8 GB 128 bits GDDR7, PCIe 5.0, sistema de resfriamento WINDFORCE, placa de vídeo GV-N5060EAGLE OC-8GD (Semi",
+                "url": "https://www.amazon.com.br/GIGABYTE-resfriamento-WINDFORCE-GV-N5060EAGLE-Seminovo/dp/B0HD2F2TCX/ref=sr_1_7?dib=eyJ2IjoiMSJ9.URlqVI-HBkeGgIyUTUQ7QQ78ZgAPqrdMd390xHwL5rq8xB5Pt-F3jYrgSIc7o-7isREjo-4Du1ySywVSMVtlgqJ9-GmdhVH6pJ1xUz9Lkei_jpnQxfy9nC__3Fasf8jGmIobL2DzHfvp_EVad6_WKEo5RiAU8lLMdtuMeXnZfS1tSvVlFEVvn0fLeO3roshuy3ynM3bc7KeJ301M2rOVz_5XmhWutelbpX-2HIAzL29cTtgFyTHdaf2xlJk4sWdS45DQTrVFW6Ts549D8DC9eG0Y5esoF6-H6rSNPpnLqFo.TsQo1PH97AAYAIMi0h0pF6R68llI0zgZkTMdpMJR6z0&dib_tag=se&keywords=gigabyte+rtx+5060&qid=1789914336&sbo=GW1QB%2BmqAsHTPf1jTZRSDA%3D%3D&sr=8-7",
+                "product_id": "B0HD2F2TCX"
+              },
+              {
+                "title": "Gigabyte Placa gráfica GeForce RTX 5060 Ti EAGLE OC ICE 8G - 8GB GDDR7, 128bit, PCI-E 5.0, 2617MHz Core Clock, 3 DisplayPort, 1 x HDMI, GV-N506TEAGLEOC ICE-8GD",
+                "url": "https://www.amazon.com.br/Gigabyte-Placa-gr%C3%A1fica-GeForce-EAGLE/dp/B0F4Z91V5S/ref=sr_1_6?dib=eyJ2IjoiMSJ9.URlqVI-HBkeGgIyUTUQ7QQ78ZgAPqrdMd390xHwL5rq8xB5Pt-F3jYrgSIc7o-7isREjo-4Du1ySywVSMVtlgqJ9-GmdhVH6pJ1xUz9Lkei_jpnQxfy9nC__3Fasf8jGmIobL2DzHfvp_EVad6_WKEo5RiAU8lLMdtuMeXnZfS1tSvVlFEVvn0fLeO3roshuy3ynM3bc7KeJ301M2rOVz_5XmhWutelbpX-2HIAzL29cTtgFyTHdaf2xlJk4sWdS45DQTrVFW6Ts549D8DC9eG0Y5esoF6-H6rSNPpnLqFo.TsQo1PH97AAYAIMi0h0pF6R68llI0zgZkTMdpMJR6z0&dib_tag=se&keywords=gigabyte+rtx+5060&qid=1789914336&sr=8-6&ufe=app_do%3Aamzn1.fos.95de73c3-5dda-43a7-bd1f-63af03b14751",
+                "product_id": "B0F4Z91V5S"
+              }
+            ]
+          }
+        ],
+        "winning_query": "gigabyte rtx 5060",
+        "candidate_count": 5
+      }
+    },
+    "amazon_us": {
+      "store": "amazon_us",
+      "query": "gigabyte rtx 5060",
+      "candidates": 5,
+      "best_candidate": "GIGABYTE GeForce RTX 5060 WINDFORCE OC 8G Graphics Card, Cooling System, 8GB 128-bit GDDR7, PCIe 5.0, Manufactured by NVIDIA, DisplayPort & HDMI - Video Output Interface, GV-N5060WF2OC-8GD Video Card",
+      "best_url": "https://www.amazon.com/dp/B0F8LDHQ7Y",
+      "match_score": "0.92",
+      "status": "MATCH",
+      "terminal": "MATCH",
+      "reason": "brand_match:gigabyte; brand_model_exact:gigabyte:rtx5060~rtx5060; title_similarity:token_set_ratio=0.136",
+      "ground_truth": false,
+      "best": {
+        "title": "GIGABYTE GeForce RTX 5060 WINDFORCE OC 8G Graphics Card, Cooling System, 8GB 128-bit GDDR7, PCIe 5.0, Manufactured by NVIDIA, DisplayPort & HDMI - Video Output Interface, GV-N5060WF2OC-8GD Video Card",
+        "url": "https://www.amazon.com/dp/B0F8LDHQ7Y",
+        "product_id": "B0F8LDHQ7Y",
+        "price": "459.00",
+        "seller": "electrolert"
+      },
+      "error": null,
+      "retrieval": {
+        "supported": true,
+        "probe_queries": [
+          {
+            "query": "gigabyte rtx 5060",
+            "count": 5,
+            "candidates": [
+              {
+                "title": "GIGABYTE",
+                "url": "https://www.amazon.com/GIGABYTE-GeForce-WINDFORCE-Graphics-GV-N5060WF2OC-8GD/dp/B0F8LDHQ7Y/ref=sr_1_1?dib=eyJ2IjoiMSJ9.UVqV_34APM_qQb7fS3if8bQT8rT5qL14NXgqDGbFb0UiisrMG8NNhIZD9_Fxwk9A0m46yv_BeRbASUHbWFm0VMMxE2N00QAmax0jO_OST77-yDv45IN7BXuDi4T_hqTnuQA6cdrR4TQHjyfKDhfWXQvnSHs6PvUgLNTIGtQstZpnCGjxvsR_v95Kk8hAZQrD4ZyC4c2_Sqxr5GphscCu_hEwsYY4ezYCXfBsc4-V8uY.4eXpJEzmLfTTsz7O8JFB8rmP1_LijjrAfFkIPn1fPdk&dib_tag=se&keywords=gigabyte+rtx+5060&qid=1789914347&sr=8-1",
+                "product_id": "B0F8LDHQ7Y"
+              },
+              {
+                "title": "GIGABYTE",
+                "url": "https://www.amazon.com/GIGABYTE-GeForce-WINDFORCE-Graphics-GV-N506TWF2OC-8GD/dp/B0F5B8KQJR/ref=sr_1_2?dib=eyJ2IjoiMSJ9.UVqV_34APM_qQb7fS3if8bQT8rT5qL14NXgqDGbFb0UiisrMG8NNhIZD9_Fxwk9A0m46yv_BeRbASUHbWFm0VMMxE2N00QAmax0jO_OST77-yDv45IN7BXuDi4T_hqTnuQA6cdrR4TQHjyfKDhfWXQvnSHs6PvUgLNTIGtQstZpnCGjxvsR_v95Kk8hAZQrD4ZyC4c2_Sqxr5GphscCu_hEwsYY4ezYCXfBsc4-V8uY.4eXpJEzmLfTTsz7O8JFB8rmP1_LijjrAfFkIPn1fPdk&dib_tag=se&keywords=gigabyte+rtx+5060&qid=1789914347&sr=8-2",
+                "product_id": "B0F5B8KQJR"
+              },
+              {
+                "title": "GIGABYTE",
+                "url": "https://www.amazon.com/Gigabyte-GeForce-WINDFORCE-Graphics-GV-N5060WF2OC-8GD/dp/B0F6NLT7M4/ref=sr_1_3?dib=eyJ2IjoiMSJ9.UVqV_34APM_qQb7fS3if8bQT8rT5qL14NXgqDGbFb0UiisrMG8NNhIZD9_Fxwk9A0m46yv_BeRbASUHbWFm0VMMxE2N00QAmax0jO_OST77-yDv45IN7BXuDi4T_hqTnuQA6cdrR4TQHjyfKDhfWXQvnSHs6PvUgLNTIGtQstZpnCGjxvsR_v95Kk8hAZQrD4ZyC4c2_Sqxr5GphscCu_hEwsYY4ezYCXfBsc4-V8uY.4eXpJEzmLfTTsz7O8JFB8rmP1_LijjrAfFkIPn1fPdk&dib_tag=se&keywords=gigabyte+rtx+5060&qid=1789914347&sr=8-3",
+                "product_id": "B0F6NLT7M4"
+              },
+              {
+                "title": "GIGABYTE",
+                "url": "https://www.amazon.com/GIGABYTE-Graphics-WINDFORCE-GV-N5080GAMING-OC-16GD/dp/B0DS2R6948/ref=sr_1_7?dib=eyJ2IjoiMSJ9.UVqV_34APM_qQb7fS3if8bQT8rT5qL14NXgqDGbFb0UiisrMG8NNhIZD9_Fxwk9A0m46yv_BeRbASUHbWFm0VMMxE2N00QAmax0jO_OST77-yDv45IN7BXuDi4T_hqTnuQA6cdrR4TQHjyfKDhfWXQvnSHs6PvUgLNTIGtQstZpnCGjxvsR_v95Kk8hAZQrD4ZyC4c2_Sqxr5GphscCu_hEwsYY4ezYCXfBsc4-V8uY.4eXpJEzmLfTTsz7O8JFB8rmP1_LijjrAfFkIPn1fPdk&dib_tag=se&keywords=gigabyte+rtx+5060&qid=1789914347&sr=8-7",
+                "product_id": "B0DS2R6948"
+              },
+              {
+                "title": "GIGABYTE",
+                "url": "https://www.amazon.com/GIGABYTE-Graphics-WINDFORCE-GV-N506TEAGLEMAX-OC-16GD/dp/B0FFQDD274/ref=sr_1_8?dib=eyJ2IjoiMSJ9.UVqV_34APM_qQb7fS3if8bQT8rT5qL14NXgqDGbFb0UiisrMG8NNhIZD9_Fxwk9A0m46yv_BeRbASUHbWFm0VMMxE2N00QAmax0jO_OST77-yDv45IN7BXuDi4T_hqTnuQA6cdrR4TQHjyfKDhfWXQvnSHs6PvUgLNTIGtQstZpnCGjxvsR_v95Kk8hAZQrD4ZyC4c2_Sqxr5GphscCu_hEwsYY4ezYCXfBsc4-V8uY.4eXpJEzmLfTTsz7O8JFB8rmP1_LijjrAfFkIPn1fPdk&dib_tag=se&keywords=gigabyte+rtx+5060&qid=1789914347&sr=8-8",
+                "product_id": "B0FFQDD274"
+              }
+            ]
+          }
+        ],
+        "winning_query": "gigabyte rtx 5060",
+        "candidate_count": 5
+      }
+    },
+    "magazineluiza": {
+      "store": "magazineluiza",
+      "query": "gigabyte rtx 5060",
+      "candidates": 5,
+      "best_candidate": "Placa de Vídeo Gigabyte RTX 5060 AERO OC 8G NVIDIA GeForce, 8GB GDDR7, 128bits, DLSS, Triple Fan, Ray Tracing - GV-N5060AERO OC-8GD",
+      "best_url": "https://www.magazineluiza.com.br/placa-de-video-gigabyte-rtx-5060-aero-oc-8g-nvidia-geforce-8gb-gddr7-128bits-dlss-triple-fan-ray-tracing-gv-n5060aero-oc-8gd/p/cbdd9e1ae6/in/pcvd/?seller_id=kabum",
+      "match_score": "0.92",
+      "status": "MATCH",
+      "terminal": "MATCH",
+      "reason": "brand_match:gigabyte; brand_model_exact:gigabyte:rtx5060~rtx5060; title_similarity:token_set_ratio=0.214",
+      "ground_truth": false,
+      "best": {
+        "title": "Placa de Vídeo Gigabyte RTX 5060 AERO OC 8G NVIDIA GeForce, 8GB GDDR7, 128bits, DLSS, Triple Fan, Ray Tracing - GV-N5060AERO OC-8GD",
+        "url": "https://www.magazineluiza.com.br/placa-de-video-gigabyte-rtx-5060-aero-oc-8g-nvidia-geforce-8gb-gddr7-128bits-dlss-triple-fan-ray-tracing-gv-n5060aero-oc-8gd/p/cbdd9e1ae6/in/pcvd/?seller_id=kabum",
+        "product_id": "cbdd9e1ae6",
+        "price": "3294.11",
+        "seller": "kabum"
+      },
+      "error": null,
+      "retrieval": {
+        "supported": true,
+        "probe_queries": [
+          {
+            "query": "gigabyte rtx 5060",
+            "count": 5,
+            "candidates": [
+              {
+                "title": "",
+                "url": "https://www.magazineluiza.com.br/placa-de-video-gigabyte-rtx-5060-aero-oc-8g-nvidia-geforce-8gb-gddr7-128bits-dlss-triple-fan-ray-tracing-gv-n5060aero-oc-8gd/p/cbdd9e1ae6/in/pcvd/?seller_id=kabum",
+                "product_id": "cbdd9e1ae6"
+              },
+              {
+                "title": "",
+                "url": "https://www.magazineluiza.com.br/placa-de-video-gigabyte-rtx-5060-eagle-max-oc-8gb-nvidia-geforce-8gb-gddr7-128bit-triple-fan-ray-tracing-gv-n5060eaglemax-oc-8gd/p/gagkc1049a/in/pcvd/?seller_id=kabum",
+                "product_id": "gagkc1049a"
+              },
+              {
+                "title": "",
+                "url": "https://www.magazineluiza.com.br/placa-de-video-gigabyte-rtx-5060-eagle-oc-8g-nvidia-geforce-8gb-gddr7-128bits-dlss-ray-tracing-gv-n5060eagle-oc-8gd/p/aa8d608724/in/pcvd/?seller_id=kabum",
+                "product_id": "aa8d608724"
+              },
+              {
+                "title": "",
+                "url": "https://www.magazineluiza.com.br/placa-de-video-gigabyte-rtx-5060-ti-eagle-oc-8g-nvidia-geforce-8gb-gddr7-128bits-dlss-ray-tracing-gv-n506teagle-oc-8gd/p/bb6kc0g485/in/pcvd/?seller_id=kabum",
+                "product_id": "bb6kc0g485"
+              },
+              {
+                "title": "",
+                "url": "https://www.magazineluiza.com.br/placa-de-video-rtx-5060-ti-windforce-8g-gigabyte-nvidia-geforce-8gb-gddr7-128bits-dlss-ray-tracing-gv-n506twf2-8gd/p/hkf06j0eh0/in/pcvd/?seller_id=kabum",
+                "product_id": "hkf06j0eh0"
+              }
+            ]
+          }
+        ],
+        "winning_query": "gigabyte rtx 5060",
+        "candidate_count": 5
+      }
+    },
+    "mercadolivre": {
+      "store": "mercadolivre",
+      "query": null,
+      "candidates": 0,
+      "best_candidate": null,
+      "best_url": null,
+      "match_score": null,
+      "status": "SEARCH_FAILURE",
+      "terminal": "NO_MATCH",
+      "reason": "SEARCH_FAILURE",
+      "ground_truth": true,
+      "best": null,
+      "error": null,
+      "retrieval": {
+        "supported": true,
+        "probe_queries": [
+          {
+            "query": "gigabyte rtx 5060",
+            "count": 0,
+            "candidates": []
+          }
+        ],
+        "winning_query": null,
+        "candidate_count": 0
+      }
+    },
+    "shopee": {
+      "store": "shopee",
+      "query": null,
+      "candidates": 0,
+      "best_candidate": null,
+      "best_url": null,
+      "match_score": null,
+      "status": "ERROR",
+      "terminal": "ERROR",
+      "reason": "Shopee exige login/sessão autenticada (falta de login). Configure SHOPEE_AUTH_EMAIL e SHOPEE_AUTH_PASSWORD ou execute make seed-shopee-login.",
+      "ground_truth": false,
+      "best": null,
+      "error": {
+        "store": "shopee",
+        "code": "AUTH_REQUIRED",
+        "message": "Shopee exige login/sessão autenticada (falta de login). Configure SHOPEE_AUTH_EMAIL e SHOPEE_AUTH_PASSWORD ou execute make seed-shopee-login."
+      },
+      "retrieval": {
+        "supported": true,
+        "probe_queries": [
+          {
+            "query": "gigabyte rtx 5060",
+            "error": {
+              "type": "RequestError",
+              "code": "UPSTREAM_REQUEST_ERROR",
+              "message": "Falha ao renderizar a página: Page.content: Unable to retrieve content because the page is navigating and changing the content."
+            }
+          }
+        ],
+        "winning_query": null,
+        "candidate_count": 0
+      }
+    },
+    "aliexpress": {
+      "store": "aliexpress",
+      "query": "gigabyte rtx 5060",
+      "candidates": 5,
+      "best_candidate": "Placa de Vídeo Gigabyte NVIDIA GeForce RTX 5060 Eagle OC, 8GB, GDDR7, DLSS, Ray Tracing, GV-N5060EAGLE OC-8GD",
+      "best_url": "https://pt.aliexpress.com/item/1005013057430673.html",
+      "match_score": "0.92",
+      "status": "MATCH",
+      "terminal": "MATCH",
+      "reason": "brand_match:gigabyte; brand_model_exact:gigabyte:rtx5060~rtx5060; title_similarity:token_set_ratio=0.300",
+      "ground_truth": true,
+      "best": {
+        "title": "Placa de Vídeo Gigabyte NVIDIA GeForce RTX 5060 Eagle OC, 8GB, GDDR7, DLSS, Ray Tracing, GV-N5060EAGLE OC-8GD",
+        "url": "https://pt.aliexpress.com/item/1005013057430673.html",
+        "product_id": "1005013057430673",
+        "price": "3101.06",
+        "seller": "MA INFOSTORE Store"
+      },
+      "error": null,
+      "retrieval": {
+        "supported": true,
+        "probe_queries": [
+          {
+            "query": "gigabyte rtx 5060",
+            "count": 5,
+            "candidates": [
+              {
+                "title": "",
+                "url": "https://pt.aliexpress.com/item/1005013057430673.html",
+                "product_id": "1005013057430673"
+              },
+              {
+                "title": "",
+                "url": "https://pt.aliexpress.com/item/1005013048843140.html",
+                "product_id": "1005013048843140"
+              },
+              {
+                "title": "",
+                "url": "https://pt.aliexpress.com/item/1005013091140987.html",
+                "product_id": "1005013091140987"
+              },
+              {
+                "title": "",
+                "url": "https://pt.aliexpress.com/item/1005011935250326.html",
+                "product_id": "1005011935250326"
+              },
+              {
+                "title": "",
+                "url": "https://pt.aliexpress.com/item/1005013064176531.html",
+                "product_id": "1005013064176531"
+              }
+            ]
+          }
+        ],
+        "winning_query": "gigabyte rtx 5060",
+        "candidate_count": 5
+      }
+    },
+    "visaovip": {
+      "store": "visaovip",
+      "query": null,
+      "candidates": 0,
+      "best_candidate": null,
+      "best_url": null,
+      "match_score": null,
+      "status": "ERROR",
+      "terminal": "ERROR",
+      "reason": "Busca ao vivo não disponível para visaovip",
+      "ground_truth": false,
+      "best": null,
+      "error": {
+        "store": "visaovip",
+        "code": "SEARCH_UNSUPPORTED",
+        "message": "Busca ao vivo não disponível para visaovip"
+      },
+      "retrieval": {
+        "supported": false,
+        "status": "ERROR",
+        "reason": "SEARCH_UNSUPPORTED"
+      }
+    }
+  },
+  "matches": [
+    {
+      "store": "kabum",
+      "decision": "auto_match",
+      "confidence": "0.92",
+      "search_query": "gigabyte rtx 5060",
+      "url": "https://www.kabum.com.br/produto/1053808/placa-de-video-gigabyte-rtx-5060-windforce-max-oc-v2-8gb-nvidia-geforce-8gb-gddr7-128bit-dlss-ray-tracing-gv-n5060wf2max-ocv2-8gd",
+      "product_id": "1053808",
+      "title": "Placa de Vídeo Gigabyte RTX 5060 WINDFORCE MAX OC V2 8GB NVIDIA GeForce, 8GB GDDR7, 128bit,  DLSS, Ray Tracing - GV-N5060WF2MAX OCV2-8GD",
+      "price": "2999.99",
+      "seller": "KaBuM!",
+      "reasons": [
+        {
+          "code": "brand_match",
+          "detail": "gigabyte",
+          "score": 1.0
+        },
+        {
+          "code": "brand_model_exact",
+          "detail": "gigabyte:rtx5060~rtx5060",
+          "score": 1.0
+        },
+        {
+          "code": "title_similarity",
+          "detail": "token_set_ratio=0.214",
+          "score": 0.21428571428571427
+        }
+      ]
+    },
+    {
+      "store": "bestbuy",
+      "decision": "auto_match",
+      "confidence": "0.92",
+      "search_query": "gigabyte rtx 5060",
+      "url": "https://www.bestbuy.com/product/gigabyte-gaming-a16-16-165hz-1920x1200-wuxga-intel-core-i7-13620h-1tb-ssd-32gb-ddr5-ram-geforce-rtx-5060-black-steel/J3GWPQC2TJ/sku/6632143?intl=nosplash",
+      "product_id": "J3GWPQC2TJ",
+      "title": "GIGABYTE - GAMING A16 - 16\" 165Hz 1920x1200 WUXGA Intel Core i7-13620H - 1TB SSD - 32GB DDR5 RAM - GeForce RTX 5060 - Black Steel",
+      "price": "1299.99",
+      "seller": "Best Buy",
+      "reasons": [
+        {
+          "code": "brand_match",
+          "detail": "gigabyte",
+          "score": 1.0
+        },
+        {
+          "code": "brand_model_exact",
+          "detail": "gigabyte:rtx5060~rtx5060",
+          "score": 1.0
+        },
+        {
+          "code": "title_similarity",
+          "detail": "token_set_ratio=0.150",
+          "score": 0.15
+        }
+      ]
+    },
+    {
+      "store": "nissei",
+      "decision": "auto_match",
+      "confidence": "0.92",
+      "search_query": "gigabyte rtx 5060",
+      "url": "https://nissei.com/py/tarjeta-de-video-gigabyte-rtx5060-eagle-oc-ice-8gb-gddr7-2497mhz-2fan-gv-n5060eagleoc-ice-8gd-3gta-br-py",
+      "product_id": "141272",
+      "title": "Placa de Video Gigabyte GeForce RTX 5060 Eagle ICE OC Edition 8 GB GDDR7 - Blanco (GV-N5060EAGLEOC ICE-8GD)",
+      "price": "4067000",
+      "seller": null,
+      "reasons": [
+        {
+          "code": "brand_match",
+          "detail": "gigabyte",
+          "score": 1.0
+        },
+        {
+          "code": "brand_model_exact",
+          "detail": "gigabyte:rtx5060~rtx5060",
+          "score": 1.0
+        },
+        {
+          "code": "title_similarity",
+          "detail": "token_set_ratio=0.231",
+          "score": 0.23076923076923078
+        }
+      ]
+    },
+    {
+      "store": "amazon_br",
+      "decision": "auto_match",
+      "confidence": "0.92",
+      "search_query": "gigabyte rtx 5060",
+      "url": "https://www.amazon.com.br/dp/B0F6NKGTR4",
+      "product_id": "B0F6NKGTR4",
+      "title": "Placa de Vídeo Gigabyte RTX 5060 8GB GDDR7 128 BITS WINDFORCE GIGABYTE GV-N5060WF2-8GD",
+      "price": "2949.90",
+      "seller": "Amazon.com.br",
+      "reasons": [
+        {
+          "code": "brand_match",
+          "detail": "gigabyte",
+          "score": 1.0
+        },
+        {
+          "code": "brand_model_exact",
+          "detail": "gigabyte:rtx5060~rtx5060",
+          "score": 1.0
+        },
+        {
+          "code": "title_similarity",
+          "detail": "token_set_ratio=0.273",
+          "score": 0.2727272727272727
+        }
+      ]
+    },
+    {
+      "store": "amazon_us",
+      "decision": "auto_match",
+      "confidence": "0.92",
+      "search_query": "gigabyte rtx 5060",
+      "url": "https://www.amazon.com/dp/B0F8LDHQ7Y",
+      "product_id": "B0F8LDHQ7Y",
+      "title": "GIGABYTE GeForce RTX 5060 WINDFORCE OC 8G Graphics Card, Cooling System, 8GB 128-bit GDDR7, PCIe 5.0, Manufactured by NVIDIA, DisplayPort & HDMI - Video Output Interface, GV-N5060WF2OC-8GD Video Card",
+      "price": "459.00",
+      "seller": "electrolert",
+      "reasons": [
+        {
+          "code": "brand_match",
+          "detail": "gigabyte",
+          "score": 1.0
+        },
+        {
+          "code": "brand_model_exact",
+          "detail": "gigabyte:rtx5060~rtx5060",
+          "score": 1.0
+        },
+        {
+          "code": "title_similarity",
+          "detail": "token_set_ratio=0.136",
+          "score": 0.13636363636363635
+        }
+      ]
+    },
+    {
+      "store": "magazineluiza",
+      "decision": "auto_match",
+      "confidence": "0.92",
+      "search_query": "gigabyte rtx 5060",
+      "url": "https://www.magazineluiza.com.br/placa-de-video-gigabyte-rtx-5060-aero-oc-8g-nvidia-geforce-8gb-gddr7-128bits-dlss-triple-fan-ray-tracing-gv-n5060aero-oc-8gd/p/cbdd9e1ae6/in/pcvd/?seller_id=kabum",
+      "product_id": "cbdd9e1ae6",
+      "title": "Placa de Vídeo Gigabyte RTX 5060 AERO OC 8G NVIDIA GeForce, 8GB GDDR7, 128bits, DLSS, Triple Fan, Ray Tracing - GV-N5060AERO OC-8GD",
+      "price": "3294.11",
+      "seller": "kabum",
+      "reasons": [
+        {
+          "code": "brand_match",
+          "detail": "gigabyte",
+          "score": 1.0
+        },
+        {
+          "code": "brand_model_exact",
+          "detail": "gigabyte:rtx5060~rtx5060",
+          "score": 1.0
+        },
+        {
+          "code": "title_similarity",
+          "detail": "token_set_ratio=0.214",
+          "score": 0.21428571428571427
+        }
+      ]
+    },
+    {
+      "store": "aliexpress",
+      "decision": "auto_match",
+      "confidence": "0.92",
+      "search_query": "gigabyte rtx 5060",
+      "url": "https://pt.aliexpress.com/item/1005013057430673.html",
+      "product_id": "1005013057430673",
+      "title": "Placa de Vídeo Gigabyte NVIDIA GeForce RTX 5060 Eagle OC, 8GB, GDDR7, DLSS, Ray Tracing, GV-N5060EAGLE OC-8GD",
+      "price": "3101.06",
+      "seller": "MA INFOSTORE Store",
+      "reasons": [
+        {
+          "code": "brand_match",
+          "detail": "gigabyte",
+          "score": 1.0
+        },
+        {
+          "code": "brand_model_exact",
+          "detail": "gigabyte:rtx5060~rtx5060",
+          "score": 1.0
+        },
+        {
+          "code": "title_similarity",
+          "detail": "token_set_ratio=0.300",
+          "score": 0.3
+        }
+      ]
+    }
+  ],
+  "unmatched_stores": [
+    "shoppingchina",
+    "mercadolivre",
+    "shopee",
+    "visaovip"
+  ],
+  "errors": [
+    {
+      "store": "shopee",
+      "code": "AUTH_REQUIRED",
+      "message": "Shopee exige login/sessão autenticada (falta de login). Configure SHOPEE_AUTH_EMAIL e SHOPEE_AUTH_PASSWORD ou execute make seed-shopee-login."
+    },
+    {
+      "store": "visaovip",
+      "code": "SEARCH_UNSUPPORTED",
+      "message": "Busca ao vivo não disponível para visaovip"
+    }
+  ]
+}

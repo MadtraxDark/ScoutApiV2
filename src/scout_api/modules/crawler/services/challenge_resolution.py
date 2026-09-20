@@ -44,6 +44,8 @@ class StoreAuthCredentials:
     amazon_password: str | None = None
     shopee_email: str | None = None
     shopee_password: str | None = None
+    mercadolivre_email: str | None = None
+    mercadolivre_password: str | None = None
 
 
 _AMAZON_CAPTCHA_IMG_RE = re.compile(
@@ -150,7 +152,7 @@ def extract_auth_resume_url(
     """Best-effort product URL to reopen after login (query ``next`` / return_to)."""
     parsed = urlparse(page_url or "")
     qs = parse_qs(parsed.query)
-    for key in ("next", "openid.return_to", "return_to", "redirectURL", "rd"):
+    for key in ("next", "openid.return_to", "return_to", "redirectURL", "rd", "go"):
         values = qs.get(key) or []
         if values and values[0].strip():
             candidate = unquote(values[0].strip())
@@ -356,6 +358,8 @@ class ChallengeResolver:
                         exc_info=True,
                     )
             logged_in = self._login_shopee(page)
+        elif self._is_mercadolivre_host(host):
+            logged_in = self._login_mercadolivre(page)
         else:
             logged_in = self._login_generic(page)
 
@@ -498,6 +502,89 @@ class ChallengeResolver:
             return False
         return True
 
+    def _login_mercadolivre(self, page: Any) -> bool:
+        """Login on gz/account-verification / enter-email flow (operator env)."""
+        creds = self.credentials
+        email = (creds.mercadolivre_email if creds else None) or ""
+        password = (creds.mercadolivre_password if creds else None) or ""
+        if not email.strip() or not password.strip():
+            logger.info("mercadolivre_auth_credentials_missing")
+            return False
+
+        # Landing often shows "Já tenho conta" before the email form.
+        _click_first(
+            page,
+            (
+                "button:has-text('Já tenho conta')",
+                "a:has-text('Já tenho conta')",
+                "button:has-text('Ya tengo cuenta')",
+                "a:has-text('Ya tengo cuenta')",
+            ),
+        )
+        try:
+            page.wait_for_timeout(1_200)
+        except Exception:
+            pass
+
+        email_ok = _fill_first(
+            page,
+            (
+                "input[type='email']",
+                "input[name='user_id']",
+                "input#user_id",
+                "input[name='email']",
+            ),
+            email.strip(),
+        )
+        if not email_ok:
+            logger.warning("mercadolivre_auth_email_field_missing")
+            return False
+        _click_first(
+            page,
+            (
+                "button:has-text('Continuar')",
+                "button[type='submit']",
+                "button:has-text('Continue')",
+            ),
+        )
+        try:
+            page.wait_for_timeout(1_500)
+        except Exception:
+            pass
+        password_ok = _fill_first(
+            page,
+            (
+                "input[type='password']",
+                "input[name='password']",
+                "input#password",
+            ),
+            password.strip(),
+        )
+        if not password_ok:
+            logger.warning("mercadolivre_auth_password_field_missing")
+            return False
+        _click_first(
+            page,
+            (
+                "button:has-text('Entrar')",
+                "button[type='submit']",
+                "button:has-text('Iniciar sesión')",
+                "button:has-text('Log in')",
+            ),
+        )
+        try:
+            page.wait_for_timeout(min(self.soft_wait_ms, 5_000))
+        except Exception:
+            pass
+
+        from .html_fetcher import is_auth_wall_page  # noqa: PLC0415
+
+        cur_url = _safe_url(page) or ""
+        cur_html = _safe_content(page)
+        if is_auth_wall_page(cur_html, url=cur_url, title=_safe_title(page)):
+            return False
+        return True
+
     def _login_generic(self, page: Any) -> bool:
         del page
         logger.info("auth_wall_generic_soft_wait_only")
@@ -515,6 +602,15 @@ class ChallengeResolver:
     @staticmethod
     def _is_shopee_host(host: str) -> bool:
         return host == "shopee.com.br" or host.endswith(".shopee.com.br")
+
+    @staticmethod
+    def _is_mercadolivre_host(host: str) -> bool:
+        return (
+            host == "mercadolivre.com.br"
+            or host.endswith(".mercadolivre.com.br")
+            or host == "mercadolibre.com"
+            or host.endswith(".mercadolibre.com")
+        )
 
     def _resolve_amazon_image_captcha(self, page: Any, html: str) -> bool:
         if self.image_solver is None:

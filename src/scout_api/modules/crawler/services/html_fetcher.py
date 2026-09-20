@@ -243,6 +243,18 @@ def is_auth_wall_page(
             if '"item_id"' not in lower and '"itemid"' not in lower:
                 return True
 
+    # Mercado Livre / Mercado Libre account-verification soft-auth gate.
+    if "mercadolivre." in folded_url or "mercadolibre." in folded_url:
+        if "account-verification" in folded_url:
+            return True
+        if (
+            "/gz/account-verification" in lower
+            or "account-verification" in lower[:8_000]
+        ):
+            # Verification interstitial without SERP/PDP product markup.
+            if "/p/mlb" not in lower and "ui-search-layout" not in lower:
+                return True
+
     return False
 
 
@@ -1675,6 +1687,8 @@ def build_html_fetcher(
     amazon_auth_password: str | None = None,
     shopee_auth_email: str | None = None,
     shopee_auth_password: str | None = None,
+    mercadolivre_auth_email: str | None = None,
+    mercadolivre_auth_password: str | None = None,
 ) -> HtmlFetcher:
     """Build the shared store-aware fetcher (direct + optional proxied Camoufox)."""
     from .challenge_resolution import (
@@ -1710,6 +1724,8 @@ def build_html_fetcher(
             amazon_password=amazon_auth_password,
             shopee_email=shopee_auth_email,
             shopee_password=shopee_auth_password,
+            mercadolivre_email=mercadolivre_auth_email,
+            mercadolivre_password=mercadolivre_auth_password,
         ),
     )
 

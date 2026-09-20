@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import re
 import time
+from dataclasses import replace
 from decimal import Decimal
 from uuid import UUID
 
@@ -28,6 +29,7 @@ from scout_api.modules.matching.gtin_learning import (
     resolve_trusted_gtin,
 )
 from scout_api.modules.matching.identity import (
+    ProductIdentity,
     build_search_queries,
     identity_from_price_item,
     normalize_gtin,
@@ -112,14 +114,66 @@ class ProductMatchService:
         self._session = session
 
     def match(self, request: MatchRequest) -> MatchResponse:
+        """Match from a live reference URL (scrape → search → score)."""
         reference = self._scrape.scrape(
             str(request.reference_url),
             include_images=request.include_images,
         )
+        return self.match_from_item(
+            reference,
+            stores=request.stores,
+            include_review=request.include_review,
+            persist=request.persist,
+            include_images=request.include_images,
+            max_candidates_per_store=request.max_candidates_per_store,
+            clear_reference_price=False,
+        )
+
+    def match_from_item(
+        self,
+        reference: ProductPriceItem,
+        *,
+        stores: list[str] | None = None,
+        include_review: bool = False,
+        persist: bool = False,
+        include_images: bool = False,
+        max_candidates_per_store: int = 5,
+        clear_reference_price: bool = True,
+    ) -> MatchResponse:
+        """Match using an already-normalized reference item (no reference scrape).
+
+        Intended for identity-only discovery: brand/model(/variant) without
+        feeding known store URLs into Search. When ``clear_reference_price`` is
+        true (default), the reference price is ignored so a synthetic identity
+        placeholder cannot trigger extreme-price ``review``/reject gates.
+        """
         ref_identity = identity_from_price_item(reference)
+        if clear_reference_price:
+            ref_identity = replace(ref_identity, price=None)
+        return self._match_with_reference(
+            reference,
+            ref_identity,
+            stores=stores,
+            include_review=include_review,
+            persist=persist,
+            include_images=include_images,
+            max_candidates_per_store=max_candidates_per_store,
+        )
+
+    def _match_with_reference(
+        self,
+        reference: ProductPriceItem,
+        ref_identity: ProductIdentity,
+        *,
+        stores: list[str] | None,
+        include_review: bool,
+        persist: bool,
+        include_images: bool,
+        max_candidates_per_store: int,
+    ) -> MatchResponse:
         queries = build_search_queries(ref_identity)
         target_stores = self._resolve_stores(
-            request.stores,
+            stores,
             reference,
             reference_has_gtin=bool(ref_identity.gtin),
         )
@@ -155,7 +209,7 @@ class ProductMatchService:
                     candidates = self._search.search(
                         store_key,
                         query,
-                        limit=request.max_candidates_per_store,
+                        limit=max_candidates_per_store,
                     )
                 except RequestError as exc:
                     last_error = MatchStoreError(
@@ -198,7 +252,7 @@ class ProductMatchService:
                     product, scrape_error = self._scrape_candidate(
                         candidate.url,
                         store_key=store_key,
-                        include_images=request.include_images,
+                        include_images=include_images,
                     )
                     if product is None:
                         scrape_failures += 1
@@ -211,7 +265,7 @@ class ProductMatchService:
                     )
                     if score.decision == "reject":
                         continue
-                    if score.decision == "review" and not request.include_review:
+                    if score.decision == "review" and not include_review:
                         continue
 
                     hit = MatchHit(
@@ -271,7 +325,7 @@ class ProductMatchService:
             reference = reference.model_copy(update={"gtin": learned.gtin})
 
         canonical_id = None
-        if request.persist:
+        if persist:
             if self._session is None:
                 raise RequestError(
                     "Persistência requer DATABASE_URL / sessão SQLAlchemy",
@@ -296,8 +350,6 @@ class ProductMatchService:
         hit: MatchHit,
     ) -> TrustedGtin | None:
         """Adopt a candidate GTIN mid-flight only under safe auto_match rules."""
-        from scout_api.modules.matching.identity import ProductIdentity
-
         assert isinstance(reference_identity, ProductIdentity)
         cand = normalize_gtin(hit.product.gtin)
         if not cand or hit.decision != "auto_match":

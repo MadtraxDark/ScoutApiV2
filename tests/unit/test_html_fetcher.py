@@ -144,6 +144,19 @@ def test_locale_and_warmup_for_url() -> None:
         url="https://shopee.com.br/verify/traffic?anti_bot_tracking_id=x",
         title="verify",
     )
+    assert is_auth_wall_page(
+        "<html><body>Verificação de conta</body></html>",
+        url=(
+            "https://www.mercadolivre.com.br/gz/account-verification"
+            "?go=https%3A%2F%2Flista.mercadolivre.com.br%2Frtx"
+        ),
+        title="Mercado Libre",
+    )
+    assert not is_auth_wall_page(
+        "<html><body class='ui-search-layout'>card</body></html>",
+        url="https://lista.mercadolivre.com.br/rtx-5060",
+        title="RTX 5060",
+    )
     assert "data-shopee-pdp" in wrap_shopee_pdp_json('{"item":{"item_id":1}}')
     assert (
         apply_shopee_br_proxy_targeting(

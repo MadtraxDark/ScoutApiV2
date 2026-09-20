@@ -789,9 +789,7 @@ def test_gpu_query_generation_progressive_not_full_title() -> None:
     queries = build_search_queries(identity)
     assert queries
     # Progressive commercial ladder leads; MPN is a fallback for GPUs.
-    assert any(
-        q.casefold().startswith("msi rtx 5070 shadow 3x") for q in queries[:4]
-    )
+    assert any(q.casefold().startswith("msi rtx 5070 shadow 3x") for q in queries[:4])
     assert any("912-V532-232" in q for q in queries)
     # Must not lead with a long SEO dump (Ray Tracing / MHz / bus width).
     joined = " | ".join(queries).casefold()
@@ -1115,3 +1113,259 @@ def test_cross_category_phone_ssd_ram_console_still_match() -> None:
         ),
     )
     assert console.decision in {"auto_match", "review"}
+
+
+# --- Gigabyte GeForce RTX 5060: identity-only discovery regressions ----------
+
+
+def test_gigabyte_rtx5060_laptop_form_factor_rejects() -> None:
+    score = MatchingEngine().score(
+        identity_from_price_item(
+            _item(
+                store="a",
+                product_id="1",
+                title="Placa de Vídeo Gigabyte GeForce RTX 5060",
+                brand="Gigabyte",
+                model="GeForce RTX 5060",
+            )
+        ),
+        identity_from_price_item(
+            _item(
+                store="bestbuy",
+                product_id="2",
+                title=(
+                    'GIGABYTE - GAMING A16 - 16" 165Hz 1920x1200 WUXGA '
+                    "Intel Core i7-13620H - 1TB SSD - 32GB DDR5 RAM - "
+                    "GeForce RTX 5060 - Black Steel"
+                ),
+                brand="Gigabyte",
+                model="GeForce RTX 5060",
+            )
+        ),
+    )
+    assert score.decision == "reject"
+    assert any(r.code == "form_factor_reject" for r in score.reasons)
+
+
+def test_gigabyte_rtx5060_same_family_different_titles_match() -> None:
+    score = MatchingEngine().score(
+        identity_from_price_item(
+            _item(
+                store="a",
+                product_id="1",
+                title="Gigabyte GeForce RTX 5060 Gaming OC",
+                brand="Gigabyte",
+                model="GeForce RTX 5060",
+            )
+        ),
+        identity_from_price_item(
+            _item(
+                store="b",
+                product_id="2",
+                title="Gigabyte RTX 5060 Gaming OC 8GB",
+                brand="Gigabyte",
+                model="GeForce RTX 5060",
+            )
+        ),
+    )
+    assert score.decision == "auto_match"
+
+
+def test_gigabyte_rtx5060_different_manufacturer_rejects() -> None:
+    score = MatchingEngine().score(
+        identity_from_price_item(
+            _item(
+                store="a",
+                product_id="1",
+                title="Gigabyte GeForce RTX 5060",
+                brand="Gigabyte",
+                model="GeForce RTX 5060",
+            )
+        ),
+        identity_from_price_item(
+            _item(
+                store="b",
+                product_id="2",
+                title="MSI GeForce RTX 5060",
+                brand="MSI",
+                model="GeForce RTX 5060",
+            )
+        ),
+    )
+    assert score.decision == "reject"
+    assert any(r.code == "brand_mismatch" for r in score.reasons)
+
+
+def test_gigabyte_rtx5060_ti_suffix_rejects() -> None:
+    score = MatchingEngine().score(
+        identity_from_price_item(
+            _item(
+                store="a",
+                product_id="1",
+                title="Gigabyte GeForce RTX 5060",
+                brand="Gigabyte",
+                model="GeForce RTX 5060",
+            )
+        ),
+        identity_from_price_item(
+            _item(
+                store="b",
+                product_id="2",
+                title="Gigabyte GeForce RTX 5060 Ti",
+                brand="Gigabyte",
+                model="GeForce RTX 5060 Ti",
+            )
+        ),
+    )
+    assert score.decision == "reject"
+    assert any(
+        r.code == "critical_conflict" and "gpu_mismatch" in (r.detail or "")
+        for r in score.reasons
+    )
+
+
+def test_gigabyte_rtx5060_base_query_allows_multiple_editions() -> None:
+    """brand+model without edition: Windforce / Gaming OC / Eagle are all candidates."""
+    from dataclasses import replace
+
+    from scout_api.modules.matching.identity import identity_reference_item
+
+    ref = replace(
+        identity_from_price_item(
+            identity_reference_item(
+                "Placa de Vídeo Gigabyte GeForce RTX 5060",
+                category="gpu",
+            )
+        ),
+        price=None,
+    )
+    assert ref.brand == "gigabyte"
+    assert "5060" in (ref.model or "")
+    assert "ti" not in (ref.model or "")
+    assert not ref.variant_attrs.get("edition")
+
+    queries = build_search_queries(ref)
+    assert queries
+    assert any("gigabyte" in q.casefold() and "5060" in q for q in queries)
+    assert all("gaming oc" not in q.casefold() for q in queries)
+    assert all("windforce" not in q.casefold() for q in queries)
+
+    engine = MatchingEngine()
+    for title in (
+        "Placa de Vídeo Gigabyte RTX 5060 Windforce 8GB GDDR7",
+        "Gigabyte GeForce RTX 5060 Gaming OC 8GB",
+        "Gigabyte RTX 5060 Eagle OC 8GB GDDR7",
+    ):
+        score = engine.score(
+            ref,
+            identity_from_price_item(
+                _item(store="kabum", product_id="x", title=title, brand="Gigabyte")
+            ),
+        )
+        assert score.decision == "auto_match", (title, score.reasons)
+
+
+def test_gigabyte_rtx5060_variant_specified_restricts_edition() -> None:
+    ref = identity_from_price_item(
+        _item(
+            store="synthetic",
+            product_id="identity",
+            title="Gigabyte GeForce RTX 5060 Gaming OC",
+            brand="Gigabyte",
+            model="GeForce RTX 5060",
+        )
+    )
+    assert ref.variant_attrs.get("edition")
+
+    queries = build_search_queries(ref)
+    assert any("gaming" in q.casefold() for q in queries)
+
+    engine = MatchingEngine()
+    gaming = engine.score(
+        ref,
+        identity_from_price_item(
+            _item(
+                store="kabum",
+                product_id="1",
+                title="Gigabyte RTX 5060 Gaming OC 8GB GDDR7",
+                brand="Gigabyte",
+            )
+        ),
+    )
+    assert gaming.decision == "auto_match"
+
+    windforce = engine.score(
+        ref,
+        identity_from_price_item(
+            _item(
+                store="kabum",
+                product_id="2",
+                title="Gigabyte RTX 5060 Windforce 8GB GDDR7",
+                brand="Gigabyte",
+            )
+        ),
+    )
+    assert windforce.decision == "reject"
+    assert any("edition" in (r.detail or "") for r in windforce.reasons)
+
+
+def test_match_from_item_identity_only_discovers_without_reference_url() -> None:
+    """Search receives progressive identity queries; no known store URL is injected."""
+    from unittest.mock import MagicMock
+
+    from scout_api.modules.crawler.models.search import SearchCandidate
+    from scout_api.modules.matching.identity import identity_reference_item
+    from scout_api.modules.matching.product_match_service import ProductMatchService
+
+    reference = identity_reference_item(
+        "Placa de Vídeo Gigabyte GeForce RTX 5060",
+        category="gpu",
+    )
+    cand = _item(
+        store="kabum",
+        product_id="999001",
+        title="Placa de Vídeo Gigabyte RTX 5060 Windforce OC 8GB GDDR7",
+        brand="Gigabyte",
+        model="GeForce RTX 5060",
+        url="https://www.kabum.com.br/produto/999001/placa",
+        canonical_url="https://www.kabum.com.br/produto/999001/placa",
+    )
+    scrape = MagicMock()
+    scrape.scrape.return_value = cand
+    search = MagicMock()
+    search.is_search_supported.return_value = True
+
+    def _search(store: str, query: str, **_kwargs: object) -> list[SearchCandidate]:
+        assert "kabum.com.br" not in query.casefold()
+        assert "http" not in query.casefold()
+        if "gigabyte" in query.casefold() and "5060" in query:
+            return [
+                SearchCandidate(
+                    url=cand.url,
+                    title=cand.title,
+                    product_id="999001",
+                    metadata={"source": "mock"},
+                )
+            ]
+        return []
+
+    search.search.side_effect = _search
+    resp = ProductMatchService(
+        scrape_service=scrape, search_service=search
+    ).match_from_item(
+        reference,
+        stores=["kabum"],
+        persist=False,
+    )
+    assert resp.matches
+    assert resp.matches[0].store == "kabum"
+    assert resp.matches[0].product.product_id == "999001"
+    assert resp.matches[0].product.url.startswith("https://www.kabum.com.br/")
+    queried = [call.args[1] for call in search.search.call_args_list]
+    assert queried
+    assert all("http" not in q.casefold() for q in queried)
+    # Reference scrape must not be called — only candidate URLs.
+    assert all(
+        "scout://identity" not in str(call.args[0])
+        for call in scrape.scrape.call_args_list
+    )

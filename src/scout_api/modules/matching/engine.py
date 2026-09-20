@@ -11,6 +11,7 @@ from scout_api.modules.matching.identity import (
     condition_conflict,
     console_soft_model_title_exempt,
     critical_identity_conflict,
+    form_factor_conflict,
     gpu_soft_model_title_exempt,
     looks_like_accessory,
     looks_like_bundle,
@@ -118,6 +119,21 @@ class MatchingEngine:
                 MatchReason(
                     code="bundle_reject",
                     detail="candidate_title_looks_like_bundle",
+                    score=0.0,
+                )
+            )
+            return MatchScore(
+                decision="reject",
+                confidence=Decimal("0.0000"),
+                reasons=tuple(reasons),
+            )
+
+        form_conflict = form_factor_conflict(reference.title, candidate.title)
+        if form_conflict:
+            reasons.append(
+                MatchReason(
+                    code="form_factor_reject",
+                    detail=form_conflict,
                     score=0.0,
                 )
             )

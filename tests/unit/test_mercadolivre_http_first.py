@@ -116,6 +116,48 @@ def test_http_first_falls_back_on_blocked_error() -> None:
     assert "GPU" in response.text
 
 
+def test_http_first_accepts_lista_serp_without_pdp_price() -> None:
+    from scout_api.modules.crawler.services.mercadolivre_http_first_fetcher import (
+        looks_like_mercadolivre_search,
+    )
+
+    url = "https://lista.mercadolivre.com.br/gigabyte-rtx-5060"
+    http_body = (
+        "<html><body class='ui-search-layout'>"
+        "<a class='ui-search-link' "
+        "href='https://www.mercadolivre.com.br/gpu/p/MLB111'>card</a>"
+        "</body></html>"
+    )
+    http = _RecordingFetcher(_html_response(url, http_body))
+    browser = _RecordingFetcher(_html_response(url, "<html>browser</html>"))
+    response = MercadoLivreHttpFirstHtmlFetcher(http=http, browser=browser).fetch(url)
+    assert http.calls == [url]
+    assert browser.calls == []
+    assert looks_like_mercadolivre_search(response)
+    assert response.meta["fetch_metrics"]["fetch_strategy"] == "curl-cffi-direct"
+
+
+def test_http_first_falls_back_on_account_verification() -> None:
+    url = "https://lista.mercadolivre.com.br/gigabyte-rtx-5060"
+    verify_url = (
+        "https://www.mercadolivre.com.br/gz/account-verification"
+        "?go=https%3A%2F%2Flista.mercadolivre.com.br%2Fgigabyte"
+    )
+    http = _RecordingFetcher(
+        _html_response(verify_url, "<html><body>Verificação de conta</body></html>")
+    )
+    browser = _RecordingFetcher(
+        _html_response(
+            url,
+            "<html><a class='ui-search-link' "
+            "href='https://www.mercadolivre.com.br/gpu/p/MLB222'>ok</a></html>",
+        )
+    )
+    response = MercadoLivreHttpFirstHtmlFetcher(http=http, browser=browser).fetch(url)
+    assert browser.calls == [url]
+    assert "ui-search-link" in response.text
+
+
 def test_non_ml_url_skips_http_leg() -> None:
     url = "https://www.kabum.com.br/produto/1"
     http = _RecordingFetcher(_html_response(url, "<html>http</html>"))

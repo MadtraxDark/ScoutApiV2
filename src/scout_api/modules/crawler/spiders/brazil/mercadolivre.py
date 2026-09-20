@@ -9,7 +9,7 @@ from urllib.parse import parse_qs, quote_plus, unquote, urljoin, urlparse
 
 from scrapy.http import Response
 
-from ...core.exceptions import MissingPriceError, ParseError
+from ...core.exceptions import MissingPriceError, ParseError, RequestError
 from ...core.fingerprints import canonicalize_url
 from ...models.product import (
     ProductDetails,
@@ -48,6 +48,19 @@ class MercadoLivreSpider(BaseStoreSpider):
         return f"https://lista.mercadolivre.com.br/{q}"
 
     def parse_search_results(self, response: Response) -> list[SearchCandidate]:
+        page_url = str(getattr(response, "url", "") or "")
+        html = getattr(response, "text", None) or ""
+        if "account-verification" in page_url.casefold() or (
+            "account-verification" in html[:8_000].casefold()
+            and "ui-search-layout" not in html.casefold()
+        ):
+            raise RequestError(
+                "Mercado Livre exige login/sessão (account-verification); "
+                "configure MERCADOLIVRE_AUTH_EMAIL/PASSWORD ou faça seed da sessão",
+                code="AUTH_REQUIRED",
+                url=page_url or None,
+                retryable=True,
+            )
         candidates: list[SearchCandidate] = []
         seen: set[str] = set()
         for href in response.css(

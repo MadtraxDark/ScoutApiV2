@@ -100,6 +100,8 @@ class Settings(BaseSettings):
     amazon_auth_password: str | None = None
     shopee_auth_email: str | None = None
     shopee_auth_password: str | None = None
+    mercadolivre_auth_email: str | None = None
+    mercadolivre_auth_password: str | None = None
 
     @field_validator("debug", mode="before")
     @classmethod

@@ -28,6 +28,7 @@ Fetch (Camoufox / urllib / curl_cffi@ML) → Store Adapter (spider) → Offer | 
 | Details | `ProductDetails` | (composed into full) | `extract_details` (no gallery) |
 | Images | `list[str]` | via `include_images=true` | `extract_images` only when requested |
 | Match | `MatchResponse` | `POST /match` | live search + scrape + `MatchingEngine` |
+| Match (identity) | `MatchResponse` | `ProductMatchService.match_from_item` | same pipeline from a synthetic identity item (no reference URL scrape) |
 | Refresh | `OfferRefreshResponse` | `POST /offers/refresh` | re-scrape + offer history diff |
 
 ADR: [0011](../adr/0011-offer-vs-product-details.md), [0012](../adr/0012-optional-image-extraction.md),
@@ -43,6 +44,10 @@ ADR: [0011](../adr/0011-offer-vs-product-details.md), [0012](../adr/0012-optiona
   `build_search_url` / `parse_search_results`.
   Lojas implementadas sem search (ex. `visaovip`) entram no `/match` como
   `SEARCH_UNSUPPORTED` (ERROR terminal), nunca omitidas.
+  Discovery may start from a **URL scrape** (`POST /match`) or from an
+  **identity-only** reference (`match_from_item` / `identity_reference_item`)
+  — brand/model(/variant) without known store URLs, product IDs, or prices
+  fed into Search. Search and Match remain separate stages.
 - Scoring cascade (precision-first): variant / **critical identity** blockers →
   accessory / **bundle** (kit+watch/AirPods) reject → **condition**
   (renewed/usado vs novo) → same store+`product_id`
@@ -53,7 +58,7 @@ ADR: [0011](../adr/0011-offer-vs-product-details.md), [0012](../adr/0012-optiona
   ≥128GB divergente. Soft model compatibility strips marketing/CPU suffixes and
   treats `Slim 3`≡`Slim 3i` (still rejects Intel↔AMD, chassis codes, CPU SKU
   conflicts, and critical suffixes like `pro`/`plus`/`ti`). Soft model matches
-  also require title similarity ≥ 0.75. Title normalization compacta
+  also require title similarity ≥ 0.75.   Title normalization compacta
   `128 GB`≡`128gb`, preserva MPN como token único e mapeia cores PT/EN/ES
   (`Preto`≡`Black`, `Verde-acinzentado`≡`teal`). Variant key aliases
   (`cor`/`colour`→`color`, `armazenamento` / `tamanho`≥128GB→`storage`) keep the
@@ -63,7 +68,9 @@ ADR: [0011](../adr/0011-offer-vs-product-details.md), [0012](../adr/0012-optiona
   the title. Placeholder brands (`outros`, Amazon Renewed store) are ignored so
   title brand can win. GPU **edition** (Dual / Shadow 3X / Gaming Trio) is a
   variant key: missing on one side is unknown, not a conflict; Dual ≠ Gaming
-  Trio still rejects (ADR 0026). Decisions: `auto_match` | `review` | `reject`.
+  Trio still rejects (ADR 0026). **Form factor:** discrete GPU / graphics card
+  listings must not auto-match notebooks/laptops that merely embed the same
+  chip (`form_factor_reject`). Decisions: `auto_match` | `review` | `reject`.
 - **Search queries:** `GTIN → display MPN (hyphenated) → brand + spaced series
   + storage → color synonyms (preto/black) → progressive drop → compacted MPN
   → título`. Compact tokens like `990evoplus` / `mzv9s1t0bam` are weak on Amazon

@@ -1300,6 +1300,89 @@ def looks_like_bundle(title: str | None, *, reference_title: str | None) -> bool
     return cand_bundle and not ref_bundle
 
 
+_SYSTEM_FORM_TOKENS = frozenset(
+    {
+        "notebook",
+        "laptop",
+        "ultrabook",
+        "chromebook",
+        "minipc",
+        "mini pc",
+        "all in one",
+        "all-in-one",
+    }
+)
+
+
+def looks_like_computing_system(title: str | None) -> bool:
+    """True for notebooks/laptops/desktops that embed a GPU as a component."""
+    folded = fold_text(title or "")
+    if not folded:
+        return False
+    if any(token in folded for token in _SYSTEM_FORM_TOKENS):
+        return True
+    # "GAMING A16 … Intel Core i7 … 32GB DDR5 … SSD … GeForce RTX 5060"
+    has_cpu = bool(
+        re.search(
+            r"\b(intel\s+core|core\s*i[3579]|ryzen\s*[3579]|i[3579]-\d{4,})\b",
+            folded,
+        )
+    )
+    has_system_mem = bool(
+        re.search(r"\b\d+\s*gb\s*(ddr[45]|ram)\b", folded)
+        or re.search(r"\bssd\b", folded)
+    )
+    has_display = bool(re.search(r"\b\d{2}\s*(inch|hz|wuxga|fhd|qhd)\b", folded))
+    return has_cpu and has_system_mem and (has_display or "gaming a" in folded)
+
+
+def looks_like_discrete_gpu(title: str | None) -> bool:
+    """True for add-in-board / graphics-card listings (not systems with a GPU)."""
+    if looks_like_computing_system(title):
+        return False
+    folded = fold_text(title or "")
+    if not folded:
+        return False
+    if ("placa" in folded and "video" in folded) or "tarjeta de video" in folded:
+        return True
+    if "graphics card" in folded or "placa grafica" in folded:
+        return True
+    if not _gpu_signature(folded):
+        return False
+    # Chip + cooler/VRAM marketing without notebook markers → discrete card.
+    return any(
+        marker in folded
+        for marker in (
+            "gddr",
+            "windforce",
+            "gaming oc",
+            "eagle",
+            "aero",
+            "dual oc",
+            "shadow",
+            "ventus",
+            "tuf",
+            "aorus",
+        )
+    ) or ("geforce" in folded or "radeon" in folded)
+
+
+def form_factor_conflict(
+    reference_title: str | None,
+    candidate_title: str | None,
+) -> str | None:
+    """Reject notebook/system listings when the reference is a discrete GPU."""
+    if looks_like_discrete_gpu(reference_title) and looks_like_computing_system(
+        candidate_title
+    ):
+        return "form_factor_mismatch:gpu!=system"
+    if looks_like_computing_system(reference_title) and looks_like_discrete_gpu(
+        candidate_title
+    ):
+        return "form_factor_mismatch:system!=gpu"
+    return None
+
+
 def looks_like_used_condition(title: str | None) -> bool:
     """True when the listing title indicates refurbished / used / CPO stock."""
     folded = fold_text(title or "")
@@ -1448,6 +1531,62 @@ def identity_from_price_item(item: ProductPriceItem) -> ProductIdentity:
         mpn=mpn,
         mpn_display=mpn_display,
         mpn_aliases=mpn_aliases,
+    )
+
+
+def identity_reference_item(
+    title: str,
+    *,
+    brand: str | None = None,
+    model: str | None = None,
+    variant: str | None = None,
+    category: str | None = None,
+) -> ProductPriceItem:
+    """Build a synthetic reference listing from product identity only.
+
+    Used for Search+Match discovery without feeding known store URLs/IDs.
+    Placeholder commercial fields satisfy ``ProductPriceItem`` validation;
+    ``ProductMatchService.match_from_item`` clears price before scoring.
+    """
+    from datetime import UTC, datetime
+
+    from scout_api.modules.crawler.utils.product_attributes import (
+        resolve_product_identity,
+    )
+
+    bundle = resolve_product_identity(title=title, category=category)
+    resolved_brand = brand or bundle.value("brand")
+    resolved_model = model or bundle.value("model")
+    resolved_variant = variant
+    if resolved_variant is None:
+        edition = bundle.value("edition")
+        if edition:
+            resolved_variant = str(edition)
+    slug = fold_text(
+        " ".join(p for p in (resolved_brand, resolved_model, resolved_variant) if p)
+        or title
+    )
+    slug = re.sub(r"[^a-z0-9]+", "-", slug).strip("-") or "identity"
+    meta: dict[str, Any] = {"identity_only": True, "source": "identity-reference"}
+    if category:
+        meta["category"] = category
+    return ProductPriceItem.model_validate(
+        {
+            "store": "synthetic",
+            "country": "BR",
+            "product_id": f"identity:{slug}",
+            "url": f"scout://identity/{slug}",
+            "canonical_url": f"scout://identity/{slug}",
+            "title": title,
+            "brand": resolved_brand,
+            "model": resolved_model,
+            "variant": resolved_variant,
+            "currency": "BRL",
+            # Schema requires price > 0; match_from_item clears it for scoring.
+            "price": Decimal("1.00"),
+            "scraped_at": datetime.now(UTC),
+            "metadata": meta,
+        }
     )
 
 

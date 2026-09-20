@@ -40,6 +40,8 @@ def looks_like_mercadolivre_pdp(response: HtmlResponse) -> bool:
     text = response.text or ""
     if is_mercadolivre_snoopy_challenge(text) or is_challenge_page(text):
         return False
+    if is_auth_wall_page(text, url=str(response.url or "")):
+        return False
     if response.css("h1.ui-pdp-title::text, h1.ui-pdp-title").get():
         return True
     if response.css(".ui-pdp-price, [itemprop='price']").get():
@@ -49,6 +51,30 @@ def looks_like_mercadolivre_pdp(response: HtmlResponse) -> bool:
         return True
     path = urlparse(response.url or "").path or ""
     return bool(_CATALOG_ID_IN_URL.search(path) or "/MLB-" in path.upper())
+
+
+def looks_like_mercadolivre_search(response: HtmlResponse) -> bool:
+    """True when HTML looks like a public SERP (lista), not verification/login."""
+    text = response.text or ""
+    page_url = str(response.url or "")
+    if is_mercadolivre_snoopy_challenge(text) or is_challenge_page(text):
+        return False
+    if is_auth_wall_page(text, url=page_url):
+        return False
+    host_path = (urlparse(page_url).netloc + urlparse(page_url).path).casefold()
+    if "lista.mercadolivre" not in host_path and "lista.mercadolibre" not in host_path:
+        # Some redirects keep result cards on www with /..._Desde_...
+        if (
+            "ui-search-layout" not in text.casefold()
+            and "poly-component__title" not in (text.casefold())
+        ):
+            return False
+    folded = text.casefold()
+    if "ui-search" in folded or "poly-component__title" in folded:
+        return True
+    if "/p/mlb" in folded or "produto.mercadolivre" in folded:
+        return True
+    return False
 
 
 def has_mercadolivre_price_signal(response: HtmlResponse) -> bool:
@@ -118,6 +144,10 @@ class MercadoLivreHttpFirstHtmlFetcher:
                 extra={"url": url},
             )
             return self._browser.fetch(url)
+
+        # SERP (lista) can succeed on HTTP without PDP price widgets.
+        if looks_like_mercadolivre_search(response):
+            return self._annotate_http(response, url=url)
 
         if not looks_like_mercadolivre_pdp(response):
             logger.info(

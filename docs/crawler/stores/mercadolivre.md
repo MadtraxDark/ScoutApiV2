@@ -18,6 +18,10 @@
 - SERP: `https://lista.mercadolivre.com.br/{query}`
 - Parser: cards `/p/MLB…` e `produto.mercadolivre.com.br/MLB-…`
 - Usado por `POST /match` (ADR 0019 / 0025)
+- Redirect/`HTML` de `gz/account-verification` é **auth wall**
+  (`AUTH_REQUIRED` / `UPSTREAM_BLOCKED`), nunca SERP vazia → `NO_MATCH`
+- HTTP-first aceita SERP `ui-search` sem exigir widgets de PDP; falha
+  classificada escala Camoufox + proxy FALLBACK (Proxy Cost Mode)
 
 ## Offer source
 
@@ -75,6 +79,10 @@ See ADR 0025. Do **not** treat Snoopy HTML as product (`available=false` / fabri
 ## Known blocking
 
 - Bot Manager **Snoopy** PoW (`verifyChallenge`, `#continue-button`, `_bmc`)
+- SERP/lista: redirect para `gz/account-verification` (“acesse sua conta”) —
+  classificado como **auth wall** (`AUTH_REQUIRED`), não como SERP vazia.
+  Resolução: login com `MERCADOLIVRE_AUTH_EMAIL` / `MERCADOLIVRE_AUTH_PASSWORD`
+  (operador local) + proxy FALLBACK (ADR 0018). Sem credenciais → ERROR terminal.
 - `api.mercadolibre.com` frequentemente 403/401 sem app auth
 - Camoufox resolve Snoopy (ADR 0017) antes de parsear PDP
 
