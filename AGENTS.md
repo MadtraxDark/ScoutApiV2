@@ -44,6 +44,14 @@
   justificativa e autorização explícita). Não trate “não está no código atual”
   como inexistência de solução. Ver
   `.cursor/rules/research-and-problem-solving.mdc`.
+- **Observabilidade de tempo (crítico):** processos significativamente longos
+  — incluindo comandos, testes e ferramentas executados por agentes — **não
+  podem ser invisíveis**. Meça duração/etapa, não aguarde silenciosamente
+  processos aparentemente travados, investigue a causa, prefira feedback
+  rápido (teste direcionado antes de suíte cara) e reporte regressões. Retries,
+  browser e Product Match devem expor timings por etapa. Pendências
+  recorrentes: tipo `PERFORMANCE`. Ver `.cursor/rules/performance.mdc`,
+  `docs/performance.md` e ADR 0028.
 
 ## Documentation
 
@@ -92,7 +100,8 @@ Não declare a tarefa completa em silêncio.
 Índice: [`docs/README.md`](docs/README.md).
 
 Comandos oficiais: `make test` (ciclo rápido; ver `docs/testing.md`),
-`python -m pytest`, `ruff check .`, `ruff format --check .`, `mypy src`,
+`make test-performance` (durations + slow tests), `python -m pytest`,
+`ruff check .`, `ruff format --check .`, `mypy src`,
 `uvicorn scout_api.main:app --reload --app-dir src` e `docker compose up --build`.
 
 ## Skills

@@ -2,7 +2,7 @@
 
 SHOPEE_SEED_URL ?= https://shopee.com.br/Kingston-HyperX-Fury-DDR4-PC-RAM-4-Gb-8-16-DDR4-2133-2400-2666-3200-Mhz-Mem%C3%B3ria-De-Mesa-i.341936748.29277977480
 
-.PHONY: help spiders spiders-logs spiders-down seed-shopee seed-shopee-login up test test-unit test-integration test-live test-full lint format typecheck migrate
+.PHONY: help spiders spiders-logs spiders-down seed-shopee seed-shopee-login up test test-unit test-integration test-live test-full test-performance lint format typecheck migrate
 
 help:
 	@echo "Comandos disponíveis:"
@@ -18,9 +18,11 @@ help:
 	@echo "  make test-integration   Apenas -m integration"
 	@echo "  make test-live          Apenas -m live (rede real / lojas)"
 	@echo "  make test-full          Suite completa (unit + integration + live + slow)"
+	@echo "  make test-performance   Suite rápida com --durations + relatório de testes lentos"
 	@echo "  make lint               Executa o Ruff"
 	@echo "  make format             Valida a formatação"
 	@echo "  make typecheck          Executa o mypy"
+
 
 spiders:
 	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/update-spiders.ps1
@@ -57,6 +59,9 @@ test-live:
 
 test-full:
 	python -m pytest
+
+test-performance:
+	python -m pytest -m "not live and not slow" --durations=25 -ra
 
 lint:
 	ruff check .

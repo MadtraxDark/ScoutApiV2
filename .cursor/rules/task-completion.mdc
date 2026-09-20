@@ -28,6 +28,8 @@ Implementar
 4. Docs canônicas atualizadas quando o conhecimento mudou
    (`.cursor/rules/documentation-governance.mdc`).
 5. Relatório final em pt-BR (`.cursor/rules/language-pt-BR.mdc`) com
-   `Pendências restantes: ...`.
+   `Pendências restantes: ...`. Em tarefas de crawler/browser/match/DB/testes/CI,
+   declare também se alguma operação ficou significativamente mais lenta
+   (`.cursor/rules/performance.mdc`).
 
 Não marque pendência como resolvida só porque “parte” do trabalho avançou.

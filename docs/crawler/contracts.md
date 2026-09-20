@@ -90,7 +90,9 @@ ADR: [0011](../adr/0011-offer-vs-product-details.md), [0012](../adr/0012-optiona
   `auto_match`; cheap-reject SERP titles (accessory/bundle/form-factor/critical
   identity/brand) before PDP scrape; cap consecutive empty non-identifier
   searches (`_MAX_EMPTY_SEARCH_QUERIES`). Structured timing logs:
-  `match_store_timing` / `match_total_timing`. Default `include_images=false`.
+  `match_store_timing` / `match_total_timing` / `match_timing_summary`, plus
+  `slow_operation` events via `scout_api.core.performance` (ADR 0028).
+  Default `include_images=false`.
 - Persistence (PostgreSQL): `CanonicalProduct`, `StoreListing`, `OfferSnapshot`,
   `OfferEvent` — refresh **appends** snapshots/events (never silent overwrite).
 - `UPSTREAM_BLOCKED` on refresh → `scrape_failed` (listing stays active).

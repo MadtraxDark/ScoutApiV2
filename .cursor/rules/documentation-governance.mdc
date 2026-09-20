@@ -58,9 +58,10 @@ Final user-facing reports must be in pt-BR
 | Architectural decision + rejected alternatives | `docs/adr/` (new ADR; never silently rewrite Accepted) |
 | Crawler contracts / errors / attributes / pricing norms | `docs/crawler/contracts.md` |
 | Store-specific durable behavior | `docs/crawler/stores/<store>.md` |
-| Agent workflow / skills / proxy / fetch immutability / research-before-block | `.cursor/rules/` |
+| Agent workflow / skills / proxy / fetch immutability / research-before-block / performance | `.cursor/rules/` |
 | Skills inventory | `docs/skills/README.md` |
 | Actionable incomplete work | `docs/pending/` |
+| Performance budgets / slow ops | `docs/performance.md` |
 | Operator overview | `README.md` |
 
 Prefer updating an existing document over creating a parallel copy.

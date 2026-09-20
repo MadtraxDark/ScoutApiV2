@@ -1,0 +1,87 @@
+---
+description: Observabilidade de tempo — processos longos não podem ser invisíveis
+alwaysApply: true
+---
+
+# CRITICAL RULE — Performance / time observability
+
+**PROCESSO LONGO NÃO PODE SER INVISÍVEL.**
+
+Canônico: `docs/performance.md` + ADR 0028. Budgets: `scout_api.core.performance.BUDGETS`.
+
+## Invariante
+
+Operações significativamente lentas — incluindo comandos/testes/ferramentas
+executados pelo agente — devem ser **identificadas e reportadas**. Não aguarde
+silenciosamente processos aparentemente travados. Meça, investigue a causa,
+reduza o caso de reprodução e registre regressões ou pendências `PERFORMANCE`
+quando necessário.
+
+Não registre raciocínio interno da IA — só etapas/operações observáveis.
+
+## Comando longo (obrigatório)
+
+Se um comando demorar muito mais que o esperado para sua categoria:
+
+1. identificar a operação ativa;
+2. verificar há quanto tempo roda;
+3. avaliar saída/progresso;
+4. verificar timeout configurado;
+5. investigar hang possível;
+6. interromper com segurança se necessário;
+7. descobrir a causa;
+8. procurar alternativa mais rápida;
+9. registrar a ocorrência no relatório final.
+
+Não ficar em “aguardando…” sem evidência de progresso. Prefira streaming/
+progresso da ferramenta; senão, timeout razoável + investigação.
+
+## Feedback rápido
+
+Antes de suíte cara:
+
+```text
+teste direcionado → testes do módulo → integration → suite → live/e2e se preciso
+```
+
+Evite: alterar → testar 10 min → alterar → testar 10 min.
+Reproduza rápido (unit/fixture), corrija, só então rode a suíte completa.
+
+## Pesquisa / debug loops
+
+Não repita `search → search → search` sem convergir. Com evidência suficiente:
+sintetize → escolha abordagem → implemente → teste. Se pesquisa/debug se
+alongar, diga por quê.
+
+## Medir antes de otimizar
+
+```text
+slow → medir → localizar gargalo → reproduzir → pesquisar → otimizar → medir de novo
+```
+
+Se não resolver na tarefa: pendência tipo `PERFORMANCE` (`docs/pending/`).
+
+## O que observar (agentes)
+
+pytest, lint, mypy, Docker, migrations, DB, downloads, pip/uv, git, pesquisas
+externas, browser/Camoufox, scrapes live, benchmarks, scripts shell, tool calls.
+
+Para tarefas grandes, estime fases observáveis (investigação / research /
+implementação / testes / lint).
+
+## Relatório final
+
+Se houve operação significativamente lenta, incluir: operação, duração, causa,
+impacto, ação (otimizou / pending / aceito com justificativa).
+
+Antes de concluir tarefas de crawler/browser/match/DB/testes/CI: **a alteração
+tornou alguma operação significativamente mais lenta?** Se sim → investigar,
+otimizar ou pending.
+
+## Não fazer
+
+- aumentar timeout para “passar” processo lento;
+- skip para esconder lentidão;
+- warning para tudo (respeitar budgets);
+- logar secrets/tokens/cookies;
+- aceitar 10 minutos como normal sem investigação.

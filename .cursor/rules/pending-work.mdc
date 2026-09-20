@@ -41,7 +41,7 @@ Fechado (nunca no índice ativo):
 
 - `RESOLVED` — critérios de done atendidos
 
-Tipo (campo separado): `INCOMPLETE` | `BUG` | `TESTING` | `TECH_DEBT` | `RESEARCH` | `DOCS`
+Tipo (campo separado): `INCOMPLETE` | `BUG` | `TESTING` | `TECH_DEBT` | `RESEARCH` | `DOCS` | `PERFORMANCE`
 
 Prioridade: `P0` | `P1` | `P2` | `P3`
 

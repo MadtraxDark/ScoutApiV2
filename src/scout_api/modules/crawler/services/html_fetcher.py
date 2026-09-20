@@ -15,6 +15,7 @@ from collections.abc import Callable, Sequence
 from contextlib import AbstractContextManager
 from http.cookiejar import CookieJar
 from pathlib import Path
+from types import TracebackType
 from typing import Any, Protocol
 from urllib.error import HTTPError, URLError
 from urllib.parse import unquote, urlparse
@@ -22,6 +23,8 @@ from urllib.request import HTTPCookieProcessor, build_opener
 from urllib.request import Request as UrlRequest
 
 from scrapy.http import HtmlResponse, Request
+
+from scout_api.core.performance import OperationCategory, observe
 
 from ..core.exceptions import RequestError, shopee_auth_required_error
 from ..core.fetch_metrics import FetchCostMetrics
@@ -1128,6 +1131,20 @@ class CamoufoxHtmlFetcher:
             payload.get("requests_by_resource_type"),
             extra=payload,
         )
+        observe(
+            "browser_fetch",
+            float(metrics.duration_ms),
+            category=OperationCategory.BROWSER_NAVIGATION,
+            stage=str(payload.get("store") or "unknown"),
+            context={
+                "result": payload.get("result"),
+                "proxy_used": payload.get("proxy_used"),
+                "retry_count": payload.get("retry_count"),
+                "network_request_count": payload.get("network_request_count"),
+                "warmup_used": payload.get("warmup_used"),
+                "early_stop": payload.get("early_stop"),
+            },
+        )
 
     def _attach_cost_listeners(
         self,
@@ -1189,10 +1206,14 @@ class CamoufoxHtmlFetcher:
     def _open_browser(self, *, url: str) -> AbstractContextManager[Any]:
         launch_kwargs = self._launch_kwargs(url=url)
         if self._browser_factory is not None:
-            return self._browser_factory(**launch_kwargs)
-        from camoufox.sync_api import Camoufox
+            inner = self._browser_factory(**launch_kwargs)
+        else:
+            from camoufox.sync_api import Camoufox
 
-        return Camoufox(**launch_kwargs)  # type: ignore[no-untyped-call]
+            inner = Camoufox(**launch_kwargs)  # type: ignore[no-untyped-call]
+        store_cfg = resolve_store_config(url)
+        store_key = store_cfg.key if store_cfg is not None else "unknown"
+        return _TimedBrowserLaunch(inner, store=store_key)
 
     def _launch_kwargs(self, *, url: str) -> dict[str, Any]:
         # Linux Docker headless is detected by Cloudflare; Xvfb "virtual" passes.
@@ -1652,6 +1673,36 @@ class CamoufoxHtmlFetcher:
             logger.debug("aliexpress_mtop_listener_unavailable")
             return
         on_fn("response", on_response)
+
+
+
+class _TimedBrowserLaunch:
+    """Measure browser/context enter without changing launch behavior."""
+
+    def __init__(self, inner: AbstractContextManager[Any], *, store: str) -> None:
+        self._inner = inner
+        self._store = store
+
+    def __enter__(self) -> Any:
+        t0 = time.perf_counter()
+        browser = self._inner.__enter__()
+        observe(
+            "browser_launch",
+            (time.perf_counter() - t0) * 1000,
+            category=OperationCategory.BROWSER_LAUNCH,
+            stage=self._store,
+        )
+        return browser
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> bool | None:
+        result = self._inner.__exit__(exc_type, exc, tb)
+        return result if isinstance(result, bool) else None
+
 
 
 def profile_dirs_for_base(base: Path) -> tuple[Path, Path]:

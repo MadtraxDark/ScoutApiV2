@@ -1,7 +1,7 @@
 # PENDING-NNN — Título curto
 
 - Status: OPEN | IN_PROGRESS | BLOCKED
-- Tipo: INCOMPLETE | BUG | TESTING | TECH_DEBT | RESEARCH | DOCS
+- Tipo: INCOMPLETE | BUG | TESTING | TECH_DEBT | RESEARCH | DOCS | PERFORMANCE
 - Prioridade: P0 | P1 | P2 | P3
 - Área: ex. crawler/amazon, api, docker
 - Origem: AAAA-MM-DD — referência breve da tarefa
@@ -10,6 +10,21 @@
 ## Contexto
 
 Por que existe e o que era esperado.
+
+## Performance (obrigatório se Tipo=PERFORMANCE)
+
+- Operação:
+- Duração observada:
+- Duração esperada (budget/categoria):
+- Frequência (ex. 3/3 runs):
+- Impacto:
+- Causa conhecida/provável:
+- Evidências (logs `slow_operation` / `match_*_timing` / pytest durations):
+- Comandos envolvidos:
+- Arquivos envolvidos:
+- Investigação realizada:
+- Possíveis soluções:
+- Done condition:
 
 ## Feito
 

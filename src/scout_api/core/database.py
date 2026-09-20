@@ -110,15 +110,20 @@ def create_db_engine(settings: Settings | None = None) -> Engine:
     }
     if is_transaction_pooler(url):
         # Serverless / transaction pooler: rely on Supavisor; no client QueuePool.
-        return create_engine(url, poolclass=NullPool, **common)
-    return create_engine(
-        url,
-        pool_size=cfg.database_pool_size,
-        max_overflow=cfg.database_max_overflow,
-        pool_timeout=cfg.database_pool_timeout_seconds,
-        pool_recycle=cfg.database_pool_recycle_seconds,
-        **common,
-    )
+        engine = create_engine(url, poolclass=NullPool, **common)
+    else:
+        engine = create_engine(
+            url,
+            pool_size=cfg.database_pool_size,
+            max_overflow=cfg.database_max_overflow,
+            pool_timeout=cfg.database_pool_timeout_seconds,
+            pool_recycle=cfg.database_pool_recycle_seconds,
+            **common,
+        )
+    from scout_api.core.performance import attach_slow_query_listener
+
+    attach_slow_query_listener(engine)
+    return engine
 
 
 @lru_cache

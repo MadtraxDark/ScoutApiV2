@@ -4,6 +4,8 @@ from typing import Any
 from scrapy import signals
 from scrapy.http import Request, Response
 
+from scout_api.core.performance import OperationCategory, observe
+
 from .core.retry import backoff_delay, retry_after
 
 logger = logging.getLogger(__name__)
@@ -28,6 +30,7 @@ class PoliteRetryMiddleware:
         retry = request.copy()
         retry.meta["retry_count"] = retries + 1
         retry.meta["download_delay_override"] = delay
+        delay_ms = round(float(delay) * 1000, 1)
         logger.info(
             "retry_scheduled",
             extra={
@@ -35,7 +38,20 @@ class PoliteRetryMiddleware:
                 "attempt": retries + 1,
                 "status": response.status,
                 "delay": delay,
+                "backoff_ms": delay_ms,
             },
+        )
+        observe(
+            "scrapy_retry",
+            delay_ms,
+            category=OperationCategory.HTTP_REQUEST,
+            stage=str(getattr(spider, "store", "unknown")),
+            context={
+                "attempt": retries + 1,
+                "status": response.status,
+                "backoff_ms": delay_ms,
+            },
+            force_event=True,
         )
         return retry
 
@@ -46,9 +62,32 @@ class PoliteRetryMiddleware:
         maximum = int(spider.settings.getint("RETRY_TIMES", 3))
         if retries >= maximum:
             return None
+        delay = backoff_delay(retries)
         retry = request.copy()
         retry.meta["retry_count"] = retries + 1
-        retry.meta["download_delay_override"] = backoff_delay(retries)
+        retry.meta["download_delay_override"] = delay
+        delay_ms = round(float(delay) * 1000, 1)
+        logger.info(
+            "retry_scheduled_exception",
+            extra={
+                "store": getattr(spider, "store", "unknown"),
+                "attempt": retries + 1,
+                "backoff_ms": delay_ms,
+                "exc_type": type(exception).__name__,
+            },
+        )
+        observe(
+            "scrapy_retry",
+            delay_ms,
+            category=OperationCategory.HTTP_REQUEST,
+            stage=str(getattr(spider, "store", "unknown")),
+            context={
+                "attempt": retries + 1,
+                "backoff_ms": delay_ms,
+                "exc_type": type(exception).__name__,
+            },
+            force_event=True,
+        )
         return retry
 
     @classmethod

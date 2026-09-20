@@ -41,6 +41,7 @@ reinicia do zero.
 | `TECH_DEBT` | Funciona, mas há dívida relevante |
 | `RESEARCH` | Precisa investigação antes de decidir |
 | `DOCS` | Falta documentação importante |
+| `PERFORMANCE` | Lentidão recorrente / regressão de tempo não resolvida |
 
 ## Prioridade
 

@@ -19,6 +19,7 @@ make test-unit         # só tests/unit
 make test-integration  # -m integration
 make test-live         # -m live (rede real)
 make test-full         # tudo
+make test-performance  # suite rápida + --durations=25 + resumo budget-aware
 
 python -m pytest --durations=50   # profiling
 ```
@@ -29,6 +30,8 @@ Equivalente direto:
 python -m pytest -m "not live and not slow"
 ```
 
+Observabilidade de tempo (budgets, `slow_operation`, retries, browser):
+[`performance.md`](performance.md).
 ## Regras para novos testes
 
 1. **Parser / identity / match scoring** → fixture HTML/JSON local em `tests/fixtures/`, unit test.

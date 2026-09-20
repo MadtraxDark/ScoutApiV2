@@ -41,6 +41,7 @@ Execute `python -m venv .venv`, `python -m pip install -e ".[dev]"` e `uvicorn s
 
 ```bash
 make test              # ciclo diário (exclui live/slow)
+make test-performance  # + --durations e resumo de testes lentos
 make test-live         # lojas reais
 make test-full         # tudo
 ruff check .
@@ -49,6 +50,7 @@ mypy src
 ```
 
 Detalhes de markers, budgets e regras: [`docs/testing.md`](docs/testing.md).
+Observabilidade de tempo: [`docs/performance.md`](docs/performance.md).
 
 Para desenvolvimento, atualize somente os spiders sem reconstruir a imagem:
 

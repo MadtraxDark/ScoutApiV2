@@ -11,6 +11,12 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from scout_api.core.performance import (
+    DuplicateWorkTracker,
+    OperationCategory,
+    format_stage_summary,
+    observe,
+)
 from scout_api.modules.crawler.core.exceptions import ParseError, RequestError
 from scout_api.modules.crawler.core.fingerprints import canonicalize_url
 from scout_api.modules.crawler.models.product import (
@@ -224,6 +230,8 @@ class ProductMatchService:
             learned = TrustedGtin(gtin=ref_identity.gtin, source="reference")
 
         match_t0 = time.perf_counter()
+        store_stage_ms: dict[str, dict[str, object]] = {}
+        dup_tracker = DuplicateWorkTracker()
         for store_key in target_stores:
             if not self._search.is_search_supported(store_key):
                 errors.append(
@@ -244,6 +252,8 @@ class ProductMatchService:
             scrape_failures = 0
             title_rejects = 0
             scrapes_done = 0
+            search_ms_total = 0.0
+            scrape_ms_total = 0.0
             last_scrape_error: MatchStoreError | None = None
             for query in queries:
                 try:
@@ -254,6 +264,17 @@ class ProductMatchService:
                         limit=max_candidates_per_store,
                     )
                     search_ms = (time.perf_counter() - search_t0) * 1000
+                    search_ms_total += search_ms
+                    observe(
+                        "product_search",
+                        search_ms,
+                        category=OperationCategory.PRODUCT_SEARCH,
+                        stage=store_key,
+                        context={
+                            "query_len": len(query),
+                            "candidates": len(candidates),
+                        },
+                    )
                 except RequestError as exc:
                     last_error = MatchStoreError(
                         store=store_key,
@@ -315,6 +336,8 @@ class ProductMatchService:
                             },
                         )
                         continue
+                    canon = canonicalize_url(candidate.url)
+                    dup_count = dup_tracker.record("scrape_url", canon)
                     scrape_t0 = time.perf_counter()
                     product, scrape_error = self._scrape_candidate(
                         candidate.url,
@@ -323,6 +346,17 @@ class ProductMatchService:
                     )
                     scrapes_done += 1
                     scrape_ms = (time.perf_counter() - scrape_t0) * 1000
+                    scrape_ms_total += scrape_ms
+                    observe(
+                        "product_scrape",
+                        scrape_ms,
+                        category=OperationCategory.CRAWLER,
+                        stage=store_key,
+                        context={
+                            "duplicate_scrape": dup_count > 1,
+                            "ok": product is not None,
+                        },
+                    )
                     if product is None:
                         scrape_failures += 1
                         if scrape_error is not None:
@@ -378,16 +412,25 @@ class ProductMatchService:
                 if store_matched:
                     break
 
-            logger.info(
-                "match_store_timing",
-                extra={
-                    "store": store_key,
-                    "elapsed_ms": round((time.perf_counter() - store_t0) * 1000, 1),
-                    "candidates_seen": candidates_seen,
-                    "title_rejects": title_rejects,
-                    "scrapes": scrapes_done,
-                    "matched": store_matched,
-                },
+            store_elapsed_ms = (time.perf_counter() - store_t0) * 1000
+            store_timing = {
+                "store": store_key,
+                "elapsed_ms": round(store_elapsed_ms, 1),
+                "search_ms": round(search_ms_total, 1),
+                "scrape_ms": round(scrape_ms_total, 1),
+                "candidates_seen": candidates_seen,
+                "title_rejects": title_rejects,
+                "scrapes": scrapes_done,
+                "matched": store_matched,
+            }
+            store_stage_ms[store_key] = store_timing
+            logger.info("match_store_timing", extra=store_timing)
+            observe(
+                "product_match_store",
+                store_elapsed_ms,
+                category=OperationCategory.PRODUCT_MATCH,
+                stage=store_key,
+                context=store_timing,
             )
 
             if store_key in best_by_store:
@@ -405,13 +448,48 @@ class ProductMatchService:
                 ):
                     errors.append(last_scrape_error)
 
-        logger.info(
-            "match_total_timing",
-            extra={
-                "elapsed_ms": round((time.perf_counter() - match_t0) * 1000, 1),
-                "stores": len(target_stores),
-                "matches": len(matches),
+        match_elapsed_ms = (time.perf_counter() - match_t0) * 1000
+        total_extra = {
+            "elapsed_ms": round(match_elapsed_ms, 1),
+            "stores": len(target_stores),
+            "matches": len(matches),
+            "stores_timing": {
+                key: {
+                    "elapsed_ms": val["elapsed_ms"],
+                    "search_ms": val["search_ms"],
+                    "scrape_ms": val["scrape_ms"],
+                    "scrapes": val["scrapes"],
+                    "matched": val["matched"],
+                }
+                for key, val in store_stage_ms.items()
             },
+        }
+        logger.info("match_total_timing", extra=total_extra)
+        summary = format_stage_summary(
+            "Product Match",
+            match_elapsed_ms,
+            {
+                store: {
+                    "elapsed_ms": timing["elapsed_ms"],
+                    "search_ms": timing["search_ms"],
+                    "scrape_ms": timing["scrape_ms"],
+                    "scrapes": timing["scrapes"],
+                    "matched": timing["matched"],
+                }
+                for store, timing in store_stage_ms.items()
+            },
+        )
+        logger.info("match_timing_summary\n%s", summary)
+        observe(
+            "product_match",
+            match_elapsed_ms,
+            category=OperationCategory.PRODUCT_MATCH,
+            stage="total",
+            context=total_extra,
+        )
+        dup_tracker.observe_if_repeated(
+            operation="product_match_duplicate_scrape",
+            category=OperationCategory.PRODUCT_MATCH,
         )
 
         # Final consensus across all auto-matches (guards mid-flight conflicts).

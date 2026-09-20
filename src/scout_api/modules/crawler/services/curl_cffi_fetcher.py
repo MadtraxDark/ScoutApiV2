@@ -9,6 +9,8 @@ from typing import Any
 
 from scrapy.http import HtmlResponse, Request
 
+from scout_api.core.performance import OperationCategory, RetryLedger
+
 from ..core.exceptions import RequestError
 from ..core.retry import backoff_delay
 from .html_fetcher import (
@@ -52,6 +54,11 @@ class CurlCffiHtmlFetcher:
     def fetch(self, url: str) -> HtmlResponse:
         last_error: Exception | None = None
         attempts = self._max_retries + 1
+        ledger = RetryLedger(
+            operation="curl_cffi_fetch",
+            category=OperationCategory.HTTP_REQUEST,
+        )
+        pending_backoff_ms = 0.0
         for attempt in range(attempts):
             if attempt > 0:
                 delay = backoff_delay(
@@ -60,13 +67,31 @@ class CurlCffiHtmlFetcher:
                     cap=self._max_delay,
                     rng=self._rng,
                 )
+                pending_backoff_ms = delay * 1000
                 # Small human-like pause even on first retry.
                 time.sleep(delay)
+            ledger.begin_attempt()
             try:
-                return self._fetch_once(url)
+                response = self._fetch_once(url)
+                ledger.end_attempt(
+                    outcome="success",
+                    backoff_ms=pending_backoff_ms,
+                )
+                pending_backoff_ms = 0.0
+                if len(ledger.attempts) > 1:
+                    ledger.observe(stage="http", extra={"host": _host_of(url)})
+                return response
             except RequestError as exc:
                 last_error = exc
-                if not exc.retryable or attempt >= attempts - 1:
+                will_retry = bool(exc.retryable) and attempt < attempts - 1
+                ledger.end_attempt(
+                    outcome="retry" if will_retry else "failed",
+                    code=exc.code,
+                    backoff_ms=pending_backoff_ms,
+                )
+                pending_backoff_ms = 0.0
+                if not will_retry:
+                    ledger.observe(stage="http", extra={"host": _host_of(url)})
                     raise
                 logger.info(
                     "curl_cffi_retry",
@@ -74,11 +99,20 @@ class CurlCffiHtmlFetcher:
                         "url": url,
                         "attempt": attempt + 1,
                         "code": exc.code,
+                        **ledger.as_context(),
                     },
                 )
             except Exception as exc:
                 last_error = exc
-                if attempt >= attempts - 1:
+                will_retry = attempt < attempts - 1
+                ledger.end_attempt(
+                    outcome="retry" if will_retry else "failed",
+                    code="UPSTREAM_NETWORK_ERROR",
+                    backoff_ms=pending_backoff_ms,
+                )
+                pending_backoff_ms = 0.0
+                if not will_retry:
+                    ledger.observe(stage="http", extra={"host": _host_of(url)})
                     raise RequestError(
                         f"Falha ao buscar URL com curl_cffi: {exc}",
                         code="UPSTREAM_NETWORK_ERROR",
@@ -87,7 +121,11 @@ class CurlCffiHtmlFetcher:
                     ) from exc
                 logger.info(
                     "curl_cffi_retry_network",
-                    extra={"url": url, "attempt": attempt + 1},
+                    extra={
+                        "url": url,
+                        "attempt": attempt + 1,
+                        **ledger.as_context(),
+                    },
                 )
         assert last_error is not None
         raise last_error
@@ -206,3 +244,9 @@ class CurlCffiHtmlFetcher:
         }
         html_response.meta["fetch_metrics"] = metrics
         return html_response
+
+
+def _host_of(url: str) -> str:
+    from urllib.parse import urlparse
+
+    return (urlparse(url).netloc or "")[:120]
