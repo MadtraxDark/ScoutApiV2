@@ -18,6 +18,7 @@ GTIN_EXPOSURE_RANK: dict[str, int] = {
     "magazineluiza": 70,  # extractor exists; often absent on PDP
     "mercadolivre": 75,  # catalog ids strong; GTIN often absent in JSON-LD
     "shopee": 90,  # marketplace; barcode often missing
+    "aliexpress": 92,  # marketplace; GTIN rare in MTop props
     "visaovip": 95,
 }
 

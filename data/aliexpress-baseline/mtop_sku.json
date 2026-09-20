@@ -1,0 +1,50 @@
+{
+  "extraInfo": {
+    "skuCountThreshold4ShowSmallImage": 20
+  },
+  "inSkuAboveBlacklist": false,
+  "selectedSkuAttr": "200007763:203054829",
+  "selectedSkuId": 12000059875009119,
+  "selectedSkuIdStr": "12000059875009119",
+  "selectedSkuSaleable": true,
+  "skuPaths": [
+    {
+      "path": "200007763:203054829",
+      "salable": true,
+      "skuAttr": "200007763:203054829",
+      "skuId": 12000059875009119,
+      "skuIdStr": "12000059875009119",
+      "skuStock": 1
+    }
+  ],
+  "skuProperties": [
+    {
+      "hasSkuImage": false,
+      "isShowTypeColor": false,
+      "showType": "none",
+      "showTypeColor": false,
+      "sizeInfo": {
+        "hasSizeInfo": false,
+        "icon": "https://ae-pic-a1.aliexpress-media.com/kf/Sbc534a10bc2044448f9aa271540236800/36x36.png",
+        "sizeInfoUrl": "https://www.aliexpress.com/p/secondaryPage/size-chart.html?_pid=1005011737968391&mid=7320476058&_locale=pt_BR&version=2",
+        "title": "Tabela de tamanhos"
+      },
+      "skuPropertyId": 200007763,
+      "skuPropertyName": "Envia de",
+      "skuPropertyValues": [
+        {
+          "propertyValueDisplayName": "Brasil",
+          "propertyValueIdLong": 203054829,
+          "propertyValueName": "Brasil",
+          "showHot": false,
+          "skuPropertyImagePath": "",
+          "skuPropertyImageSummPath": "",
+          "skuPropertySendGoodsCountryCode": "BR"
+        }
+      ]
+    }
+  ],
+  "skuSupportClothes": false,
+  "stealthSelection": false,
+  "supportClothesSku": false
+}

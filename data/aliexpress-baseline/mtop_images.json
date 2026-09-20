@@ -1,0 +1,63 @@
+{
+  "currentSkuImages": [
+    "https://ae-pic-a1.aliexpress-media.com/kf/A39428fdb8d074887a681b5a55845c0978.png_960x960.png"
+  ],
+  "imagePathList": [
+    "https://ae-pic-a1.aliexpress-media.com/kf/A39428fdb8d074887a681b5a55845c0978.png",
+    "https://ae-pic-a1.aliexpress-media.com/kf/A3853ed57de834693b6519fd866376c1ek.png",
+    "https://ae-pic-a1.aliexpress-media.com/kf/A399d521cc76b457cbf10a79b827a48bae.png",
+    "https://ae-pic-a1.aliexpress-media.com/kf/Ae964c40c024844219502de258deeedda3.png",
+    "https://ae-pic-a1.aliexpress-media.com/kf/A234ded1f3f2547248ec278aa87946bddH.png",
+    "https://ae-pic-a1.aliexpress-media.com/kf/Addf9c8df28ab449faadbb3143e1e9cb2V.png"
+  ],
+  "imgList": [
+    "https://ae-pic-a1.aliexpress-media.com/kf/A39428fdb8d074887a681b5a55845c0978.png_960x960.png",
+    "https://ae-pic-a1.aliexpress-media.com/kf/A3853ed57de834693b6519fd866376c1ek.png_960x960.png",
+    "https://ae-pic-a1.aliexpress-media.com/kf/A399d521cc76b457cbf10a79b827a48bae.png_960x960.png",
+    "https://ae-pic-a1.aliexpress-media.com/kf/Ae964c40c024844219502de258deeedda3.png_960x960.png",
+    "https://ae-pic-a1.aliexpress-media.com/kf/A234ded1f3f2547248ec278aa87946bddH.png_960x960.png",
+    "https://ae-pic-a1.aliexpress-media.com/kf/Addf9c8df28ab449faadbb3143e1e9cb2V.png_960x960.png"
+  ],
+  "mainImages": [
+    {
+      "imageKey": "A39428fdb8d074887a681b5a55845c0978.png",
+      "imageUrl": "https://ae-pic-a1.aliexpress-media.com/kf/A39428fdb8d074887a681b5a55845c0978.png_960x960.png"
+    },
+    {
+      "imageKey": "A3853ed57de834693b6519fd866376c1ek.png",
+      "imageUrl": "https://ae-pic-a1.aliexpress-media.com/kf/A3853ed57de834693b6519fd866376c1ek.png_960x960.png"
+    },
+    {
+      "imageKey": "A399d521cc76b457cbf10a79b827a48bae.png",
+      "imageUrl": "https://ae-pic-a1.aliexpress-media.com/kf/A399d521cc76b457cbf10a79b827a48bae.png_960x960.png"
+    },
+    {
+      "imageKey": "Ae964c40c024844219502de258deeedda3.png",
+      "imageUrl": "https://ae-pic-a1.aliexpress-media.com/kf/Ae964c40c024844219502de258deeedda3.png_960x960.png"
+    },
+    {
+      "imageKey": "A234ded1f3f2547248ec278aa87946bddH.png",
+      "imageUrl": "https://ae-pic-a1.aliexpress-media.com/kf/A234ded1f3f2547248ec278aa87946bddH.png_960x960.png"
+    },
+    {
+      "imageKey": "Addf9c8df28ab449faadbb3143e1e9cb2V.png",
+      "imageUrl": "https://ae-pic-a1.aliexpress-media.com/kf/Addf9c8df28ab449faadbb3143e1e9cb2V.png_960x960.png"
+    }
+  ],
+  "pageBarShiftLeft": false,
+  "showColorTab": false,
+  "showLongImage": false,
+  "skuImagesMap": {
+    "12000059875009119": [
+      "https://ae-pic-a1.aliexpress-media.com/kf/A39428fdb8d074887a681b5a55845c0978.png_960x960.png"
+    ]
+  },
+  "summImagePathList": [
+    "https://ae-pic-a1.aliexpress-media.com/kf/A39428fdb8d074887a681b5a55845c0978.png_80x80.png",
+    "https://ae-pic-a1.aliexpress-media.com/kf/A3853ed57de834693b6519fd866376c1ek.png_80x80.png",
+    "https://ae-pic-a1.aliexpress-media.com/kf/A399d521cc76b457cbf10a79b827a48bae.png_80x80.png",
+    "https://ae-pic-a1.aliexpress-media.com/kf/Ae964c40c024844219502de258deeedda3.png_80x80.png",
+    "https://ae-pic-a1.aliexpress-media.com/kf/A234ded1f3f2547248ec278aa87946bddH.png_80x80.png",
+    "https://ae-pic-a1.aliexpress-media.com/kf/Addf9c8df28ab449faadbb3143e1e9cb2V.png_80x80.png"
+  ]
+}

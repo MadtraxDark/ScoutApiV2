@@ -1,0 +1,390 @@
+{
+  "bgColor": "#FFFFFF",
+  "deliveryExt": "[{\"d0\":\"8819.02\",\"d1\":\"BRL\",\"itemScene\":\"newGlobal\",\"p0\":\"12000059875009119\",\"p1\":\"8819.02\",\"p10\":[526666,1098872,2022550,680867,299658,648839,1517927,2006319,2034478,526940,1961321,2065739,273138,2019016,111478,2000201,1998022,339135,1961383,1976581,1998021,2066528],\"p16\":true,\"p18\":\"default\",\"p24\":\"{\\\"scenario\\\":\\\"pcMainScreen\\\"}\",\"p25\":\"\",\"p3\":\"BRL\",\"p4\":\"990000\",\"p5\":\"0\",\"p6\":\"null\",\"p7\":\"{}\",\"p8\":\"BR\",\"p9\":\"R$ 8.819,02\"}]",
+  "deliveryLayoutInfo": [
+    {
+      "additionLayout": [
+        {
+          "blockGroup": "others-0",
+          "blockType": "others",
+          "componentId": "134000",
+          "content": "Rastreamento Disponível",
+          "displayCondition": "tracking=visible&&isApl!=yes",
+          "distance": 1,
+          "medusaKey": "tracking_available@others",
+          "order": 4,
+          "type": "textWithMark",
+          "useInDeliveryOptionPanel": true,
+          "useInDetailFirstScreen": false,
+          "useInSkuSwitch": false
+        }
+      ],
+      "bizData": {
+        "deliveryOptionCode": "BR_L2L_SISLOGICA_CORREIOS",
+        "leadTimeSort": [
+          9999
+        ],
+        "deliveryProviderName": "BR_L2L_SISLOGICA_CORREIOS",
+        "useTimeType": "algorithm",
+        "patternId": 2696001,
+        "discount": 100.0,
+        "utParams": "{\"buyerId\":0,\"categoryId\":708044,\"cmd\":false,\"crowdTypes\":\"{\\\"eta_sensitive_tag\\\":\\\"-730838169\\\",\\\"shipping_cost_sensitive\\\":\\\"-1315857875\\\"}\",\"currency\":\"BRL\",\"deliveryDate\":\"2026-09-29\",\"deliveryDateMin\":\"2026-09-22\",\"deliveryDayMax\":9,\"deliveryDayMin\":2,\"fAmount\":0.0,\"fCurrency\":\"BRL\",\"gtpEtaTraceId\":\"2#9#ALGORITHM#1790078468117#1790683268117#BR_L2L_SISLOGICA_CORREIOS#ae_marketplace#BR#1789905668117#NON#POP#NON#NON#BR#32#f94c5b45c283c6ae0337db68b6f55080_20260919#903200250000000000#\",\"itemId\":1005011737968391,\"preOrder\":false,\"productId\":1005011737968391,\"provider\":\"operator\",\"serviceName\":\"BR_L2L_SISLOGICA_CORREIOS\",\"shipFrom\":\"BR\",\"shipToCityCode\":\"903200250059000000\",\"shipToCountry\":\"BR\",\"shipToStateCode\":\"903200250000000000\",\"shippingFee\":\"0\",\"traceId\":\"2101e80f17899056680387111e0d55\",\"trackingAvailable\":true}",
+        "tracking": "visible",
+        "workDayOneFourBeforeCutTime": "no",
+        "gtpProvider": "ALGORITHM",
+        "existEtaMinTime": "yes",
+        "dayOfWeek": "terça-feira",
+        "provider": "operator",
+        "itemShipFromType": "same",
+        "identityType": "POP",
+        "displayTomorrow": "no",
+        "itemScene": "newGlobal",
+        "shipToCode": "BR",
+        "thresholdOverZero": "yes",
+        "currency": "BRL",
+        "company": "Entrega Padrão 3PL(Sislogica-Correios)",
+        "deliveryDate": "29 de Set.",
+        "shipFrom": "Brasil",
+        "deliveryDayMax": 9,
+        "displayEtaMinDate": "22 de Set.",
+        "guaranteedDeliveryTime": 45,
+        "etaVersionDisplayType": "deliveryDateInterval",
+        "freightCommitDay": "45",
+        "etaTraceId": "2#9#ALGORITHM#1790078468117#1790683268117#BR_L2L_SISLOGICA_CORREIOS#ae_marketplace#BR#1789905668117#NON#POP#NON#NON#BR#32#f94c5b45c283c6ae0337db68b6f55080_20260919#903200250000000000#",
+        "etaVersionStrategyId": 98,
+        "gtpEtaTraceId": "2#9#ALGORITHM#1790078468117#1790683268117#BR_L2L_SISLOGICA_CORREIOS#ae_marketplace#BR#1789905668117#NON#POP#NON#NON#BR#32#f94c5b45c283c6ae0337db68b6f55080_20260919#903200250000000000#",
+        "workDayOneFiveBeforeCutTime": "no",
+        "showMoreCount": "1",
+        "existEtaMaxTime": "yes",
+        "itemId": 1005011737968391,
+        "solutionBusinessType": "Default",
+        "etaVersionSceneId": 413,
+        "shippingFee": "free",
+        "displayEtaMaxDate": "29 de Set.",
+        "solutionBusinessXDays": 0,
+        "deliveryDayMin": 2,
+        "guaranteedDeliveryTimeProviderName": "decision_committed_time",
+        "showXDayDeliveryTips": "yes",
+        "shipFromCode": "BR",
+        "solutionId": 3356001,
+        "deliveryProviderCode": "BR_L2L_SISLOGICA_CORREIOS",
+        "shipTo": "Sao Paulo"
+      },
+      "contentLayout": [
+        [
+          {
+            "blockGroup": "freight-1",
+            "blockType": "freight",
+            "componentId": "133968",
+            "content": "<span style=\"color: #018941;\"><span style=\"color: #191919;\"><strong>Entrega: 22 - 29 de Set.</strong></span></span>",
+            "displayCondition": "default=visible",
+            "distance": 1,
+            "medusaKey": "eta_content_APL_new_Green",
+            "order": 1,
+            "type": "htmlText",
+            "useInDeliveryOptionPanel": true,
+            "useInDetailFirstScreen": true,
+            "useInSkuSwitch": true
+          }
+        ],
+        [
+          {
+            "blockGroup": "freight-3",
+            "blockType": "freight",
+            "componentId": "133982",
+            "content": "<span style=\"color: #8E90A1;\">via Entrega Padrão 3PL(Sislogica-Correios)</span>",
+            "displayCondition": "isApl!=yes",
+            "distance": 1,
+            "medusaKey": "APL_via_gray@freight",
+            "order": 1,
+            "type": "htmlText",
+            "useInDeliveryOptionPanel": true,
+            "useInDetailFirstScreen": false,
+            "useInSkuSwitch": false
+          }
+        ]
+      ],
+      "deliveryOptionPanelDisplayList": [
+        "133986",
+        "133992",
+        "133994",
+        "133995",
+        "133968",
+        "133982",
+        "134000"
+      ],
+      "detailFirstScreenDisplayList": [
+        "133986",
+        "133992",
+        "133994",
+        "133995",
+        "133968"
+      ],
+      "finalPatternId": 2696001,
+      "skuSwitchDisplayList": [
+        "133986",
+        "133992",
+        "133994",
+        "133995",
+        "133968"
+      ],
+      "titleLayout": [
+        [
+          {
+            "blockGroup": "title-0",
+            "blockType": "title",
+            "componentId": "133986",
+            "content": "<span style=\"color: #191919;\"><strong>Frete grátis</strong></span>",
+            "displayCondition": "shippingFee=free",
+            "distance": 1,
+            "medusaKey": "Global_Version_freeshipping@freightCost",
+            "order": 2,
+            "type": "htmlText",
+            "useInDeliveryOptionPanel": true,
+            "useInDetailFirstScreen": true,
+            "useInSkuSwitch": true
+          },
+          {
+            "blockGroup": "title-0",
+            "blockType": "title",
+            "componentId": "133992",
+            "content": "·",
+            "displayCondition": "shipFromCode!=CN",
+            "distance": 1,
+            "medusaKey": "Point",
+            "order": 8,
+            "type": "htmlText",
+            "useInDeliveryOptionPanel": true,
+            "useInDetailFirstScreen": true,
+            "useInSkuSwitch": true
+          },
+          {
+            "blockGroup": "title-0",
+            "blockType": "title",
+            "componentId": "133994",
+            "content": "<img src=https://img.alicdn.com/imgextra/i4/O1CN01jwnscN1EcsZ60iOsv_!!6000000000373-2-tps-72-48.png width='18' height='12' >",
+            "displayCondition": "shipFromCode!=CN",
+            "distance": 1,
+            "medusaKey": "Choice_Warehouse_National_Flag@freight",
+            "order": 10,
+            "type": "icon",
+            "useInDeliveryOptionPanel": true,
+            "useInDetailFirstScreen": true,
+            "useInSkuSwitch": true
+          },
+          {
+            "blockGroup": "title-0",
+            "blockType": "title",
+            "componentId": "133995",
+            "content": "<span style=\"color: #191919;\">Do Brasil</span>",
+            "displayCondition": "shipFromCode!=CN",
+            "distance": 1,
+            "medusaKey": "Global_Version_shippingfrom@freight",
+            "order": 11,
+            "type": "htmlText",
+            "useInDeliveryOptionPanel": true,
+            "useInDetailFirstScreen": true,
+            "useInSkuSwitch": true
+          }
+        ]
+      ]
+    }
+  ],
+  "hideDelivery": false,
+  "icon": "https://ae-pic-a1.aliexpress-media.com/kf/S9e723ca0d10848499e4e3fb33be2224do.png",
+  "originalLayoutResultList": [
+    {
+      "additionLayout": [
+        {
+          "blockGroup": "others-0",
+          "blockType": "others",
+          "componentId": "134000",
+          "content": "Rastreamento Disponível",
+          "displayCondition": "tracking=visible&&isApl!=yes",
+          "distance": 1,
+          "medusaKey": "tracking_available@others",
+          "order": 4,
+          "type": "textWithMark",
+          "useInDeliveryOptionPanel": true,
+          "useInDetailFirstScreen": false,
+          "useInSkuSwitch": false
+        }
+      ],
+      "bizData": {
+        "deliveryOptionCode": "BR_L2L_SISLOGICA_CORREIOS",
+        "leadTimeSort": [
+          9999
+        ],
+        "deliveryProviderName": "BR_L2L_SISLOGICA_CORREIOS",
+        "useTimeType": "algorithm",
+        "patternId": 2696001,
+        "discount": 100.0,
+        "utParams": "{\"buyerId\":0,\"categoryId\":708044,\"cmd\":false,\"crowdTypes\":\"{\\\"eta_sensitive_tag\\\":\\\"-730838169\\\",\\\"shipping_cost_sensitive\\\":\\\"-1315857875\\\"}\",\"currency\":\"BRL\",\"deliveryDate\":\"2026-09-29\",\"deliveryDateMin\":\"2026-09-22\",\"deliveryDayMax\":9,\"deliveryDayMin\":2,\"fAmount\":0.0,\"fCurrency\":\"BRL\",\"gtpEtaTraceId\":\"2#9#ALGORITHM#1790078468117#1790683268117#BR_L2L_SISLOGICA_CORREIOS#ae_marketplace#BR#1789905668117#NON#POP#NON#NON#BR#32#f94c5b45c283c6ae0337db68b6f55080_20260919#903200250000000000#\",\"itemId\":1005011737968391,\"preOrder\":false,\"productId\":1005011737968391,\"provider\":\"operator\",\"serviceName\":\"BR_L2L_SISLOGICA_CORREIOS\",\"shipFrom\":\"BR\",\"shipToCityCode\":\"903200250059000000\",\"shipToCountry\":\"BR\",\"shipToStateCode\":\"903200250000000000\",\"shippingFee\":\"0\",\"traceId\":\"2101e80f17899056680387111e0d55\",\"trackingAvailable\":true}",
+        "tracking": "visible",
+        "workDayOneFourBeforeCutTime": "no",
+        "gtpProvider": "ALGORITHM",
+        "existEtaMinTime": "yes",
+        "dayOfWeek": "terça-feira",
+        "provider": "operator",
+        "itemShipFromType": "same",
+        "identityType": "POP",
+        "displayTomorrow": "no",
+        "itemScene": "newGlobal",
+        "shipToCode": "BR",
+        "thresholdOverZero": "yes",
+        "currency": "BRL",
+        "company": "Entrega Padrão 3PL(Sislogica-Correios)",
+        "deliveryDate": "29 de Set.",
+        "shipFrom": "Brasil",
+        "deliveryDayMax": 9,
+        "displayEtaMinDate": "22 de Set.",
+        "guaranteedDeliveryTime": 45,
+        "etaVersionDisplayType": "deliveryDateInterval",
+        "freightCommitDay": "45",
+        "etaTraceId": "2#9#ALGORITHM#1790078468117#1790683268117#BR_L2L_SISLOGICA_CORREIOS#ae_marketplace#BR#1789905668117#NON#POP#NON#NON#BR#32#f94c5b45c283c6ae0337db68b6f55080_20260919#903200250000000000#",
+        "etaVersionStrategyId": 98,
+        "gtpEtaTraceId": "2#9#ALGORITHM#1790078468117#1790683268117#BR_L2L_SISLOGICA_CORREIOS#ae_marketplace#BR#1789905668117#NON#POP#NON#NON#BR#32#f94c5b45c283c6ae0337db68b6f55080_20260919#903200250000000000#",
+        "workDayOneFiveBeforeCutTime": "no",
+        "showMoreCount": "1",
+        "existEtaMaxTime": "yes",
+        "itemId": 1005011737968391,
+        "solutionBusinessType": "Default",
+        "etaVersionSceneId": 413,
+        "shippingFee": "free",
+        "displayEtaMaxDate": "29 de Set.",
+        "solutionBusinessXDays": 0,
+        "deliveryDayMin": 2,
+        "guaranteedDeliveryTimeProviderName": "decision_committed_time",
+        "showXDayDeliveryTips": "yes",
+        "shipFromCode": "BR",
+        "solutionId": 3356001,
+        "deliveryProviderCode": "BR_L2L_SISLOGICA_CORREIOS",
+        "shipTo": "Sao Paulo"
+      },
+      "contentLayout": [
+        [
+          {
+            "blockGroup": "freight-1",
+            "blockType": "freight",
+            "componentId": "133968",
+            "content": "<span style=\"color: #018941;\"><span style=\"color: #191919;\"><strong>Entrega: 22 - 29 de Set.</strong></span></span>",
+            "displayCondition": "default=visible",
+            "distance": 1,
+            "medusaKey": "eta_content_APL_new_Green",
+            "order": 1,
+            "type": "htmlText",
+            "useInDeliveryOptionPanel": true,
+            "useInDetailFirstScreen": true,
+            "useInSkuSwitch": true
+          }
+        ],
+        [
+          {
+            "blockGroup": "freight-3",
+            "blockType": "freight",
+            "componentId": "133982",
+            "content": "<span style=\"color: #8E90A1;\">via Entrega Padrão 3PL(Sislogica-Correios)</span>",
+            "displayCondition": "isApl!=yes",
+            "distance": 1,
+            "medusaKey": "APL_via_gray@freight",
+            "order": 1,
+            "type": "htmlText",
+            "useInDeliveryOptionPanel": true,
+            "useInDetailFirstScreen": false,
+            "useInSkuSwitch": false
+          }
+        ]
+      ],
+      "deliveryOptionPanelDisplayList": [
+        "133986",
+        "133992",
+        "133994",
+        "133995",
+        "133968",
+        "133982",
+        "134000"
+      ],
+      "detailFirstScreenDisplayList": [
+        "133986",
+        "133992",
+        "133994",
+        "133995",
+        "133968"
+      ],
+      "finalPatternId": 2696001,
+      "skuSwitchDisplayList": [
+        "133986",
+        "133992",
+        "133994",
+        "133995",
+        "133968"
+      ],
+      "titleLayout": [
+        [
+          {
+            "blockGroup": "title-0",
+            "blockType": "title",
+            "componentId": "133986",
+            "content": "<span style=\"color: #191919;\"><strong>Frete grátis</strong></span>",
+            "displayCondition": "shippingFee=free",
+            "distance": 1,
+            "medusaKey": "Global_Version_freeshipping@freightCost",
+            "order": 2,
+            "type": "htmlText",
+            "useInDeliveryOptionPanel": true,
+            "useInDetailFirstScreen": true,
+            "useInSkuSwitch": true
+          },
+          {
+            "blockGroup": "title-0",
+            "blockType": "title",
+            "componentId": "133992",
+            "content": "·",
+            "displayCondition": "shipFromCode!=CN",
+            "distance": 1,
+            "medusaKey": "Point",
+            "order": 8,
+            "type": "htmlText",
+            "useInDeliveryOptionPanel": true,
+            "useInDetailFirstScreen": true,
+            "useInSkuSwitch": true
+          },
+          {
+            "blockGroup": "title-0",
+            "blockType": "title",
+            "componentId": "133994",
+            "content": "<img src=https://img.alicdn.com/imgextra/i4/O1CN01jwnscN1EcsZ60iOsv_!!6000000000373-2-tps-72-48.png width='18' height='12' >",
+            "displayCondition": "shipFromCode!=CN",
+            "distance": 1,
+            "medusaKey": "Choice_Warehouse_National_Flag@freight",
+            "order": 10,
+            "type": "icon",
+            "useInDeliveryOptionPanel": true,
+            "useInDetailFirstScreen": true,
+            "useInSkuSwitch": true
+          },
+          {
+            "blockGroup": "title-0",
+            "blockType": "title",
+            "componentId": "133995",
+            "content": "<span style=\"color: #191919;\">Do Brasil</span>",
+            "displayCondition": "shipFromCode!=CN",
+            "distance": 1,
+            "medusaKey": "Global_Version_shippingfrom@freight",
+            "order": 11,
+            "type": "htmlText",
+            "useInDeliveryOptionPanel": true,
+            "useInDetailFirstScreen": true,
+            "useInSkuSwitch": true
+          }
+        ]
+      ]
+    }
+  ],
+  "selectedDeliveryOptionCode": "BR_L2L_SISLOGICA_CORREIOS",
+  "styleCode": "default",
+  "systemFeature": {
+    "hideShipFrom": true
+  },
+  "title": "Envio"
+}

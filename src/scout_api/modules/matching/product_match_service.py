@@ -54,7 +54,9 @@ MVP_SEARCH_STORES = (
     "amazon_br",
     "amazon_us",
     "magazineluiza",
+    "mercadolivre",
     "shopee",
+    "aliexpress",
 )
 
 _MAX_RATE_LIMIT_WAIT_SECONDS = 20.0

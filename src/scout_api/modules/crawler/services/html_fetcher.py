@@ -177,6 +177,8 @@ def is_challenge_page(html: str, *, title: str | None = None) -> bool:
         return True
     if is_mercadolivre_snoopy_challenge(html):
         return True
+    if is_aliexpress_block_page(html, title=title):
+        return True
     return False
 
 
@@ -267,6 +269,8 @@ def locale_for_url(url: str) -> str | None:
         return "pt-BR"
     if hostname == "shopee.com.br" or hostname.endswith(".shopee.com.br"):
         return "pt-BR"
+    if is_aliexpress_url(f"https://{hostname}/"):
+        return "pt-BR"
     if hostname == "amazon.com.br" or hostname.endswith(".amazon.com.br"):
         return "pt-BR"
     if hostname == "amazon.com" or hostname.endswith(".amazon.com"):
@@ -311,6 +315,8 @@ def warmup_url_for(url: str) -> str | None:
     if hostname == "nissei.com" or hostname.endswith(".nissei.com"):
         return f"{parsed.scheme}://{parsed.netloc}/py/"
     if hostname == "shopee.com.br" or hostname.endswith(".shopee.com.br"):
+        return f"{parsed.scheme}://{parsed.netloc}/"
+    if is_aliexpress_url(url):
         return f"{parsed.scheme}://{parsed.netloc}/"
     if hostname == "magazineluiza.com.br" or hostname.endswith(".magazineluiza.com.br"):
         # Mint Akamai/_abck cookies on the origin before the PDP (ADR 0017).
@@ -402,6 +408,113 @@ def looks_like_shopee_search_payload(raw: str) -> bool:
     return '"items"' in sample or '"item_basic"' in sample or '"itemid"' in sample
 
 
+_ALIEXPRESS_ITEM_PATH = re.compile(
+    r"/item/(?:[^/]+/)?(?P<item_id>\d{6,})\.html",
+    re.IGNORECASE,
+)
+
+
+def is_aliexpress_url(url: str) -> bool:
+    hostname = (urlparse(url).hostname or "").lower()
+    return hostname == "aliexpress.com" or hostname.endswith(".aliexpress.com")
+
+
+def aliexpress_item_id_from_url(url: str) -> str | None:
+    match = _ALIEXPRESS_ITEM_PATH.search(urlparse(url).path or "")
+    return match.group("item_id") if match else None
+
+
+def is_aliexpress_pdp_api_url(url: str) -> bool:
+    folded = (url or "").casefold()
+    return "mtop.aliexpress.pdp.pc.query" in folded or (
+        "mtop.aliexpress" in folded and "asyncpcdetail" in folded
+    )
+
+
+def is_aliexpress_search_page_url(url: str) -> bool:
+    if not is_aliexpress_url(url):
+        return False
+    path = (urlparse(url).path or "").casefold()
+    return (
+        path.startswith("/w/wholesale")
+        or path.startswith("/wholesale")
+        or "searchtext=" in (urlparse(url).query or "").casefold()
+    )
+
+
+def is_aliexpress_search_api_url(url: str) -> bool:
+    folded = (url or "").casefold()
+    return "aer-webapi" in folded and "/search" in folded
+
+
+def looks_like_aliexpress_pdp(raw: str) -> bool:
+    text = raw or ""
+    head = text[:8_000]
+    if "FAIL_SYS_USER_VALIDATE" in head or "RGV587" in head:
+        return False
+    if "FAIL_SYS_TOKEN_EMPTY" in head and "PRODUCT_TITLE" not in text[:50_000]:
+        return False
+    # Component order varies; PRICE/SKU/TITLE may sit after a large POPUP blob.
+    sample = text[:80_000]
+    return (
+        "PRODUCT_TITLE" in sample
+        or "targetSkuPriceInfo" in sample
+        or "skuIdStrPriceInfoMap" in sample
+        or ('"PRICE"' in sample and '"SKU"' in sample)
+    )
+
+
+def looks_like_aliexpress_search_payload(raw: str) -> bool:
+    sample = (raw or "")[:4_000]
+    return (
+        '"itemList"' in sample
+        or '"productId"' in sample
+        or "mods" in sample[:200]
+    )
+
+
+def wrap_aliexpress_pdp_json(raw: str) -> str:
+    return (
+        '<!DOCTYPE html><html><head><meta charset="utf-8">'
+        "<title>AliExpress PDP</title></head><body>"
+        f'<script type="application/json" data-aliexpress-pdp="1">{raw}</script>'
+        "</body></html>"
+    )
+
+
+def wrap_aliexpress_search_json(raw: str) -> str:
+    return (
+        '<!DOCTYPE html><html><head><meta charset="utf-8">'
+        "<title>AliExpress Search</title></head><body>"
+        f'<script type="application/json" data-aliexpress-search="1">{raw}</script>'
+        "</body></html>"
+    )
+
+
+def is_aliexpress_block_page(html: str, *, title: str | None = None) -> bool:
+    """True for TMD/RGV587/x5sec shells without a usable PDP payload."""
+    if "data-aliexpress-pdp" in (html or "") and "PRODUCT_TITLE" in (html or ""):
+        return False
+    title_text = (title or "").strip().casefold()
+    lower = (html or "")[:12_000].casefold()
+    haystack = f"{title_text}\n{lower}"
+    markers = (
+        "rgv587",
+        "fail_sys_user_validate",
+        "fail_sys_token_empty",
+        "_____tmd_____",
+        "x5secdata",
+        "baxia-dialog",
+        "nc_wrapper",
+        "slide-to-validate",
+    )
+    if any(marker in haystack for marker in markers):
+        # CSR shell with empty title is common when MTop is gated.
+        if "product_title" not in lower and "targetskupriceinfo" not in lower:
+            return True
+    return False
+
+
 def apply_shopee_br_proxy_targeting(proxy_url: str, page_url: str) -> str:
     """Pin DataImpulse-style username geo to Brazil for shopee.com.br."""
     return apply_proxy_geo_targeting(proxy_url, page_url)
@@ -421,6 +534,8 @@ def apply_proxy_geo_targeting(proxy_url: str, page_url: str) -> str:
         return proxy_url
     country: str | None = None
     if is_shopee_url(page_url):
+        country = "br"
+    elif is_aliexpress_url(page_url):
         country = "br"
     elif is_bestbuy_url(page_url):
         country = "us"
@@ -730,11 +845,18 @@ class CamoufoxHtmlFetcher:
                 captured: dict[str, str] = {}
                 shopee = is_shopee_url(url)
                 shopee_search = is_shopee_search_page_url(url)
+                aliexpress = is_aliexpress_url(url)
+                aliexpress_search = is_aliexpress_search_page_url(url)
                 if shopee:
                     if shopee_search:
                         self._attach_shopee_search_listener(page, captured)
                     else:
                         self._attach_shopee_get_pc_listener(page, captured, url)
+                elif aliexpress:
+                    if aliexpress_search:
+                        self._attach_aliexpress_search_listener(page, captured)
+                    else:
+                        self._attach_aliexpress_pdp_listener(page, captured, url)
                 warmup_used = False
                 if self._should_warmup(url):
                     warmup_used = self._maybe_warmup(page, url)
@@ -743,6 +865,20 @@ class CamoufoxHtmlFetcher:
                 if shopee and self._early_stop_on_shopee_get_pc:
                     self._goto_shopee_early_stop(page, url, captured)
                     metrics.early_stop = True
+                elif aliexpress:
+                    self._goto_aliexpress_early_stop(page, url, captured)
+                    metrics.early_stop = True
+                    if not captured.get("body") and not aliexpress_search:
+                        metrics.result = "blocked"
+                        self._log_metrics(metrics, request_types, byte_holder["n"], t0)
+                        raise RequestError(
+                            "AliExpress não entregou payload MTop de produto "
+                            "(shell CSR / anti-bot)",
+                            code="UPSTREAM_BLOCKED",
+                            url=url,
+                            upstream_status=403,
+                            retryable=True,
+                        )
                 else:
                     self._goto_with_bestbuy_retry(page, url, metrics=metrics)
 
@@ -751,12 +887,25 @@ class CamoufoxHtmlFetcher:
                 )
                 if captured.get("body"):
                     if shopee_search or captured.get("kind") == "search":
-                        html = wrap_shopee_search_json(captured["body"])
+                        if aliexpress or captured.get("store") == "aliexpress":
+                            html = wrap_aliexpress_search_json(captured["body"])
+                            title = "AliExpress Search"
+                        else:
+                            html = wrap_shopee_search_json(captured["body"])
+                            title = "Shopee Search"
                         final_url = url
-                        title = "Shopee Search"
                         metrics.get_pc_captured = True
                         logger.info(
-                            "shopee_search_api_intercepted",
+                            "store_search_api_intercepted",
+                            extra={"url": captured.get("response_url") or url},
+                        )
+                    elif aliexpress or captured.get("store") == "aliexpress":
+                        html = wrap_aliexpress_pdp_json(captured["body"])
+                        final_url = url
+                        title = "AliExpress PDP"
+                        metrics.get_pc_captured = True
+                        logger.info(
+                            "aliexpress_mtop_pdp_intercepted",
                             extra={"url": captured.get("response_url") or url},
                         )
                     else:
@@ -768,6 +917,27 @@ class CamoufoxHtmlFetcher:
                             "shopee_get_pc_intercepted",
                             extra={"url": captured.get("response_url") or url},
                         )
+                # AliExpress PDP is CSR: without intercepted MTop SUCCESS there is
+                # no product payload — fail here so ProxyPolicy.FALLBACK can retry.
+                if (
+                    aliexpress
+                    and not aliexpress_search
+                    and not (
+                        captured.get("body")
+                        and captured.get("store") == "aliexpress"
+                        and captured.get("kind") == "pdp"
+                    )
+                ):
+                    metrics.result = "blocked"
+                    self._log_metrics(metrics, request_types, byte_holder["n"], t0)
+                    raise RequestError(
+                        "AliExpress não entregou payload MTop de produto "
+                        "(shell CSR / anti-bot)",
+                        code="UPSTREAM_BLOCKED",
+                        url=final_url or url,
+                        upstream_status=403,
+                        retryable=True,
+                    )
                 if is_shopee_traffic_block(final_url or url, html):
                     # Prefer a captured signed search payload over a traffic wall.
                     if not (
@@ -982,6 +1152,10 @@ class CamoufoxHtmlFetcher:
     def _should_warmup(self, url: str) -> bool:
         if not self._warmup_origin:
             return False
+        # AliExpress: fresh context + MTop intercept; origin warmup often burns
+        # budget and does not mint a usable PDP token on cold/direct egress.
+        if is_aliexpress_url(url):
+            return False
         if self._warmup_policy == "never":
             return False
         warm = warmup_url_for(url)
@@ -1022,6 +1196,12 @@ class CamoufoxHtmlFetcher:
             "persistent_context": True,
             "user_data_dir": str(profile_dir),
         }
+        if is_aliexpress_url(url):
+            import tempfile
+
+            # Fresh profile per lookup — reused Camoufox state often yields RGV587.
+            kwargs["user_data_dir"] = tempfile.mkdtemp(prefix="ae-camoufox-")
+            kwargs["persistent_context"] = True
         # Camoufox #450 / #555: instant CSS-animation collapse is an Akamai
         # detection vector on some builds; opt out when the flag exists.
         kwargs["config"] = {"disableInstantAnimations": True}
@@ -1043,7 +1223,8 @@ class CamoufoxHtmlFetcher:
             # ipecho/etc). Keep residential egress; pin locale from the store URL.
             # Best Buy Akamai is especially sensitive — prefer geoip when we already
             # pinned ``__cr.us`` so timezone/WebRTC match the US exit IP.
-            if is_bestbuy_url(url):
+            # AliExpress MTop similarly benefits from geoip matching BR egress.
+            if is_bestbuy_url(url) or is_aliexpress_url(url):
                 kwargs["geoip"] = True
             else:
                 kwargs["geoip"] = False
@@ -1187,6 +1368,27 @@ class CamoufoxHtmlFetcher:
             if is_shopee_traffic_block(str(getattr(page, "url", "") or ""), ""):
                 break
             page.wait_for_timeout(150)
+        if captured.get("body"):
+            self._mark_warmup(url)
+
+    def _goto_aliexpress_early_stop(
+        self, page: Any, url: str, captured: dict[str, str]
+    ) -> None:
+        """Navigate to AliExpress PDP/SERP and stop when MTop/search JSON arrives."""
+        page.goto(url, wait_until="domcontentloaded", timeout=self._timeout_ms)
+        # Bound wait: SUCCESS MTop usually arrives in a few seconds; long waits
+        # on cold/direct shells only burn time before ProxyPolicy.FALLBACK.
+        budget_s = min(25.0, max(8.0, self._timeout_ms / 1000.0 / 3.0))
+        deadline = time.perf_counter() + budget_s
+        while not captured.get("body") and time.perf_counter() < deadline:
+            try:
+                html = page.content()
+            except Exception:
+                html = ""
+            if is_aliexpress_block_page(html):
+                # Bail early — waiting does not mint MTop SUCCESS on TMD punish.
+                break
+            page.wait_for_timeout(200)
         if captured.get("body"):
             self._mark_warmup(url)
 
@@ -1340,6 +1542,102 @@ class CamoufoxHtmlFetcher:
         on_fn = getattr(page, "on", None)
         if not callable(on_fn):
             logger.debug("shopee_get_pc_listener_unavailable")
+            return
+        on_fn("response", on_response)
+
+    @classmethod
+    def _attach_aliexpress_search_listener(
+        cls,
+        page: Any,
+        captured: dict[str, str],
+    ) -> None:
+        def on_response(response: Any) -> None:
+            if captured.get("body"):
+                return
+            try:
+                response_url = str(getattr(response, "url", "") or "")
+            except Exception:
+                return
+            if not is_aliexpress_search_api_url(response_url):
+                return
+            try:
+                status = int(getattr(response, "status", 0) or 0)
+            except (TypeError, ValueError):
+                status = 0
+            if status and status >= 400:
+                return
+            try:
+                raw = response.text()
+            except Exception:
+                logger.debug("aliexpress_search_body_read_failed", exc_info=True)
+                return
+            if not isinstance(raw, str) or not looks_like_aliexpress_search_payload(
+                raw
+            ):
+                return
+            captured["body"] = raw
+            captured["response_url"] = response_url
+            captured["kind"] = "search"
+            captured["store"] = "aliexpress"
+
+        on_fn = getattr(page, "on", None)
+        if not callable(on_fn):
+            logger.debug("aliexpress_search_listener_unavailable")
+            return
+        on_fn("response", on_response)
+
+    @classmethod
+    def _attach_aliexpress_pdp_listener(
+        cls,
+        page: Any,
+        captured: dict[str, str],
+        request_url: str,
+    ) -> None:
+        """Capture the browser's own signed MTop PDP response."""
+        wanted_item = aliexpress_item_id_from_url(request_url)
+
+        def on_response(response: Any) -> None:
+            if captured.get("body") and captured.get("ok") == "1":
+                return
+            try:
+                response_url = str(getattr(response, "url", "") or "")
+            except Exception:
+                return
+            if not is_aliexpress_pdp_api_url(response_url):
+                return
+            if wanted_item and wanted_item not in response_url:
+                # productId is usually in the query ``data=`` blob.
+                pass
+            try:
+                status = int(getattr(response, "status", 0) or 0)
+            except (TypeError, ValueError):
+                status = 0
+            if status and status >= 400:
+                return
+            try:
+                raw = response.text()
+            except Exception:
+                logger.debug("aliexpress_mtop_body_read_failed", exc_info=True)
+                return
+            if not isinstance(raw, str) or not raw.strip():
+                return
+            if not looks_like_aliexpress_pdp(raw):
+                return
+            if (
+                wanted_item
+                and wanted_item not in raw
+                and wanted_item not in response_url
+            ):
+                return
+            captured["body"] = raw
+            captured["response_url"] = response_url
+            captured["kind"] = "pdp"
+            captured["store"] = "aliexpress"
+            captured["ok"] = "1"
+
+        on_fn = getattr(page, "on", None)
+        if not callable(on_fn):
+            logger.debug("aliexpress_mtop_listener_unavailable")
             return
         on_fn("response", on_response)
 

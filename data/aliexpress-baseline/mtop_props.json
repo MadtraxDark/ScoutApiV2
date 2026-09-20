@@ -1,0 +1,193 @@
+{
+  "outerProps": [
+    {
+      "attrName": "Superclockado",
+      "attrValue": "Sim"
+    },
+    {
+      "attrName": "Tipo de pacote",
+      "attrValue": "Varejo"
+    },
+    {
+      "attrName": "Condição do Itel",
+      "attrValue": "Novo"
+    }
+  ],
+  "propGroups": [],
+  "sexy": false,
+  "showOnAbove": false,
+  "showPropGroups": false,
+  "showPropOuter": false,
+  "showedProps": [
+    {
+      "attrName": "Superclockado",
+      "attrValue": "Sim"
+    },
+    {
+      "attrName": "Tipo de pacote",
+      "attrValue": "Varejo"
+    },
+    {
+      "attrName": "Condição do Itel",
+      "attrValue": "Novo"
+    },
+    {
+      "attrName": "Conector de alimentação",
+      "attrValue": "12VHPWR"
+    },
+    {
+      "attrName": "Categoria de produto",
+      "attrValue": "Placas gráficas de mesa"
+    },
+    {
+      "attrName": "Características do produto",
+      "attrValue": "VR Pronto"
+    },
+    {
+      "attrName": "Resolução máxima",
+      "attrValue": "7680 por 4320"
+    },
+    {
+      "attrName": "Processo de chip",
+      "attrValue": "4nm"
+    },
+    {
+      "attrName": "DiretoX",
+      "attrValue": "DiretoX 12"
+    },
+    {
+      "attrName": "Tipo de refrigerador",
+      "attrValue": "Ventiladores triplos"
+    },
+    {
+      "attrName": "Tipo de interface de saída",
+      "attrValue": "Porta de exibição x 3,HDMI 2,1 X 1"
+    },
+    {
+      "attrName": "Tipo de memória de vídeo",
+      "attrValue": "GDDR7"
+    },
+    {
+      "attrName": "Interface de memória",
+      "attrValue": "256 bits"
+    },
+    {
+      "attrName": "Fabricante de chipset",
+      "attrValue": "Nvidia"
+    },
+    {
+      "attrName": "Relógio central (Mhz)",
+      "attrValue": "2482MHz"
+    },
+    {
+      "attrName": "Relógio de memória (Mhz)",
+      "attrValue": "28000MHz"
+    },
+    {
+      "attrName": "Aplicação",
+      "attrValue": "Estação de trabalho,Área de trabalho"
+    },
+    {
+      "attrName": "Tipo de Interface",
+      "attrValue": "PCI Express 5.0x16"
+    },
+    {
+      "attrName": "Capacidade de memória de vídeo",
+      "attrValue": "16 GBs"
+    },
+    {
+      "attrName": "Nome da marca",
+      "attrValue": "MSI"
+    },
+    {
+      "attrName": "RGBs",
+      "attrValue": "no"
+    }
+  ],
+  "showedPropsMap": {
+    "2": {
+      "attrName": "Nome da marca",
+      "attrValue": "MSI"
+    },
+    "100004182": {
+      "attrName": "Fabricante de chipset",
+      "attrValue": "Nvidia"
+    },
+    "1188": {
+      "attrName": "Resolução máxima",
+      "attrValue": "7680 por 4320"
+    },
+    "200006671": {
+      "attrName": "Processo de chip",
+      "attrValue": "4nm"
+    },
+    "286897567": {
+      "attrName": "Superclockado",
+      "attrValue": "Sim"
+    },
+    "200006701": {
+      "attrName": "Relógio central (Mhz)",
+      "attrValue": "2482MHz"
+    },
+    "1031": {
+      "attrName": "Tipo de memória de vídeo",
+      "attrValue": "GDDR7"
+    },
+    "200180265": {
+      "attrName": "Aplicação",
+      "attrValue": "Estação de trabalho,Área de trabalho"
+    },
+    "1032": {
+      "attrName": "Capacidade de memória de vídeo",
+      "attrValue": "16 GBs"
+    },
+    "1033": {
+      "attrName": "Interface de memória",
+      "attrValue": "256 bits"
+    },
+    "200001287": {
+      "attrName": "Categoria de produto",
+      "attrValue": "Placas gráficas de mesa"
+    },
+    "1036": {
+      "attrName": "Relógio de memória (Mhz)",
+      "attrValue": "28000MHz"
+    },
+    "493": {
+      "attrName": "Tipo de Interface",
+      "attrValue": "PCI Express 5.0x16"
+    },
+    "19022": {
+      "attrName": "Tipo de refrigerador",
+      "attrValue": "Ventiladores triplos"
+    },
+    "276979469": {
+      "attrName": "Tipo de pacote",
+      "attrValue": "Varejo"
+    },
+    "248460352": {
+      "attrName": "Conector de alimentação",
+      "attrValue": "12VHPWR"
+    },
+    "19024": {
+      "attrName": "DiretoX",
+      "attrValue": "DiretoX 12"
+    },
+    "100004128": {
+      "attrName": "Tipo de interface de saída",
+      "attrValue": "Porta de exibição x 3,HDMI 2,1 X 1"
+    },
+    "276980373": {
+      "attrName": "Condição do Itel",
+      "attrValue": "Novo"
+    },
+    "200000181": {
+      "attrName": "Características do produto",
+      "attrValue": "VR Pronto"
+    },
+    "248307570": {
+      "attrName": "RGBs",
+      "attrValue": "no"
+    }
+  }
+}

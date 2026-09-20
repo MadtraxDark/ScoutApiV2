@@ -39,6 +39,7 @@ Governança de documentação: [`.cursor/rules/documentation-governance.mdc`](..
 | Magazine Luiza | [`crawler/stores/magazineluiza.md`](crawler/stores/magazineluiza.md) |
 | Mercado Livre | [`crawler/stores/mercadolivre.md`](crawler/stores/mercadolivre.md) |
 | Shopee | [`crawler/stores/shopee.md`](crawler/stores/shopee.md) |
+| AliExpress | [`crawler/stores/aliexpress.md`](crawler/stores/aliexpress.md) |
 | Best Buy | [`crawler/stores/bestbuy.md`](crawler/stores/bestbuy.md) |
 | Nissei | [`crawler/stores/nissei.md`](crawler/stores/nissei.md) |
 | Shopping China | [`crawler/stores/shoppingchina.md`](crawler/stores/shoppingchina.md) |

@@ -1,0 +1,57 @@
+{
+  "reference_url": "https://pt.aliexpress.com/item/1005011737968391.html",
+  "reference": {
+    "store": "aliexpress",
+    "product_id": "1005011737968391",
+    "title": "Placa de Vídeo MSI NVIDIA GeForce RTX 5070 Ti Shadow 3X OC, 16GB, GDDR7, DLSS, Ray Tracing, 912-V531-465",
+    "brand": "MSI",
+    "model": "GeForce RTX 5070 Ti",
+    "price": "8819.02"
+  },
+  "stores": {
+    "kabum": {
+      "status": "NO_MATCH"
+    },
+    "magazineluiza": {
+      "status": "NO_MATCH"
+    },
+    "mercadolivre": {
+      "status": "NO_MATCH"
+    },
+    "shopee": {
+      "status": "ERROR",
+      "code": "TIMEOUT",
+      "message": "exceeded 240s"
+    },
+    "aliexpress": {
+      "status": "REFERENCE",
+      "note": "origem do match"
+    },
+    "amazon_br": {
+      "status": "NO_MATCH"
+    },
+    "amazon_us": {
+      "status": "ERROR",
+      "code": "TIMEOUT",
+      "message": "exceeded 300s"
+    },
+    "bestbuy": {
+      "status": "ERROR",
+      "code": "TIMEOUT",
+      "message": "exceeded 300s"
+    },
+    "nissei": {
+      "status": "NO_MATCH"
+    },
+    "shoppingchina": {
+      "status": "NO_MATCH"
+    },
+    "visaovip": {
+      "status": "ERROR",
+      "code": "SEARCH_UNSUPPORTED",
+      "message": "Busca ao vivo não disponível para visaovip"
+    }
+  },
+  "missing_silent": [],
+  "notes": "Match por loja com persist=False, max_candidates_per_store=2. NO_MATCH = sem candidato equivalente (não erro silencioso). TIMEOUT = Camoufox/ambiente nas lojas-alvo (não regressão AliExpress)."
+}

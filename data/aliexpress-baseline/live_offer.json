@@ -1,0 +1,59 @@
+{
+  "store": "aliexpress",
+  "country": "BR",
+  "product_id": "1005011737968391",
+  "sku": "12000059875009119",
+  "seller": "MA INFOSTORE Store",
+  "url": "https://pt.aliexpress.com/item/1005011737968391.html",
+  "canonical_url": "https://pt.aliexpress.com/item/1005011737968391.html?sku_id=12000059875009119",
+  "currency": "BRL",
+  "price": "8819.02",
+  "original_price": "8999.0",
+  "discount_percentage": "2",
+  "pix_price": null,
+  "installment_price": "808.41",
+  "installment_count": 12,
+  "availability": "available",
+  "available": true,
+  "scraped_at": "2026-09-20T13:56:50.450060Z",
+  "metadata": {
+    "item_id": "1005011737968391",
+    "sku_id": "12000059875009119",
+    "market": {
+      "locale": "pt_BR",
+      "region": "BR",
+      "storefront": "pt.aliexpress.com"
+    },
+    "source": {
+      "price": "sale-price-local",
+      "original_price": "original-price",
+      "discount": "structured",
+      "installment": "installment-block",
+      "availability": "sku-stock",
+      "seller": "shop-card",
+      "product_id": "item_id",
+      "sku": "selected_sku_id",
+      "currency": "price-payload"
+    },
+    "store_num": "1105347822",
+    "seller_id": "7320476058",
+    "seller_origin": "Brasil",
+    "promotions": {
+      "m03_new_user": "-29895",
+      "n_tag": "-29910",
+      "disPrice": "8819.02",
+      "u": "0",
+      "d": "0",
+      "coupon_block_visible": true
+    },
+    "shipping": {
+      "shipping_fee": "free",
+      "currency": "BRL",
+      "ship_from": "Brasil",
+      "ship_from_code": "BR",
+      "ship_to": "Sao Paulo",
+      "ship_to_code": "BR",
+      "company": "Entrega Padrão 3PL(Sislogica-Correios)"
+    }
+  }
+}

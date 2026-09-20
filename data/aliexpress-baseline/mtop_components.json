@@ -1,0 +1,233 @@
+{
+  "PRODUCT_TITLE": {
+    "text": "Placa de Vídeo MSI NVIDIA GeForce RTX 5070 Ti Shadow 3X OC, 16GB, GDDR7, DLSS, Ray Tracing, 912-V531-465",
+    "titleMaxLine": "2"
+  },
+  "PRICE": {
+    "discountExt": "{\"p0\":\"Default\",\"p1\":\"BR_L2L_SISLOGICA_CORREIOS\",\"p3\":12000059875009119}",
+    "isLot": "False",
+    "priceLocalConfig": "{\"from\":{\"currencySymbol\":\"R$\",\"currencySymbolPosition\":\"front\",\"decimalPointChar\":\",\",\"showDecimal\":true,\"thousandsChar\":\".\"},\"roundOffZero\":false,\"separatorStr\":\" - \",\"single\":{\"currencySymbol\":\"R$\"",
+    "productId": "1005011737968391",
+    "region": "BR",
+    "reverseDiscountAndPrice": "False",
+    "selectedSkuId": "12000059875009119",
+    "skuIdStrPriceInfoMap": [
+      "12000059875009119"
+    ],
+    "skuPriceInfoMap": [
+      "12000059875009119"
+    ],
+    "skuSecondPriceInfoMap": [],
+    "targetSkuPriceInfo": [
+      "discount",
+      "originalPrice",
+      "priceFontColor",
+      "salePriceLocal",
+      "salePriceString",
+      "sellerByLot"
+    ]
+  },
+  "PRICE_EXTEND": {
+    "buildText": "<span style=\\\"color: #979797;\\\">Produto já no Brasil</span>",
+    "priceExtendViews": "list[1]",
+    "seperator": "; "
+  },
+  "SKU": {
+    "extraInfo": [
+      "skuCountThreshold4ShowSmallImage"
+    ],
+    "inSkuAboveBlacklist": "False",
+    "selectedSkuAttr": "200007763:203054829",
+    "selectedSkuId": "12000059875009119",
+    "selectedSkuIdStr": "12000059875009119",
+    "selectedSkuSaleable": "True",
+    "skuPaths": "list[1]",
+    "skuProperties": "list[1]",
+    "skuSupportClothes": "False",
+    "stealthSelection": "False",
+    "supportClothesSku": "False"
+  },
+  "SHOP_CARD_PC": {
+    "benefitInfoList": "list[4]",
+    "bgImage": "https://ae-pic-a1.aliexpress-media.com/kf/A6b755dd379004cca9886d6c97b03d3f0y.png",
+    "fontColor": "#FFFFFF",
+    "hasStoreFeedback": "False",
+    "licenseInfo": [
+      "actionTarget",
+      "text"
+    ],
+    "logo": "https://ae-pic-a1.aliexpress-media.com/kf/A7a1dcaf6f21145ab90d067ae31873401S.png",
+    "sellerInfo": [
+      "adminSeq",
+      "aeRuSelfOperation",
+      "boutiqueSeller",
+      "companyId",
+      "countryCompleteName",
+      "esRetailOrConsignment",
+      "formatOpenTime",
+      "hasStore",
+      "localSeller",
+      "openTime",
+      "openedYear",
+      "payPalAccount",
+      "plazaElectronicSeller",
+      "province",
+      "ruConsignmentAndMarketPlace",
+      "ruSelfOperation",
+      "showPlazaHeader",
+      "spanishPlaza",
+      "storeNum",
+      "storeURL"
+    ],
+    "sellerLevel": "14-s",
+    "sellerPositiveNum": "101",
+    "sellerPositiveRate": "100.0",
+    "sellerScore": "101",
+    "sellerTotalNum": "101",
+    "shadowColor": "#000000",
+    "shadowOpacity": "0.4",
+    "showStoreInfo": "True",
+    "storeAllProductPage": "https://campaign.aliexpress.com/wow/gcp/shop-framework/index?wx_navbar_hidden=true&wx_navbar_transparent=true&shopId=1105347822&sellerId=7320476058&extParams=&productIds=&expAppPageFrameVersion=&pageP",
+    "storeHeaderResult": [
+      "tabList"
+    ],
+    "storeHomePage": "https://m.aliexpress.com/store/storeHome.htm?sellerAdminSeq=7320476058",
+    "storeName": "MA INFOSTORE Store",
+    "storeNameKey": "Vendido por",
+    "storeStyle": "DEFAULT"
+  },
+  "SHIPPING": {
+    "bgColor": "#FFFFFF",
+    "deliveryExt": "[{\"d0\":\"8819.02\",\"d1\":\"BRL\",\"itemScene\":\"newGlobal\",\"p0\":\"12000059875009119\",\"p1\":\"8819.02\",\"p10\":[526666,1098872,2022550,680867,299658,648839,1517927,2006319,2034478,526940,1961321,2065739,273138,201",
+    "deliveryLayoutInfo": "list[1]",
+    "hideDelivery": "False",
+    "icon": "https://ae-pic-a1.aliexpress-media.com/kf/S9e723ca0d10848499e4e3fb33be2224do.png",
+    "originalLayoutResultList": "list[1]",
+    "selectedDeliveryOptionCode": "BR_L2L_SISLOGICA_CORREIOS",
+    "styleCode": "default",
+    "systemFeature": [
+      "hideShipFrom"
+    ],
+    "title": "Envio"
+  },
+  "PRODUCT_PROP_PC": {
+    "outerProps": "list[3]",
+    "propGroups": "list[0]",
+    "sexy": "False",
+    "showOnAbove": "False",
+    "showPropGroups": "False",
+    "showPropOuter": "False",
+    "showedProps": "list[21]",
+    "showedPropsMap": [
+      "2",
+      "100004182",
+      "1188",
+      "200006671",
+      "286897567",
+      "200006701",
+      "1031",
+      "200180265",
+      "1032",
+      "1033",
+      "200001287",
+      "1036",
+      "493",
+      "19022",
+      "276979469",
+      "248460352",
+      "19024",
+      "100004128",
+      "276980373",
+      "200000181"
+    ]
+  },
+  "HEADER_IMAGE_PC": {
+    "currentSkuImages": "list[1]",
+    "imagePathList": "list[6]",
+    "imgList": "list[6]",
+    "mainImages": "list[6]",
+    "pageBarShiftLeft": "False",
+    "showColorTab": "False",
+    "showLongImage": "False",
+    "skuImagesMap": [
+      "12000059875009119"
+    ],
+    "summImagePathList": "list[6]"
+  },
+  "GLOBAL_DATA": {
+    "globalData": [
+      "hitHideShipToExp",
+      "curPagePriceInfo",
+      "subject",
+      "pcFeature202507",
+      "wishlistParams",
+      "dp",
+      "localStr",
+      "scene",
+      "pdp2pdpParam",
+      "sellerId",
+      "minidetailFloating",
+      "siteType",
+      "msiteFeature202506",
+      "category2",
+      "traceId",
+      "category3",
+      "image",
+      "regionProvinceName",
+      "productId",
+      "pc30"
+    ]
+  },
+  "QUANTITY_PC": {
+    "allSkuQuantityView": [
+      "12000059875009119"
+    ],
+    "currentSkuQuantityView": [
+      "currentCount",
+      "maxBuyCount",
+      "maxBuyCountStr"
+    ],
+    "title": "Quant.",
+    "totalAvailableInventory": "1"
+  },
+  "INSTALLMENT": {
+    "actionTarget": "https://www.aliexpress.com/p/second-payment/installment-info.html?skipPopHalfH5=yes&encryptedData=KbPrFq6dLy0czKmk4B526mxXVh6UZmN8VlE%2FKMvHuni3LybAdhc2yzcXQA1HkJ8nAuU3HiyBursBqf44WnD4L%2FfEoUuRG37HQL",
+    "hide": "False",
+    "icon": "https://ae-pic-a1.aliexpress-media.com/kf/Sb7f281b05a6d4139adafaba9df0e5fe14.png",
+    "iframePopup": "True",
+    "newStyle": "True",
+    "popTitle": "Como funciona o parcelamento",
+    "showH5": "True",
+    "tailIconList": "list[1]",
+    "text": "R$808,41 x 12 meses"
+  },
+  "DESC": {
+    "descFoldThreshold": "8",
+    "isLocalSeller": "False",
+    "msiteDescUrl": "https://pdp.aliexpress-media.com/product/description/msite/v2/pt_BR/desc.htm?productId=1005011737968391&key=S55b1537200ec4c28a68d27b4c2c8c9f3X.zip&token=a2cb5047794a86a3b769782528b734ed&sellerId=73204",
+    "nativeDescUrl": "https://pdp.aliexpress-media.com/product/description/stdmobile/v2/pt_BR/desc.json?productId=1005011737968391&key=S71cfcdea7eb24274b1a572dc5cb7381bA.json&token=d1d919a422d97bdfc46c40a225f1e522&sellerId",
+    "pcDescUrl": "https://pdp.aliexpress-media.com/product/description/pc/v2/pt_BR/desc.htm?productId=1005011737968391&key=S55b1537200ec4c28a68d27b4c2c8c9f3X.zip&token=a2cb5047794a86a3b769782528b734ed&sellerId=73204760",
+    "reportText": "report",
+    "sellingPointInfo": [
+      "limitCnt",
+      "title",
+      "viewLessText",
+      "viewMoreText"
+    ],
+    "storeId": "1105347822",
+    "title": "Detalhes do item",
+    "urlMatchList": "list[3]"
+  },
+  "PC_RATING": {
+    "aiSell": [
+      "actionTarget",
+      "imageList",
+      "rotationInterval",
+      "textFragments"
+    ],
+    "otherText": "1 vendido(s)",
+    "rating": "5.0",
+    "separator": "౹",
+    "totalValidNum": "1"
+  }
+}

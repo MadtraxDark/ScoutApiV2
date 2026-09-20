@@ -1,0 +1,67 @@
+{
+  "benefitInfoList": [
+    {
+      "title": "# Vendido em 180 dias",
+      "value": "400+"
+    },
+    {
+      "title": "Revisão positiva",
+      "value": "100.0%"
+    },
+    {
+      "title": "Classificação da loja",
+      "value": "4.9"
+    },
+    {
+      "title": "Comunicação",
+      "value": "5.0"
+    }
+  ],
+  "bgImage": "https://ae-pic-a1.aliexpress-media.com/kf/A6b755dd379004cca9886d6c97b03d3f0y.png",
+  "fontColor": "#FFFFFF",
+  "hasStoreFeedback": false,
+  "licenseInfo": {
+    "actionTarget": "https://shoprenderview.aliexpress.com/credential/showcredential.htm?storeNum=1105347822&_lang=pt_BR&_currency=BRL",
+    "text": "Informações da loja"
+  },
+  "logo": "https://ae-pic-a1.aliexpress-media.com/kf/A7a1dcaf6f21145ab90d067ae31873401S.png",
+  "sellerInfo": {
+    "adminSeq": 7320476058,
+    "aeRuSelfOperation": false,
+    "boutiqueSeller": false,
+    "companyId": 7320476058,
+    "countryCompleteName": "Brasil",
+    "esRetailOrConsignment": false,
+    "formatOpenTime": "fev 23, 2026",
+    "hasStore": false,
+    "localSeller": false,
+    "openTime": "2026-02-23 09:46:06",
+    "openedYear": 0,
+    "payPalAccount": false,
+    "plazaElectronicSeller": false,
+    "province": "",
+    "ruConsignmentAndMarketPlace": false,
+    "ruSelfOperation": false,
+    "showPlazaHeader": false,
+    "spanishPlaza": false,
+    "storeNum": 1105347822,
+    "storeURL": "//pt.aliexpress.com/store/1105347822",
+    "topRatedSeller": false
+  },
+  "sellerLevel": "14-s",
+  "sellerPositiveNum": 101,
+  "sellerPositiveRate": "100.0",
+  "sellerScore": 101,
+  "sellerTotalNum": 101,
+  "shadowColor": "#000000",
+  "shadowOpacity": "0.4",
+  "showStoreInfo": true,
+  "storeAllProductPage": "https://campaign.aliexpress.com/wow/gcp/shop-framework/index?wx_navbar_hidden=true&wx_navbar_transparent=true&shopId=1105347822&sellerId=7320476058&extParams=&productIds=&expAppPageFrameVersion=&pagePath=allProduct.htm&invitationCode=&wh_weex=true",
+  "storeHeaderResult": {
+    "tabList": []
+  },
+  "storeHomePage": "https://m.aliexpress.com/store/storeHome.htm?sellerAdminSeq=7320476058",
+  "storeName": "MA INFOSTORE Store",
+  "storeNameKey": "Vendido por",
+  "storeStyle": "DEFAULT"
+}

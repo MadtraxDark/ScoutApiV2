@@ -1,0 +1,21 @@
+{
+  "strategy": "camoufox_proxy",
+  "proxy_configured": true,
+  "elapsed_s": 12.41,
+  "title": "Placa de Vídeo MSI NVIDIA GeForce RTX 5070 Ti Shadow 3X OC, 16GB, GDDR7, DLSS, Ray Tracing, 912-V531-465 - AliExpress",
+  "final_url": "https://pt.aliexpress.com/item/1005011737968391.html",
+  "html_len": 317773,
+  "mtop_len": 54261,
+  "mtop_status": 200,
+  "has_SUCCESS": false,
+  "has_RGV587": false,
+  "has_PRICE": true,
+  "has_skuId": true,
+  "has_productId": true,
+  "ret": [
+    "SUCCESS::调用成功"
+  ],
+  "data_keys": [
+    "result"
+  ]
+}

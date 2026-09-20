@@ -39,7 +39,7 @@ ADR: [0011](../adr/0011-offer-vs-product-details.md), [0012](../adr/0012-optiona
 
 - Discovery: live SERP on all implemented stores with `supports_search`
   (`kabum`, `bestbuy`, `nissei`, `shoppingchina`, `amazon_br`, `amazon_us`,
-  `magazineluiza`, `mercadolivre`, `shopee` — ordered by typical GTIN/EAN exposure) via
+  `magazineluiza`, `mercadolivre`, `shopee`, `aliexpress` — ordered by typical GTIN/EAN exposure) via
   `build_search_url` / `parse_search_results`.
   Lojas implementadas sem search (ex. `visaovip`) entram no `/match` como
   `SEARCH_UNSUPPORTED` (ERROR terminal), nunca omitidas.
@@ -76,7 +76,7 @@ ADR: [0011](../adr/0011-offer-vs-product-details.md), [0012](../adr/0012-optiona
   `review`-only hits never promote a GTIN.
 - **Search order:** live match prefers stores that typically expose GTIN/EAN/UPC
   on the PDP (`kabum`, `bestbuy`, `nissei`, `shoppingchina`, then Amazons,
-  then `magazineluiza` / `shopee`). If the reference listing has no barcode,
+  then `magazineluiza` / `mercadolivre` / `shopee` / `aliexpress`). If the reference listing has no barcode,
   the reference store itself is deprioritized so a GTIN-rich peer can seed
   queries first (`store_search_order.py`).
 - Persistence (PostgreSQL): `CanonicalProduct`, `StoreListing`, `OfferSnapshot`,

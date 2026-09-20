@@ -19,6 +19,22 @@ TRACKING_KEYS = {
     "utm_term",
     "utm_content",
     "xptdk",
+    # AliExpress SERP / campaign tracking (sku selection uses sku_id separately).
+    "spm",
+    "algo_pvid",
+    "algo_exp_id",
+    "pdp_ext_f",
+    "pdp_npi",
+    "curpageloguid",
+    "utparam-url",
+    "tblci",
+    "aff_fcid",
+    "aff_fsk",
+    "aff_platform",
+    "aff_trace_key",
+    "terminal_id",
+    "af",
+    "dp",
 }
 
 # Marketing / affiliate prefixes (Mercado Livre Google Shopping, etc.)

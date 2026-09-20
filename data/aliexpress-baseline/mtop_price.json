@@ -1,0 +1,50 @@
+{
+  "discountExt": "{\"p0\":\"Default\",\"p1\":\"BR_L2L_SISLOGICA_CORREIOS\",\"p3\":12000059875009119}",
+  "isLot": false,
+  "priceLocalConfig": "{\"from\":{\"currencySymbol\":\"R$\",\"currencySymbolPosition\":\"front\",\"decimalPointChar\":\",\",\"showDecimal\":true,\"thousandsChar\":\".\"},\"roundOffZero\":false,\"separatorStr\":\" - \",\"single\":{\"currencySymbol\":\"R$\",\"currencySymbolPosition\":\"front\",\"decimalPointChar\":\",\",\"showDecimal\":true,\"thousandsChar\":\".\"},\"to\":{\"currencySymbol\":\"$\",\"currencySymbolPosition\":\"front\",\"decimalPointChar\":\",\",\"showDecimal\":true,\"thousandsChar\":\".\"},\"useful\":true,\"version\":\"v1\"}",
+  "productId": 1005011737968391,
+  "region": "BR",
+  "reverseDiscountAndPrice": false,
+  "selectedSkuId": 12000059875009119,
+  "skuIdStrPriceInfoMap": {
+    "12000059875009119": {
+      "discount": "2% de desc.",
+      "originalPrice": {
+        "currency": "BRL",
+        "formatedAmount": "R$8.999,00",
+        "value": 8999.0
+      },
+      "priceFontColor": "#FD384F",
+      "salePriceLocal": "R$8.819,02|8819|02",
+      "salePriceString": "R$8.819,02",
+      "sellerByLot": false
+    }
+  },
+  "skuPriceInfoMap": {
+    "12000059875009119": {
+      "discount": "2% de desc.",
+      "originalPrice": {
+        "currency": "BRL",
+        "formatedAmount": "R$8.999,00",
+        "value": 8999.0
+      },
+      "priceFontColor": "#FD384F",
+      "salePriceLocal": "R$8.819,02|8819|02",
+      "salePriceString": "R$8.819,02",
+      "sellerByLot": false
+    }
+  },
+  "skuSecondPriceInfoMap": {},
+  "targetSkuPriceInfo": {
+    "discount": "2% de desc.",
+    "originalPrice": {
+      "currency": "BRL",
+      "formatedAmount": "R$8.999,00",
+      "value": 8999.0
+    },
+    "priceFontColor": "#FD384F",
+    "salePriceLocal": "R$8.819,02|8819|02",
+    "salePriceString": "R$8.819,02",
+    "sellerByLot": false
+  }
+}

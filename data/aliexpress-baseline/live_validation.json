@@ -1,0 +1,27 @@
+{
+  "offer": {
+    "price": "8819.02",
+    "currency": "BRL",
+    "seller": "MA INFOSTORE Store",
+    "sku": "12000059875009119",
+    "product_id": "1005011737968391",
+    "available": true,
+    "shipping": null
+  },
+  "details": {
+    "title": "Placa de Vídeo MSI NVIDIA GeForce RTX 5070 Ti Shadow 3X OC, 16GB, GDDR7, DLSS, Ray Tracing, 912-V531-465",
+    "brand": "MSI",
+    "model": "GeForce RTX 5070 Ti",
+    "variant": "Envia de: Brasil",
+    "canonical_url": "https://pt.aliexpress.com/item/1005011737968391.html?sku_id=12000059875009119"
+  },
+  "images": {
+    "n": 6,
+    "bad": 0,
+    "sample": [
+      "https://ae-pic-a1.aliexpress-media.com/kf/A39428fdb8d074887a681b5a55845c0978.png",
+      "https://ae-pic-a1.aliexpress-media.com/kf/A3853ed57de834693b6519fd866376c1ek.png",
+      "https://ae-pic-a1.aliexpress-media.com/kf/A399d521cc76b457cbf10a79b827a48bae.png"
+    ]
+  }
+}

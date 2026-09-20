@@ -40,7 +40,14 @@ STORE_CONFIGS = {
         proxy_policy=ProxyPolicy.FALLBACK,
         supports_images=False,
     ),
-    "aliexpress": StoreConfig("aliexpress", "BR", "BRL", ("aliexpress.com",)),
+    "aliexpress": StoreConfig(
+        "aliexpress",
+        "BR",
+        "BRL",
+        ("aliexpress.com",),
+        True,
+        proxy_policy=ProxyPolicy.FALLBACK,
+    ),
     "amazon_br": StoreConfig(
         "amazon",
         "BR",

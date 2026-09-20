@@ -1,0 +1,78 @@
+{
+  "elapsed": 19.34,
+  "count": 9,
+  "mtops": [
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.aliexpress.pdp.pc.query/1.0/?jsv=2.5.1&appKey=12574478&t=1789907505180&sign=3929e9bc5a09a0d7c98c7ed50c18cc04&api=mtop.aliexpress.pdp.pc.query&type=originaljsonp&v=1.0&timeout=15000&data",
+      "status": 200,
+      "len": 151,
+      "is_pdp_api": true,
+      "looks_pdp": false,
+      "head": " mtopjsonp1({\"api\":\"mtop.aliexpress.pdp.pc.query\",\"data\":{},\"ret\":[\"FAIL_SYS_TOKEN_EMPTY::令牌为空\"],\"traceId\":\"2101d2e717899075081711163e0e5d\",\"v\":\"1.0\"})"
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.aliexpress.pdp.pc.query/1.0/?jsv=2.5.1&appKey=12574478&t=1789907509060&sign=971c5a11494ce9f2a9f84b0c2ddf43e6&api=mtop.aliexpress.pdp.pc.query&type=originaljsonp&v=1.0&timeout=15000&data",
+      "status": 200,
+      "len": 54250,
+      "is_pdp_api": true,
+      "looks_pdp": false,
+      "head": " mtopjsonp2({\"api\":\"mtop.aliexpress.pdp.pc.query\",\"data\":{\"result\":{\"POPUP\":{\"popupMap\":{},\"sortedPopup\":[]},\"GLOBAL_DATA\":{\"globalData\":{\"hitHideShipToExp\":true,\"curPagePriceInfo\""
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.relationrecommend.aliexpressrecommend.recommend/1.0/?jsv=2.5.1&appKey=12574478&t=1789907510371&sign=8aaa601f74e36a7c019c9896c9a14ed2&api=mtop.relationrecommend.AliexpressRecommend.recom",
+      "status": 200,
+      "len": 35468,
+      "is_pdp_api": false,
+      "looks_pdp": false,
+      "head": "{\"api\":\"mtop.relationrecommend.aliexpressrecommend.recommend\",\"data\":{\"result\":[1],\"data\":{\"layoutInfo\":[\"categories\",\"subCategories\",\"rankList\",\"searchList\"],\"trace\":{\"exposure\":{"
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.aliexpress.address.shipto.division.get/1.0/?jsv=2.5.1&appKey=12574478&t=1789907510371&sign=780ed59542a9cea7d6b1794fff871e88&api=mtop.aliexpress.address.shipto.division.get&v=1.0&type=js",
+      "status": 200,
+      "len": 41150,
+      "is_pdp_api": false,
+      "looks_pdp": false,
+      "head": " mtopjsonp3({\"api\":\"mtop.aliexpress.address.shipto.division.get\",\"data\":{\"hotCountries\":[{\"code\":\"US\",\"hasChildren\":true,\"i18nMap\":{\"hitGray\":\"false\"},\"id\":228,\"language\":\"pt_BR\",\""
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.aliexpress.trade.cart.count/1.0/?jsv=2.5.1&appKey=12574478&t=1789907510371&sign=ec8de5fe58a06ba211bc927c39c471db&api=mtop.aliexpress.trade.cart.count&v=1.0&timeout=10000&type=jsonp&data",
+      "status": 200,
+      "len": 155,
+      "is_pdp_api": false,
+      "looks_pdp": false,
+      "head": " mtopjsonp4({\"api\":\"mtop.aliexpress.trade.cart.count\",\"data\":{\"cartNum\":\"0\"},\"ret\":[\"SUCCESS::调用成功\"],\"traceId\":\"2101d2e717899075098441245e0e5d\",\"v\":\"1.0\"})"
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.ae.cookie.render/1.0/?jsv=2.5.1&appKey=12574478&t=1789907510371&sign=ad93bfa035dc1808dd4c72f7a724eb21&api=mtop.ae.cookie.render&v=1.0&timeout=10000&type=jsonp&dataType=jsonp&callback=mt",
+      "status": 200,
+      "len": 292,
+      "is_pdp_api": false,
+      "looks_pdp": false,
+      "head": " mtopjsonp5({\"api\":\"mtop.ae.cookie.render\",\"data\":{\"country\":\"BR\",\"inGdpr\":false,\"trigger\":\"ipCountry:BR|findIpStatus:false|validateRegistryCountryStatus:false|shipToCountry:BR|val"
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.ae.cookie.render/1.0/?jsv=2.5.1&appKey=12574478&t=1789907510371&sign=ad93bfa035dc1808dd4c72f7a724eb21&api=mtop.ae.cookie.render&v=1.0&timeout=10000&type=jsonp&dataType=jsonp&callback=mt",
+      "status": 200,
+      "len": 292,
+      "is_pdp_api": false,
+      "looks_pdp": false,
+      "head": " mtopjsonp6({\"api\":\"mtop.ae.cookie.render\",\"data\":{\"country\":\"BR\",\"inGdpr\":false,\"trigger\":\"ipCountry:BR|findIpStatus:false|validateRegistryCountryStatus:false|shipToCountry:BR|val"
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.aliexpress.traffic.web.cross.trace.report/1.0/?jsv=2.5.1&appKey=12574478&t=1789907510372&sign=c72314673c098994a073e7db92e76052&api=mtop.aliexpress.traffic.web.cross.trace.report&v=1.0&t",
+      "status": 200,
+      "len": 156,
+      "is_pdp_api": false,
+      "looks_pdp": false,
+      "head": " mtopjsonp7({\"api\":\"mtop.aliexpress.traffic.web.cross.trace.report\",\"data\":{},\"ret\":[\"SUCCESS::调用成功\"],\"traceId\":\"2101d2e717899075100541252e0e5d\",\"v\":\"1.0\"})"
+    },
+    {
+      "url": "https://acs.aliexpress.com/h5/mtop.aliexpress.pdp.pc.adjust/1.0/?jsv=2.5.1&appKey=12574478&t=1789907510371&sign=171f7ab4f5634f859776d5078d0ef093&api=mtop.aliexpress.pdp.pc.adjust&v=1.0&type=originaljson&dataType=jsonp",
+      "status": 200,
+      "len": 27280,
+      "is_pdp_api": false,
+      "looks_pdp": true,
+      "head": "{\"api\":\"mtop.aliexpress.pdp.pc.adjust\",\"data\":{\"result\":{\"PRICE\":{\"discountExt\":\"{\\\"p0\\\":\\\"Default\\\",\\\"p1\\\":\\\"BR_L2L_SISLOGICA_CORREIOS\\\",\\\"p3\\\":12000059875009119}\",\"isLot\":false,\""
+    }
+  ]
+}
