@@ -1,8 +1,12 @@
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field
+
+from scout_api.core.http_url import AbsoluteHttpUrl
 
 
 class CrawlRequest(BaseModel):
-    url: HttpUrl = Field(description="URL pública do produto ou da oferta na loja.")
+    url: AbsoluteHttpUrl = Field(
+        description="URL pública do produto ou da oferta na loja."
+    )
     include_images: bool = Field(
         default=False,
         description=(

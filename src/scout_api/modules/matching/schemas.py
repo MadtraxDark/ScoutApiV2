@@ -7,8 +7,9 @@ from decimal import Decimal
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field
 
+from scout_api.core.http_url import AbsoluteHttpUrl
 from scout_api.modules.crawler.models.product import ProductOffer, ProductPriceItem
 from scout_api.modules.crawler.models.search import SearchCandidate
 
@@ -64,7 +65,7 @@ class MatchReason(BaseModel):
 
 
 class MatchRequest(BaseModel):
-    reference_url: HttpUrl = Field(
+    reference_url: AbsoluteHttpUrl = Field(
         description="URL do produto de referência usado como base do matching."
     )
     stores: list[str] | None = Field(
@@ -131,7 +132,7 @@ class OfferRefreshRequest(BaseModel):
         default=None,
         description="Listings específicos a atualizar.",
     )
-    urls: list[HttpUrl] | None = Field(
+    urls: list[AbsoluteHttpUrl] | None = Field(
         default=None,
         description="URLs avulsas de oferta a atualizar.",
     )
@@ -232,10 +233,10 @@ class ProductRegisterRequest(BaseModel):
     sku: str | None = Field(
         default=None, max_length=128, description="SKU na loja, quando disponível."
     )
-    url: HttpUrl | None = Field(
+    url: AbsoluteHttpUrl | None = Field(
         default=None, description="URL da página do produto na loja."
     )
-    canonical_url: HttpUrl | None = Field(
+    canonical_url: AbsoluteHttpUrl | None = Field(
         default=None, description="URL canônica do listing na loja."
     )
 
