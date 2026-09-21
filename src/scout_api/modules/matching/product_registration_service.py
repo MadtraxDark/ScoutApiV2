@@ -14,7 +14,11 @@ from scout_api.modules.crawler.utils.product_identity import (
     canonical_variant_key,
 )
 from scout_api.modules.images.schemas import ApprovedImageInput, ProductImageView
-from scout_api.modules.images.service import ProductImageService, to_image_view
+from scout_api.modules.images.service import (
+    ProductImageService,
+    primary_display_url,
+    to_image_view,
+)
 from scout_api.modules.matching.identity import (
     normalize_brand,
     normalize_gtin,
@@ -254,19 +258,14 @@ class ProductRegistrationService:
         start = max(0, offset)
         repo = MatchingRepository(self._session)
         is_admin = viewer.role == UserRole.ADMIN
-        total = repo.count_canonical_products(
-            viewer_id=viewer.id, is_admin=is_admin
-        )
+        total = repo.count_canonical_products(viewer_id=viewer.id, is_admin=is_admin)
         rows = repo.search_canonical_products(
             viewer_id=viewer.id,
             is_admin=is_admin,
             limit=cap,
             offset=start,
         )
-        items = [
-            self.get_product(product.id, viewer=viewer)
-            for product in rows
-        ]
+        items = [self.get_product(product.id, viewer=viewer) for product in rows]
         views = [item for item in items if item is not None]
         return ProductListResponse(
             items=views,
@@ -492,6 +491,7 @@ def _to_product_view(
         updated_at=product.updated_at,
         listings=[_to_listing_view(item) for item in listings],
         images=list(images or []),
+        primary_image_url=primary_display_url(list(images or [])),
     )
 
 

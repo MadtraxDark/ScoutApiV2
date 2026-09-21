@@ -31,6 +31,11 @@ class ProductImage(Base):
     __table_args__ = (
         Index("ix_product_images_product_position", "canonical_product_id", "position"),
         Index(
+            "ix_product_images_optimization_due",
+            "optimized_status",
+            "optimization_next_attempt_at",
+        ),
+        Index(
             "uq_product_images_product_sha256",
             "canonical_product_id",
             "original_sha256",
@@ -87,6 +92,23 @@ class ProductImage(Base):
         String(32), nullable=False, default="pending"
     )
     optimized_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Durable AVIF job lease (ADR 0031) — survives API restart.
+    optimization_attempts: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0
+    )
+    optimization_next_attempt_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    optimization_claimed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    optimization_claim_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    optimization_worker_id: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )
 
     position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     is_main: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

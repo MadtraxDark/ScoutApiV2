@@ -77,10 +77,12 @@ Falha de galeria não derruba o produto: metadata `image_status` /
 
 Após revisão no PriceScout, o import (`POST /products`) envia
 `images: [{ source_url, position, is_main }]`. Só então o ScoutApiV2 baixa,
-valida (SSRF), grava original no Drive da conta dedicada e gera AVIF.
+valida (SSRF), grava o **original** no Drive e responde sucesso. AVIF roda
+em background (`optimized_status=pending` é estado válido).
 
-Galeria persistida: usar `display_url` (proxy autenticado). Não usar URL da
-loja depois da aprovação. Credenciais Drive nunca no frontend.
+Galeria persistida: usar `display_url` ou, na listagem, `primary_image_url`
+(ambos já aplicam AVIF-if-ready, senão original). Não usar URL da loja depois
+da aprovação. Credenciais Drive nunca no frontend.
 
 Canônico: [`docs/persistence/product-images.md`](../persistence/product-images.md)
 + [ADR 0029](../adr/0029-google-drive-product-images.md).
@@ -97,8 +99,10 @@ Canônico: [`docs/persistence/product-images.md`](../persistence/product-images.
    import; deixar claro que ainda não estão no Drive.
 5. Import: `POST /products` com `images: [{ source_url, position, is_main }]`
    das aprovadas (idempotente no clique).
-6. Após cadastro: listar via `GET /products/{id}/images` ou campo `images` do
-   `ProductView`; renderizar só `display_url` (com Bearer).
+6. Após cadastro: listar via `GET /products/{id}/images` ou campo `images` /
+   `primary_image_url` do `ProductView`; renderizar `display_url` /
+   `primary_image_url` (com Bearer). **Não espere AVIF** — original já é
+   válida enquanto `optimized_status` for `pending`/`processing`/`failed`.
 7. CRUD: `POST/PATCH/DELETE /products/{id}/images`; retry AVIF opcional.
 8. Não enviar `drive_file_id` / paths / credentials no body.
 9. Reutilizar `ImageViewer` / `ImageWithState` se já existirem.

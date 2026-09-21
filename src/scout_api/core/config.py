@@ -112,7 +112,13 @@ class Settings(BaseSettings):
     image_max_per_product: int = 20
     image_avif_quality: int = 60
     image_avif_max_concurrency: int = 2
+    # Alias conceitual: IMAGE_OPTIMIZATION_CONCURRENCY → image_avif_max_concurrency
+    image_optimization_concurrency: int | None = None
     image_media_cache_max_age_seconds: int = 86_400
+    image_optimization_enabled: bool = True
+    image_optimization_sweep_interval_seconds: int = 2
+    image_optimization_batch_size: int = 4
+    image_optimization_lease_seconds: int = 300
     # --- Persistent offer monitoring (ADR 0030). Clock lives in PostgreSQL. ---
     offer_refresh_interval_hours: int = 12
     offer_monitor_enabled: bool = True
@@ -150,6 +156,10 @@ class Settings(BaseSettings):
                 "AUTH_REQUIRED=false (ou AUTH_ENABLED=false) não é permitido "
                 "quando ENVIRONMENT=production. "
                 "Defina AUTH_REQUIRED=true ou use um ambiente não-produção."
+            )
+        if self.image_optimization_concurrency is not None:
+            self.image_avif_max_concurrency = max(
+                1, int(self.image_optimization_concurrency)
             )
         return self
 

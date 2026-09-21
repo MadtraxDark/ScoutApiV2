@@ -337,6 +337,13 @@ class ProductView(BaseModel):
     updated_at: datetime
     listings: list[ProductListingView] = Field(default_factory=list)
     images: list[ProductImageView] = Field(default_factory=list)
+    primary_image_url: str | None = Field(
+        default=None,
+        description=(
+            "URL de capa para cards: AVIF se ready, senão original. "
+            "Prefira este campo na listagem; não espere optimized_status."
+        ),
+    )
 
 
 class ProductUpdateRequest(BaseModel):

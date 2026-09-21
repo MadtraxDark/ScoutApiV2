@@ -26,6 +26,7 @@ Política de quando criar/atualizar docs:
 | [0028](0028-performance-observability.md) | Observabilidade de tempo + budgets por categoria | Accepted |
 | [0029](0029-google-drive-product-images.md) | Google Drive (conta dedicada OAuth) + imagens de produto | Accepted |
 | [0030](0030-persistent-offer-monitoring.md) | Monitoramento persistente de ofertas (PostgreSQL-driven) | Accepted |
+| [0031](0031-durable-image-optimization-queue.md) | Fila durável PostgreSQL para otimização AVIF | Accepted |
 
 ## Índice — crawler
 

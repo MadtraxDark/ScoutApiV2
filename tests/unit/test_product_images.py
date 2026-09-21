@@ -220,9 +220,7 @@ def test_display_url_fallback_rules(
         owner=_OWNER,
     )
     product_id = created.product.id
-    svc = ProductImageService(
-        session, drive=drive, schedule_avif=False
-    )
+    svc = ProductImageService(session, drive=drive, schedule_avif=False)
     png = _png_bytes()
 
     def fake_download(url: str):
@@ -240,9 +238,7 @@ def test_display_url_fallback_rules(
             source_url=url,
         )
 
-    with patch.object(
-        svc._pipeline._downloader, "download", side_effect=fake_download
-    ):
+    with patch.object(svc._pipeline._downloader, "download", side_effect=fake_download):
         view = svc.add_image(
             product_id,
             AddProductImageRequest(
@@ -253,9 +249,10 @@ def test_display_url_fallback_rules(
     assert view.original_status == "ready"
     assert view.optimized_status == "pending"
     assert view.display_url == view.original_url
-    assert view.display_url and view.display_url.endswith("/content")
+    assert view.display_url and "variant=original" in view.display_url
+    assert view.optimized_url is None
 
-    # Mark optimized ready → prefer AVIF path (same content URL, different etag)
+    # Mark optimized ready → prefer AVIF path (distinct URL for cache safety)
     from scout_api.modules.images.repository import ProductImageRepository
 
     row = ProductImageRepository(session).get(view.image_id)
@@ -266,11 +263,17 @@ def test_display_url_fallback_rules(
     session.flush()
     ready = to_image_view(row)
     assert ready.display_url == ready.optimized_url
+    assert ready.optimized_url and "variant=optimized" in ready.optimized_url
 
     row.optimized_status = "failed"
     session.flush()
     failed = to_image_view(row)
     assert failed.display_url == failed.original_url
+
+    row.optimized_status = "processing"
+    session.flush()
+    processing = to_image_view(row)
+    assert processing.display_url == processing.original_url
 
 
 def test_approval_persists_only_selected(
@@ -309,9 +312,7 @@ def test_approval_persists_only_selected(
         )
         for i in (0, 2, 4)
     ]
-    with patch.object(
-        svc._pipeline._downloader, "download", side_effect=fake_download
-    ):
+    with patch.object(svc._pipeline._downloader, "download", side_effect=fake_download):
         views = svc.persist_approved(product.id, approved, owner=_OWNER)
     assert len(views) == 3
     assert len(drive.files) == 3
@@ -343,9 +344,7 @@ def test_reorder_main_delete(session: Session, drive: InMemoryDriveStorage) -> N
             source_url=url,
         )
 
-    with patch.object(
-        svc._pipeline._downloader, "download", side_effect=fake_download
-    ):
+    with patch.object(svc._pipeline._downloader, "download", side_effect=fake_download):
         a = svc.add_image(
             product.id,
             AddProductImageRequest(
@@ -385,9 +384,7 @@ def test_avif_failure_keeps_original(
         ProductRegisterRequest(title="Phone", gtin="7891991010863"),
         owner=_OWNER,
     ).product
-    pipeline = ImagePipeline(
-        session, drive=drive, schedule_avif=False
-    )
+    pipeline = ImagePipeline(session, drive=drive, schedule_avif=False)
 
     def fake_download(url: str):
         import hashlib
@@ -441,3 +438,399 @@ def test_avif_optimizer_no_upscale() -> None:
     assert result.width == 64
     assert result.height == 64
     assert result.mime_type == "image/avif"
+
+
+def _fake_download_side_effect(png: bytes):
+    import hashlib
+
+    from scout_api.modules.images.downloader import DownloadedImage
+
+    def fake_download(url: str):
+        return DownloadedImage(
+            data=png,
+            content_type="image/png",
+            width=32,
+            height=32,
+            sha256=hashlib.sha256(png).hexdigest(),
+            extension="png",
+            source_url=url,
+        )
+
+    return fake_download
+
+
+def test_save_does_not_wait_for_slow_avif(
+    session: Session, drive: InMemoryDriveStorage
+) -> None:
+    """Critical path: persist returns while convert is artificially slow."""
+    import threading
+    import time
+
+    from sqlalchemy.orm import sessionmaker
+
+    from scout_api.core.config import Settings
+    from scout_api.modules.images.optimizer import OptimizedImage
+    from scout_api.modules.images.repository import ProductImageRepository
+    from scout_api.modules.images.worker import ImageOptimizationScheduler
+
+    reg = ProductRegistrationService(session)
+    product = reg.register(
+        ProductRegisterRequest(title="Async Cam", gtin="7891991010863"),
+        owner=_OWNER,
+    ).product
+
+    hold = threading.Event()
+    convert_started = threading.Event()
+    settings = Settings(
+        image_optimization_enabled=True,
+        image_avif_max_concurrency=1,
+    )
+    pipeline = ImagePipeline(
+        session, drive=drive, settings=settings, schedule_avif=True
+    )
+
+    def slow_convert(data: bytes, **kwargs):
+        convert_started.set()
+        assert hold.wait(timeout=5)
+        return OptimizedImage(
+            data=b"fake-avif",
+            mime_type="image/avif",
+            width=32,
+            height=32,
+            size_bytes=9,
+        )
+
+    png = _png_bytes()
+    with patch.object(
+        pipeline._downloader,
+        "download",
+        side_effect=_fake_download_side_effect(png),
+    ):
+        t0 = time.perf_counter()
+        rows = pipeline.persist_approved(
+            product.id,
+            [
+                ApprovedImageInput(
+                    source_url="https://cdn.example/slow.png",
+                    position=0,
+                    is_main=True,
+                )
+            ],
+        )
+        save_ms = (time.perf_counter() - t0) * 1000
+
+    assert save_ms < 2000, f"save blocked on AVIF: {save_ms:.1f}ms"
+    row = rows[0]
+    assert row.original_status == "ready"
+    assert row.optimized_status == "pending"
+    assert not convert_started.is_set()
+    session.commit()
+
+    factory = sessionmaker(bind=session.get_bind(), autoflush=False, autocommit=False)
+    sched = ImageOptimizationScheduler(
+        settings=settings, drive=drive, session_factory=factory
+    )
+
+    from scout_api.modules.images import worker as worker_mod
+
+    def process_with_slow(session_obj, image, *, drive, settings):
+        pipe = ImagePipeline(
+            session_obj, drive=drive, settings=settings, schedule_avif=False
+        )
+        with patch.object(pipe._optimizer, "convert", side_effect=slow_convert):
+            return pipe.optimize_now(image, already_claimed=True)
+
+    with patch.object(
+        worker_mod, "process_claimed_image", side_effect=process_with_slow
+    ):
+        worker = threading.Thread(target=sched.sweep_once_inline)
+        worker.start()
+        assert convert_started.wait(timeout=5)
+        # Save already returned long before convert finishes.
+        hold.set()
+        worker.join(timeout=15)
+    assert not worker.is_alive()
+
+    db = factory()
+    try:
+        done = ProductImageRepository(db).get(row.id)
+        assert done is not None
+        assert done.optimized_status == "ready"
+        assert done.optimized_drive_file_id
+    finally:
+        db.close()
+
+
+def test_restart_recovers_pending_avif(
+    session: Session, drive: InMemoryDriveStorage
+) -> None:
+    from sqlalchemy.orm import sessionmaker
+
+    from scout_api.core.config import Settings
+    from scout_api.modules.images.optimizer import OptimizedImage
+    from scout_api.modules.images.repository import ProductImageRepository
+    from scout_api.modules.images.worker import ImageOptimizationScheduler
+
+    reg = ProductRegistrationService(session)
+    product = reg.register(
+        ProductRegisterRequest(title="Restart Cam", gtin="7891991010863"),
+        owner=_OWNER,
+    ).product
+    pipeline = ImagePipeline(session, drive=drive, schedule_avif=True)
+    png = _png_bytes(color=(1, 2, 3))
+    with patch.object(
+        pipeline._downloader, "download", side_effect=_fake_download_side_effect(png)
+    ):
+        rows = pipeline.persist_approved(
+            product.id,
+            [
+                ApprovedImageInput(
+                    source_url="https://cdn.example/restart.png",
+                    position=0,
+                    is_main=True,
+                )
+            ],
+        )
+    session.commit()
+    image_id = rows[0].id
+    assert rows[0].optimized_status == "pending"
+
+    # Simulate API restart: new scheduler instance, same durable pending row.
+    factory = sessionmaker(bind=session.get_bind(), autoflush=False, autocommit=False)
+    settings = Settings(image_avif_max_concurrency=1)
+    worker_a = ImageOptimizationScheduler(
+        settings=settings, drive=drive, session_factory=factory
+    )
+    del worker_a
+    worker_b = ImageOptimizationScheduler(
+        settings=settings, drive=drive, session_factory=factory
+    )
+
+    from scout_api.modules.images import worker as worker_mod
+
+    def process_fake(session_obj, image, *, drive, settings):
+        pipe = ImagePipeline(
+            session_obj, drive=drive, settings=settings, schedule_avif=False
+        )
+        with patch.object(
+            pipe._optimizer,
+            "convert",
+            return_value=OptimizedImage(
+                data=b"avif",
+                mime_type="image/avif",
+                width=32,
+                height=32,
+                size_bytes=4,
+            ),
+        ):
+            return pipe.optimize_now(image, already_claimed=True)
+
+    with patch.object(worker_mod, "process_claimed_image", side_effect=process_fake):
+        summary = worker_b.sweep_once_inline()
+    assert summary["claimed"] == 1
+    assert summary["processed"] == 1
+
+    db = factory()
+    try:
+        done = ProductImageRepository(db).get(image_id)
+        assert done is not None
+        assert done.optimized_status == "ready"
+    finally:
+        db.close()
+
+
+def test_duplicate_claim_single_conversion(
+    session: Session, drive: InMemoryDriveStorage
+) -> None:
+    from sqlalchemy.orm import sessionmaker
+
+    from scout_api.core.config import Settings
+    from scout_api.modules.images.claim import claim_due_optimizations, new_worker_id
+    from scout_api.modules.images.repository import ProductImageRepository
+
+    reg = ProductRegistrationService(session)
+    product = reg.register(
+        ProductRegisterRequest(title="Claim Cam", gtin="7891991010863"),
+        owner=_OWNER,
+    ).product
+    pipeline = ImagePipeline(session, drive=drive, schedule_avif=True)
+    png = _png_bytes(color=(9, 9, 9))
+    with patch.object(
+        pipeline._downloader, "download", side_effect=_fake_download_side_effect(png)
+    ):
+        rows = pipeline.persist_approved(
+            product.id,
+            [
+                ApprovedImageInput(
+                    source_url="https://cdn.example/claim.png",
+                    position=0,
+                    is_main=True,
+                )
+            ],
+        )
+    session.commit()
+
+    factory = sessionmaker(bind=session.get_bind(), autoflush=False, autocommit=False)
+    s1 = factory()
+    s2 = factory()
+    try:
+        settings = Settings(image_optimization_batch_size=4)
+        claimed1 = claim_due_optimizations(
+            s1, worker_id=new_worker_id(), settings=settings
+        )
+        s1.commit()
+        claimed2 = claim_due_optimizations(
+            s2, worker_id=new_worker_id(), settings=settings
+        )
+        s2.commit()
+        assert len(claimed1) == 1
+        assert claimed1[0].id == rows[0].id
+        assert claimed2 == []
+    finally:
+        s1.close()
+        s2.close()
+
+    # Convert once; second optimize_now is no-op when ready.
+    db = factory()
+    try:
+        row = ProductImageRepository(db).get(rows[0].id)
+        assert row is not None
+        pipe = ImagePipeline(db, drive=drive, schedule_avif=False)
+        convert_calls = {"n": 0}
+
+        def counting_convert(data: bytes, **kwargs):
+            from scout_api.modules.images.optimizer import OptimizedImage
+
+            convert_calls["n"] += 1
+            return OptimizedImage(
+                data=b"avif",
+                mime_type="image/avif",
+                width=32,
+                height=32,
+                size_bytes=4,
+            )
+
+        with patch.object(pipe._optimizer, "convert", side_effect=counting_convert):
+            pipe.optimize_now(row, already_claimed=True)
+            pipe.optimize_now(row, already_claimed=True)
+        assert convert_calls["n"] == 1
+        assert row.optimized_status == "ready"
+    finally:
+        db.close()
+
+
+def test_product_list_and_detail_use_display_fallback(
+    session: Session, drive: InMemoryDriveStorage
+) -> None:
+    """Product list/detail cards must show original while AVIF is pending."""
+    reg = ProductRegistrationService(session)
+    created = reg.register(
+        ProductRegisterRequest(title="Card Cam", gtin="7891991010863"),
+        owner=_OWNER,
+    )
+    product_id = created.product.id
+    svc = ProductImageService(session, drive=drive, schedule_avif=False)
+    png = _png_bytes(color=(50, 50, 50))
+    with patch.object(
+        svc._pipeline._downloader,
+        "download",
+        side_effect=_fake_download_side_effect(png),
+    ):
+        view = svc.add_image(
+            product_id,
+            AddProductImageRequest(
+                source_url="https://cdn.example/card.png", is_main=True
+            ),
+            owner=_OWNER,
+        )
+    session.flush()
+
+    listed = reg.list_products(viewer=_OWNER, limit=10)
+    match = next(p for p in listed.items if p.id == product_id)
+    assert match.primary_image_url == view.display_url
+    assert match.primary_image_url and "variant=original" in match.primary_image_url
+    assert match.images[0].optimized_status == "pending"
+
+    detail = reg.get_product(product_id, viewer=_OWNER)
+    assert detail is not None
+    assert detail.primary_image_url == match.primary_image_url
+    assert detail.images[0].display_url == view.original_url
+
+    # After AVIF ready, primary switches without re-import.
+    from scout_api.modules.images.repository import ProductImageRepository
+
+    row = ProductImageRepository(session).get(view.image_id)
+    assert row is not None
+    row.optimized_status = "ready"
+    row.optimized_drive_file_id = "opt-1"
+    session.flush()
+    detail2 = reg.get_product(product_id, viewer=_OWNER)
+    assert detail2 is not None
+    assert (
+        detail2.primary_image_url and "variant=optimized" in detail2.primary_image_url
+    )
+    assert detail2.images[0].display_url == detail2.images[0].optimized_url
+
+
+def test_retry_reuses_original_without_redownload(
+    session: Session, drive: InMemoryDriveStorage
+) -> None:
+    reg = ProductRegistrationService(session)
+    product = reg.register(
+        ProductRegisterRequest(title="Retry Cam", gtin="7891991010863"),
+        owner=_OWNER,
+    ).product
+    svc = ProductImageService(session, drive=drive, schedule_avif=False)
+    png = _png_bytes(color=(7, 7, 7))
+    with patch.object(
+        svc._pipeline._downloader,
+        "download",
+        side_effect=_fake_download_side_effect(png),
+    ):
+        view = svc.add_image(
+            product.id,
+            AddProductImageRequest(
+                source_url="https://cdn.example/retry.png", is_main=True
+            ),
+            owner=_OWNER,
+        )
+    from scout_api.modules.images.repository import ProductImageRepository
+
+    row = ProductImageRepository(session).get(view.image_id)
+    assert row is not None
+    row.optimized_status = "failed"
+    row.optimized_error = "boom"
+    session.flush()
+
+    downloads = {"n": 0}
+
+    def counting_download(url: str):
+        downloads["n"] += 1
+        return _fake_download_side_effect(png)(url)
+
+    from scout_api.modules.images.optimizer import OptimizedImage
+
+    with (
+        patch.object(
+            svc._pipeline._downloader, "download", side_effect=counting_download
+        ),
+        patch.object(
+            svc._pipeline._optimizer,
+            "convert",
+            return_value=OptimizedImage(
+                data=b"avif",
+                mime_type="image/avif",
+                width=32,
+                height=32,
+                size_bytes=4,
+            ),
+        ),
+    ):
+        retried = svc.retry_optimization(
+            product.id, view.image_id, owner=_OWNER, sync=True
+        )
+    assert downloads["n"] == 0
+    assert retried.optimized_status == "ready"
+    row2 = ProductImageRepository(session).get(view.image_id)
+    assert row2 is not None
+    assert row2.original_drive_file_id == row.original_drive_file_id

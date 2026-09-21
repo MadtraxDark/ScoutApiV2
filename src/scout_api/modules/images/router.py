@@ -3,10 +3,19 @@
 from __future__ import annotations
 
 from collections.abc import Generator
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Path, Response, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    Header,
+    HTTPException,
+    Path,
+    Query,
+    Response,
+    status,
+)
 from fastapi.responses import Response as PlainResponse
 from sqlalchemy.orm import Session
 
@@ -96,7 +105,7 @@ def list_images(
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(require_permission("products:write"))],
     summary="Adicionar imagem",
-    description="Baixa URL externa aprovada e persiste original (+ AVIF assíncrono).",
+    description="Baixa URL externa aprovada e persiste original; AVIF em background.",
 )
 def add_image(
     product_id: Annotated[UUID, Path()],
@@ -185,7 +194,10 @@ def retry_optimization(
     tags=["Imagens"],
     dependencies=[Depends(require_permission("products:read"))],
     summary="Conteúdo da imagem",
-    description="Proxy autenticado: prefere AVIF; fallback para original.",
+    description=(
+        "Proxy autenticado. Use variant=original|optimized (URLs imutáveis); "
+        "sem variant, auto prefere AVIF quando ready."
+    ),
     responses={
         200: {"content": {"image/*": {}}},
         304: {"description": "Not Modified"},
@@ -200,10 +212,14 @@ def get_image_content(
         AuthenticatedPrincipal, Depends(require_permission("products:read"))
     ],
     if_none_match: Annotated[str | None, Header(alias="If-None-Match")] = None,
+    variant: Annotated[
+        Literal["auto", "original", "optimized"],
+        Query(description="original|optimized|auto (padrão)"),
+    ] = "auto",
 ) -> PlainResponse:
     try:
         data, content_type, etag = service.get_content(
-            product_id, image_id, viewer=principal
+            product_id, image_id, viewer=principal, variant=variant
         )
     except RequestError as exc:
         raise _http_error(exc) from exc

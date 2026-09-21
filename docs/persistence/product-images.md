@@ -1,7 +1,8 @@
 # Imagens de produto — Google Drive + PostgreSQL
 
 Documento canônico do lifecycle de imagens do catálogo.
-Decisão: [ADR 0029](../adr/0029-google-drive-product-images.md).
+Decisões: [ADR 0029](../adr/0029-google-drive-product-images.md) (storage) +
+[ADR 0031](../adr/0031-durable-image-optimization-queue.md) (AVIF durável).
 Integração FE: [pricescout.md](../integration/pricescout.md).
 
 ## Princípio
@@ -11,12 +12,47 @@ Crawler encontra candidatas
   → PriceScout revisa / seleciona / ordena / define principal
   → ScoutApiV2 baixa só as aprovadas
   → original no Drive + metadata no Postgres
-  → AVIF assíncrono
-  → API prefere AVIF; original é fallback
+  → API retorna sucesso (optimized_status=pending é válido)
+  → AVIF em background (fila PostgreSQL)
+  → quando ready, display_url passa a preferir AVIF
 ```
+
+**SALVAR PRODUTO ≠ CONVERTER AVIF.**  
+O original torna a imagem utilizável. O AVIF só otimiza.
 
 **EXTERNAL CANDIDATE IMAGE ≠ CATALOG PRODUCT IMAGE.**  
 Upload no Drive só ocorre **após aprovação**.
+
+## Dois caminhos
+
+### SAVE PATH (bloqueante para o cadastro)
+
+```text
+Product
+  → download seguro + validate
+  → persist original (Drive)
+  → ProductImage (original_status=ready, optimized_status=pending)
+  → HTTP 200/201 sucesso
+```
+
+Métricas neste caminho: `product_save_ms`, `original_download_ms`,
+`original_upload_ms`, `optimization_enqueue_ms`.
+
+**`avif_conversion_ms` NÃO entra neste caminho.**
+
+### BACKGROUND PATH (pós-processamento)
+
+```text
+original ready
+  → claim (lease + SKIP LOCKED)
+  → AVIF convert + upload
+  → optimized_status=ready
+```
+
+Métricas: `avif_conversion_ms`, `avif_upload_ms`, `compression_ratio`.
+
+Recovery: após restart, `pending` ou `processing` com lease expirado é
+reclamado pelo worker.
 
 ## Conta dedicada
 
@@ -53,12 +89,12 @@ Não use o Google OAuth do login Supabase do usuário para storage.
 ```
 
 Identidade = UUID interno. Identificador de arquivo = `drive_file_id`.
+O original **nunca** é apagado após AVIF.
 
 ## Schema `product_images`
 
 PostgreSQL conhece: produto → imagens → file IDs original/AVIF, status,
-hash, dimensões, `position`, `is_main`. A API **não** lista o Drive para
-montar a galeria.
+hash, dimensões, `position`, `is_main`, e lease do job AVIF.
 
 ### Status
 
@@ -67,27 +103,51 @@ montar a galeria.
 | `original_status` | `pending`, `downloading`, `ready`, `failed`, `deleting` |
 | `optimized_status` | `pending`, `processing`, `ready`, `failed` |
 
-## Pipeline
+Estado válido após cadastro: `original_status=ready` +
+`optimized_status=pending`.
+
+### Lease do job (ADR 0031)
+
+| Campo | Função |
+|---|---|
+| `optimization_attempts` | Contador de claims |
+| `optimization_next_attempt_at` | Quando o job fica elegível |
+| `optimization_claimed_at` / `optimization_claim_expires_at` | Lease |
+| `optimization_worker_id` | Worker que detém o lease |
+
+## IMAGE DELIVERY
+
+```text
+if optimized_status == ready:
+    display_url → ?variant=optimized  (AVIF)
+else:
+    display_url → ?variant=original   (pending | processing | failed)
+```
+
+- Listagem: `ProductView.primary_image_url` aplica a mesma regra na capa.
+- Galeria / detalhe: usar `display_url` (não espalhar `if optimized_status`
+  no FE).
+- URLs de variante são **imutáveis por arquivo** — evita cache inconsistente
+  quando o AVIF fica pronto.
+- `GET .../content` sem `variant` = `auto` (prefer AVIF se ready).
+
+Falha de AVIF: original permanece; `optimized_status=failed`; retry via
+`POST .../retry-optimization` (reusa original; não rebaixa URL).
+
+## Pipeline detalhado
 
 1. Validar URL (http/https) + SSRF (DNS→IP, redirects revalidados).
 2. Download com limite de bytes/timeout/redirects.
 3. Validar conteúdo real (Pillow), não só `Content-Type`.
 4. SHA-256; dedup por `(product_id, sha256)`.
 5. Upload original → `original_status=ready`.
-6. Enfileirar AVIF (thread pool, concorrência limitada).
-7. AVIF ready → preferido em `display_url` / `/content`.
+6. Enfileirar AVIF (`optimized_status=pending` + `next_attempt_at`).
+7. Responder sucesso do cadastro.
+8. Worker claim → convert → upload AVIF → `ready`.
 
-Falha de AVIF: original permanece; `optimized_status=failed`; retry via
-`POST .../retry-optimization`.
-
-## Entrega
-
-`GET /products/{product_id}/images/{image_id}/content`
-
-- Auth + ownership.
-- Prefere AVIF se `optimized_status=ready`.
-- `Cache-Control: private, max-age=…` + `ETag`.
-- `display_url` aponta para este endpoint (nunca `drive.google.com/.../view`).
+Atomicidade de originais no import: falha de **original** aborta a
+transação do request (produto/imagens do batch não commitam). Falha de
+**AVIF** é independente e nunca invalida o cadastro já commitado.
 
 ## CRUD
 
@@ -98,10 +158,19 @@ Falha de AVIF: original permanece; `optimized_status=failed`; retry via
 | PATCH | `/products/{id}/images` |
 | DELETE | `/products/{id}/images/{image_id}` |
 | POST | `/products/{id}/images/{image_id}/retry-optimization` |
+| GET | `/products/{id}/images/{image_id}/content?variant=` |
 
 Reorder / set main = só metadata. Delete = remove files conhecidos + linha;
 “not found” no Drive é idempotente. Delete de produto limpa imagens conhecidas
 antes do cascade (sem delete recursivo cego de pasta).
+
+## Worker
+
+- In-process: lifespan da API (`IMAGE_OPTIMIZATION_ENABLED=true`).
+- Compose: serviço `image-optimizer`
+  (`python -m scout_api.modules.images.worker`).
+- Concorrência: `IMAGE_AVIF_MAX_CONCURRENCY` (ou
+  `IMAGE_OPTIMIZATION_CONCURRENCY`).
 
 ## Configuração
 
@@ -115,6 +184,11 @@ antes do cascade (sem delete recursivo cego de pasta).
 | `IMAGE_MAX_PER_PRODUCT` | Cap por produto |
 | `IMAGE_AVIF_QUALITY` | Qualidade Pillow AVIF |
 | `IMAGE_AVIF_MAX_CONCURRENCY` | Conversões paralelas |
+| `IMAGE_OPTIMIZATION_CONCURRENCY` | Alias de concorrência |
+| `IMAGE_OPTIMIZATION_ENABLED` | Liga poller/worker |
+| `IMAGE_OPTIMIZATION_SWEEP_INTERVAL_SECONDS` | Intervalo do poller |
+| `IMAGE_OPTIMIZATION_BATCH_SIZE` | Claims por sweep |
+| `IMAGE_OPTIMIZATION_LEASE_SECONDS` | TTL do lease |
 | `IMAGE_MEDIA_CACHE_MAX_AGE_SECONDS` | Cache-Control do proxy |
 
 ## SSRF

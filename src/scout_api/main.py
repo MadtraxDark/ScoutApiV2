@@ -36,8 +36,15 @@ _openapi_url: str | None = None if _is_production else "/openapi.json"
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     # Engine stays lazy: do not connect to PostgreSQL on startup.
-    yield
-    dispose_database_engine()
+    # Image AVIF poller connects only on first sweep (ADR 0031).
+    from scout_api.modules.images.worker import start_scheduler, stop_scheduler
+
+    start_scheduler()
+    try:
+        yield
+    finally:
+        stop_scheduler()
+        dispose_database_engine()
 
 
 app = FastAPI(

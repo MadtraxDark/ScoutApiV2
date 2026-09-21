@@ -59,7 +59,10 @@ Service Account em My Drive e isola storage do login do usuário.
 ## Trade-offs / consequências negativas
 
 - Bytes passam pelo backend (latência/quota Drive); CDN fica para o futuro.
-- `BackgroundTasks`/thread pool pode perder AVIF em restart — status
-  `pending`/`failed` no Postgres permite retry.
 - Scope `drive.file` exige que a pasta raiz seja criada/gerida pelo app.
 - Alternativa futura: Workspace Shared Drive + Service Account, se confirmado.
+
+> **Nota (2026-09-21):** recovery de AVIF após restart e claim entre réplicas
+> foram resolvidos em [ADR 0031](0031-durable-image-optimization-queue.md)
+> (fila PostgreSQL na própria `product_images`). O trade-off antigo de
+> “thread pool perde jobs no restart” não se aplica mais.

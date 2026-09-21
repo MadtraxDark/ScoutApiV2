@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Literal
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -30,22 +31,34 @@ from scout_api.modules.matching.repository import MatchingRepository
 
 logger = logging.getLogger(__name__)
 
+ContentVariant = Literal["auto", "original", "optimized"]
 
-def content_path(product_id: UUID, image_id: UUID) -> str:
-    return f"/products/{product_id}/images/{image_id}/content"
+
+def content_path(
+    product_id: UUID,
+    image_id: UUID,
+    *,
+    variant: ContentVariant | None = None,
+) -> str:
+    base = f"/products/{product_id}/images/{image_id}/content"
+    if variant in {"original", "optimized"}:
+        return f"{base}?variant={variant}"
+    return base
 
 
 def to_image_view(row: ProductImage) -> ProductImageView:
     product_id = row.canonical_product_id
     original_url = (
-        content_path(product_id, row.id) if row.original_status == "ready" else None
+        content_path(product_id, row.id, variant="original")
+        if row.original_status == "ready"
+        else None
     )
     optimized_url = (
-        content_path(product_id, row.id)
+        content_path(product_id, row.id, variant="optimized")
         if row.optimized_status == "ready"
         else None
     )
-    if row.optimized_status == "ready":
+    if row.optimized_status == "ready" and optimized_url:
         display_url = optimized_url
     elif row.original_status == "ready":
         display_url = original_url
@@ -68,6 +81,15 @@ def to_image_view(row: ProductImage) -> ProductImageView:
         created_at=row.created_at,
         updated_at=row.updated_at,
     )
+
+
+def primary_display_url(images: list[ProductImageView]) -> str | None:
+    """Canonical card thumbnail: AVIF if ready, else original."""
+    if not images:
+        return None
+    main = next((img for img in images if img.is_main), None)
+    chosen = main or images[0]
+    return chosen.display_url
 
 
 class ProductImageService:
@@ -188,11 +210,7 @@ class ProductImageService:
         try:
             self._pipeline.delete_image_files(row)
         except DriveClientError as exc:
-            logger.error(
-                "Drive cleanup failed for image %s: %s", image_id, exc
-            )
-            # Keep deleting marker for retry; still remove DB row only if files gone
-            # Prefer leaving row so operator can retry — but plan says allow retry.
+            logger.error("Drive cleanup failed for image %s: %s", image_id, exc)
             raise RequestError(
                 "Falha parcial ao excluir arquivos no Drive; tente novamente",
                 code="STORAGE_ERROR",
@@ -226,13 +244,12 @@ class ProductImageService:
                 "Original não está ready",
                 code="INVALID_REQUEST",
             )
-        row.optimized_status = "pending"
-        row.optimized_error = None
-        self._session.flush()
+        # Reuse persisted original — never re-download.
+        self._pipeline.enqueue_optimization(row.id)
         if sync:
-            self._pipeline.optimize_now(row)
-        else:
-            self._pipeline.enqueue_optimization(row.id)
+            refreshed = self._repo.get(image_id, product_id=product_id)
+            assert refreshed is not None
+            self._pipeline.optimize_now(refreshed)
         refreshed = self._repo.get(image_id, product_id=product_id)
         assert refreshed is not None
         return to_image_view(refreshed)
@@ -243,17 +260,35 @@ class ProductImageService:
         image_id: UUID,
         *,
         viewer: AuthenticatedPrincipal,
+        variant: ContentVariant = "auto",
     ) -> tuple[bytes, str, str]:
         """Return (bytes, content_type, etag)."""
         self._require_product(product_id, viewer)
         row = self._repo.get(image_id, product_id=product_id)
         if row is None:
             raise RequestError("Imagem não encontrada", code="PRODUCT_NOT_FOUND")
-        if row.optimized_status == "ready" and row.optimized_drive_file_id:
-            data = self._drive.download_bytes(row.optimized_drive_file_id)
-            ctype = row.optimized_mime_type or "image/avif"
-            etag = row.original_sha256 or str(row.id)
-            return data, ctype, f'"{etag}-avif"'
+
+        prefer_optimized = variant == "optimized" or (
+            variant == "auto" and row.optimized_status == "ready"
+        )
+        if prefer_optimized and row.optimized_drive_file_id:
+            if row.optimized_status != "ready" and variant == "optimized":
+                raise RequestError(
+                    "Versão otimizada ainda não disponível",
+                    code="INVALID_REQUEST",
+                )
+            if row.optimized_status == "ready":
+                data = self._drive.download_bytes(row.optimized_drive_file_id)
+                ctype = row.optimized_mime_type or "image/avif"
+                etag = row.original_sha256 or str(row.id)
+                return data, ctype, f'"{etag}-avif"'
+
+        if variant == "optimized":
+            raise RequestError(
+                "Versão otimizada ainda não disponível",
+                code="INVALID_REQUEST",
+            )
+
         if row.original_status == "ready" and row.original_drive_file_id:
             data = self._drive.download_bytes(row.original_drive_file_id)
             ctype = row.original_mime_type or "application/octet-stream"
