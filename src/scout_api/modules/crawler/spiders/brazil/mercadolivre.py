@@ -61,16 +61,22 @@ class MercadoLivreSpider(BaseStoreSpider):
                 url=page_url or None,
                 retryable=True,
             )
+
+        # Prefer titled organic cards; skip carousel/intervention ads that
+        # otherwise flood the first N /p/MLB links (Norton, M365, …).
+        anchors = response.css(
+            "a.poly-component__title, a.ui-search-link, a[href*='/p/MLB']"
+        )
         candidates: list[SearchCandidate] = []
         seen: set[str] = set()
-        for href in response.css(
-            "a.ui-search-link::attr(href), "
-            "a.poly-component__title::attr(href), "
-            "a[href*='/p/MLB']::attr(href), "
-            "a[href*='produto.mercadolivre']::attr(href)"
-        ).getall():
-            absolute = urljoin(response.url, (href or "").strip())
-            if "mercadolivre.com.br" not in absolute:
+        for anchor in anchors:
+            href = (anchor.css("::attr(href)").get() or "").strip()
+            if not href:
+                continue
+            absolute = urljoin(response.url, href)
+            if "mercadolivre.com.br" not in absolute.casefold():
+                continue
+            if self._is_serp_noise_url(absolute):
                 continue
             path = urlparse(absolute).path or ""
             if "/p/" not in path and "/MLB-" not in path.upper():
@@ -79,6 +85,7 @@ class MercadoLivreSpider(BaseStoreSpider):
             if canonical in seen:
                 continue
             seen.add(canonical)
+            title = self._serp_anchor_title(anchor)
             product_id = None
             catalog = _CATALOG_ID_RE.search(path)
             if catalog:
@@ -90,14 +97,53 @@ class MercadoLivreSpider(BaseStoreSpider):
             candidates.append(
                 SearchCandidate(
                     url=absolute,
-                    title=None,
+                    title=title,
                     product_id=product_id,
                     metadata={"source": "mercadolivre-search"},
                 )
             )
-            if len(candidates) >= 10:
+            if len(candidates) >= 40:
                 break
         return candidates
+
+    @staticmethod
+    def _is_serp_noise_url(url: str) -> bool:
+        folded = url.casefold()
+        if "intervention_type=" in folded:
+            return True
+        # Digital-goods carousels often sit above organic GPU cards.
+        if "#intervention" in folded or "intervention_type" in folded:
+            return True
+        return False
+
+    @staticmethod
+    def _serp_anchor_title(anchor: Any) -> str | None:
+        title = (anchor.css("::attr(title)").get() or "").strip()
+        if MercadoLivreSpider._usable_serp_title(title):
+            return title
+        texts = [
+            t.strip()
+            for t in anchor.css("::text").getall()
+            if t and t.strip() and t.strip().casefold() not in {"r$", "rs"}
+        ]
+        joined = " ".join(texts).strip()
+        if MercadoLivreSpider._usable_serp_title(joined):
+            return joined
+        return None
+
+    @staticmethod
+    def _usable_serp_title(text: str | None) -> bool:
+        if not text or len(text.strip()) < 8:
+            return False
+        folded = text.strip().casefold()
+        if folded in {"r$", "rs"}:
+            return False
+        # Price / discount fragments from non-title anchors.
+        compact = re.sub(r"\s+", "", folded)
+        if re.fullmatch(r"[\d\.\,\%xoff\-semjuros]+", compact):
+            return False
+        letters = sum(1 for ch in folded if ch.isalpha())
+        return letters >= 4
 
     def prepare_fetch_url(self, url: str) -> str:
         """Keep catalog id + item_id filter; drop marketing tracking noise."""
@@ -120,6 +166,29 @@ class MercadoLivreSpider(BaseStoreSpider):
         sku = self._string(json_ld.get("sku")) or product_id
         seller = self._seller(response)
 
+        from ...utils.timed_promotion import mercadolivre_lightning_promotion
+
+        promo = mercadolivre_lightning_promotion(
+            response.text or "",
+            item_id=item_id,
+            product_id=product_id,
+        )
+        metadata: dict[str, Any] = {
+            "source": {
+                "price": price_source,
+                "original_price": original_source,
+                "installment": installment_source,
+                "availability": availability_source,
+                "product_id": "json-ld-or-url",
+                "seller": "pdp-dom" if seller else "absent",
+                "promotion": promo["source"] if promo else "absent",
+            },
+            "item_id": item_id,
+            "catalog_product_id": product_id,
+        }
+        if promo:
+            metadata["promotion"] = promo
+
         return ProductOffer(
             store=self.store,
             country=self.country,
@@ -137,18 +206,7 @@ class MercadoLivreSpider(BaseStoreSpider):
             installment_count=installment_count,
             available=availability == "available",
             availability=availability,
-            metadata={
-                "source": {
-                    "price": price_source,
-                    "original_price": original_source,
-                    "installment": installment_source,
-                    "availability": availability_source,
-                    "product_id": "json-ld-or-url",
-                    "seller": "pdp-dom" if seller else "absent",
-                },
-                "item_id": item_id,
-                "catalog_product_id": product_id,
-            },
+            metadata=metadata,
         )
 
     def extract_details(self, response: Response) -> ProductDetails:
@@ -202,7 +260,12 @@ class MercadoLivreSpider(BaseStoreSpider):
             "snoopy-generation" in text
             and ("continue-button" in text or "_bmc" in text)
         ):
-            raise ParseError("Página de challenge Snoopy do Mercado Livre (não é PDP)")
+            # Must keep Camoufox / challenge resolution / proxy FALLBACK open.
+            raise RequestError(
+                "Mercado Livre apresentou challenge Snoopy anti-bot",
+                code="UPSTREAM_BLOCKED",
+                url=response.url,
+            )
         json_ld = self.json_ld(response)
         if json_ld.get("@type") == "Product" or json_ld.get("name"):
             return

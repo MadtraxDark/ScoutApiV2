@@ -1,0 +1,51 @@
+{
+  "queries": [
+    "gigabyte rtx 5060"
+  ],
+  "search": {
+    "gigabyte rtx 5060": {
+      "count": 5,
+      "candidates": [
+        {
+          "title": "Placa De Vídeo Gigabyte Rtx 5060 Eagle Oc 8gb Gddr7 128bits",
+          "url": "https://www.mercadolivre.com.br/placa-de-video-gigabyte-rtx-5060-eagle-oc-8gb-gddr7-128bits/p/MLB50869989#polycard_client=search-desktop&be_origin=backend&overlay_label=not_apply&search_layout=grid&position=8&type=product&tracking_id=0958b831-0c57-4dce-80e2-ceb5d5bcfe45&wid=MLB7602524614&sid=search",
+          "product_id": "MLB50869989"
+        },
+        {
+          "title": "Placa De Vídeo Gigabyte Rtx 5060 Ti Windforce 2x 8gb Gddr7",
+          "url": "https://www.mercadolivre.com.br/placa-de-video-gigabyte-rtx-5060-ti-windforce-2x-8gb-gddr7/p/MLB51260786#polycard_client=search-desktop&be_origin=backend&overlay_label=not_apply&search_layout=grid&position=24&type=product&tracking_id=0958b831-0c57-4dce-80e2-ceb5d5bcfe45&wid=MLB7404899368&sid=search",
+          "product_id": "MLB51260786"
+        },
+        {
+          "title": "Placa De Vídeo Gigabyte Rtx 5060 Aero Oc 8gb Gddr7 128bits",
+          "url": "https://www.mercadolivre.com.br/placa-de-video-gigabyte-rtx-5060-aero-oc-8gb-gddr7-128bits/p/MLB51306452#polycard_client=search-desktop&be_origin=backend&overlay_label=not_apply&search_layout=grid&position=26&type=product&tracking_id=0958b831-0c57-4dce-80e2-ceb5d5bcfe45&wid=MLB5220430421&sid=search",
+          "product_id": "MLB51306452"
+        },
+        {
+          "title": "Placa De Vídeo Gigabyte Rtx 5060 Eagle Oc Max 8gb Gddr7",
+          "url": "https://www.mercadolivre.com.br/placa-de-video-gigabyte-rtx-5060-eagle-oc-max-8gb-gddr7/p/MLB62060438#polycard_client=search-desktop&be_origin=backend&overlay_label=not_apply&search_layout=grid&position=29&type=product&tracking_id=0958b831-0c57-4dce-80e2-ceb5d5bcfe45&wid=MLB7219876458&sid=search",
+          "product_id": "MLB62060438"
+        },
+        {
+          "title": "5.382 3.623 32% OFF 10x 362 , 31 sem juros",
+          "url": "https://www.mercadolivre.com.br/placa-de-video-gigabyte-rtx-5060-ti-windforce-2x-8gb-gddr7/p/MLB51260786?offer_type=BEST_INSTALLMENTS#wid=MLB7404912234&sid=search",
+          "product_id": "MLB51260786"
+        }
+      ]
+    }
+  },
+  "match": {
+    "matches": [
+      {
+        "decision": "auto_match",
+        "confidence": "0.92",
+        "query": "gigabyte rtx 5060",
+        "url": "https://www.mercadolivre.com.br/placa-de-video-gigabyte-rtx-5060-eagle-oc-8gb-gddr7-128bits/p/MLB50869989",
+        "title": "Placa De Vídeo Gigabyte Rtx 5060 Eagle Oc 8gb Gddr7 128bits",
+        "product_id": "MLB50869989"
+      }
+    ],
+    "unmatched": [],
+    "errors": []
+  }
+}

@@ -592,8 +592,9 @@ def rank_candidates_for_query(
             else 0
         )
         title_tokens_set = set(re.findall(r"[a-z0-9]+", title))
-        token_hits = len(q_tokens & title_tokens_set)
-        variant_hits = len(variantish & title_tokens_set)
+        path_tokens_set = set(re.findall(r"[a-z0-9]+", path_fold))
+        token_hits = len(q_tokens & (title_tokens_set | path_tokens_set))
+        variant_hits = len(variantish & (title_tokens_set | path_tokens_set))
         return (exact, variant_hits, token_hits, min(len(title), 200))
 
     return sorted(candidates, key=sort_key, reverse=True)

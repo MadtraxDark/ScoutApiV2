@@ -1,0 +1,48 @@
+{
+  "query": "gigabyte rtx 5060",
+  "started_at": "2026-09-21T19:02:47.903831+00:00",
+  "count": 8,
+  "candidates": [
+    {
+      "product_id": "MLB49822699",
+      "title": "",
+      "url": "https://www.mercadolivre.com.br/placa-de-video-msi-rtx-5060-ti-8gb-gddr7-128bits-ventus-plus/p/MLB49822699#polycard_client=search-desktop&float_highlight=last_unit&be_origin=backend&overlay_label=not_apply&search_layout=grid&position=4&type=product&tracking_id=d2613e18-ebbf-442e-9431-a93f21bf59b4&wid=MLB4064704319&sid=search"
+    },
+    {
+      "product_id": "MLB49822699",
+      "title": "",
+      "url": "https://www.mercadolivre.com.br/placa-de-video-msi-rtx-5060-ti-8gb-gddr7-128bits-ventus-plus/p/MLB49822699?offer_type=BEST_INSTALLMENTS#wid=MLB5390069504&sid=search"
+    },
+    {
+      "product_id": "MLB51757708",
+      "title": "",
+      "url": "https://www.mercadolivre.com.br/microsoft-365-family-assinatura-1-ano-digital/p/MLB51757708#intervention_type=digital_goods&position=1&search_layout=grid&type=cart_intervention&tracking_id=c8ee4ecb-116b-4cca-a011-7db435e506b3&initiative=digital_goods"
+    },
+    {
+      "product_id": "MLB66573732",
+      "title": "",
+      "url": "https://www.mercadolivre.com.br/norton-360-deluxe-50gb-5-dispositivos-1-ano-digital/p/MLB66573732#intervention_type=digital_goods&position=2&search_layout=grid&type=cart_intervention&tracking_id=c8ee4ecb-116b-4cca-a011-7db435e506b3&initiative=digital_goods"
+    },
+    {
+      "product_id": "MLB51957759",
+      "title": "",
+      "url": "https://www.mercadolivre.com.br/microsoft-365-personal-assinatura-1-ano-digital/p/MLB51957759#intervention_type=digital_goods&position=3&search_layout=grid&type=cart_intervention&tracking_id=c8ee4ecb-116b-4cca-a011-7db435e506b3&initiative=digital_goods"
+    },
+    {
+      "product_id": "MLB66418267",
+      "title": "",
+      "url": "https://www.mercadolivre.com.br/norton-360-premium-75gb-10-dispositivos-1-ano-digital/p/MLB66418267#intervention_type=digital_goods&position=4&search_layout=grid&type=cart_intervention&tracking_id=c8ee4ecb-116b-4cca-a011-7db435e506b3&initiative=digital_goods"
+    },
+    {
+      "product_id": "MLB51757604",
+      "title": "",
+      "url": "https://www.mercadolivre.com.br/norton-360-deluxe-25gb-3-dispositivos-1-ano-digital/p/MLB51757604#intervention_type=digital_goods&position=5&search_layout=grid&type=cart_intervention&tracking_id=c8ee4ecb-116b-4cca-a011-7db435e506b3&initiative=digital_goods"
+    },
+    {
+      "product_id": "MLB66418539",
+      "title": "",
+      "url": "https://www.mercadolivre.com.br/norton-360-advanced-100gb-10-dispositivos-1-ano-digital/p/MLB66418539#intervention_type=digital_goods&position=6&search_layout=grid&type=cart_intervention&tracking_id=c8ee4ecb-116b-4cca-a011-7db435e506b3&initiative=digital_goods"
+    }
+  ],
+  "elapsed_s": 12.12
+}

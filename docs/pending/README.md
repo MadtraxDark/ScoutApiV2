@@ -82,10 +82,23 @@ Itens resolvidos **não** ficam no índice ativo.
 
 | ID | Título | Status | Tipo | Prioridade | Área |
 |---|---|---|---|---|---|
-| [PENDING-012](PENDING-012-mercadolivre-serp-account-verification.md) | Mercado Livre SERP account-verification (auth wall) | OPEN | INCOMPLETE | P1 | crawler/mercadolivre |
-| [PENDING-014](PENDING-014-promo-timer-spider-wiring.md) | Extrair timers de promo em spiders live (Pichau/ML/Shopee) | OPEN | INCOMPLETE | P2 | crawler/promotions |
 
-*(pendências ativas: 2)*
+*(pendências ativas: 0)*
+
+Resolvida em 2026-09-21:
+
+- PENDING-012 Mercado Livre SERP account-verification / soft-block — arquivo
+  apagado; lista live via Camoufox resolve Snoopy; parser SERP com título +
+  skip intervention ads; match identity-only Gigabyte RTX 5060 →
+  `auto_match` (`MLB50869989`); auth wall `MERCADOLIVRE_AUTH_*` permanece
+  como caminho quando o gate de login voltar
+
+Resolvida em 2026-09-21:
+
+- PENDING-014 Extrair timers de promo em spiders live (Pichau/ML/Shopee/
+  Terabyte) — arquivo apagado; spiders + `metadata.promotion` + docs
+  `promotions.md` / `stores/pichau.md` / `stores/terabyteshop.md`; Pichau
+  sem timer estruturado (limitação aceita)
 
 Resolvida em 2026-09-21:
 

@@ -40,8 +40,10 @@ STORE_CONFIGS = {
         True,
         proxy_policy=ProxyPolicy.FALLBACK,
     ),
-    "pichau": StoreConfig("pichau", "BR", "BRL", ("pichau.com.br",)),
-    "terabyteshop": StoreConfig("terabyteshop", "BR", "BRL", ("terabyteshop.com.br",)),
+    "pichau": StoreConfig("pichau", "BR", "BRL", ("pichau.com.br",), True),
+    "terabyteshop": StoreConfig(
+        "terabyteshop", "BR", "BRL", ("terabyteshop.com.br",), True
+    ),
     "shopee": StoreConfig(
         "shopee",
         "BR",

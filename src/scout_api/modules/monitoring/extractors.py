@@ -22,7 +22,11 @@ _TERABYTE_COUNTDOWN_RE = re.compile(
     re.IGNORECASE,
 )
 
-# Mercado Livre public PDP sometimes embeds finish dates in JSON blobs.
+# Mercado Livre public PDP / deals embed lightning finish dates.
+_ML_LIGHTNING_RE = re.compile(
+    r'lightning_deal_configuration"\s*:\s*\{\s*"finish_date"\s*:\s*"(?P<when>[^"]+)"',
+    re.IGNORECASE,
+)
 _ML_FINISH_RE = re.compile(
     r"""["'](?:finish_date|expires_at|end_time|stop_time)["']\s*:\s*["'](?P<when>[^"']+)["']""",
     re.IGNORECASE,
@@ -108,20 +112,23 @@ def extract_mercadolivre_finish(
     *,
     offer: ProductOffer | None = None,
 ) -> PromotionObservation | None:
-    match = _ML_FINISH_RE.search(html)
+    match = _ML_LIGHTNING_RE.search(html) or _ML_FINISH_RE.search(html)
     if match is None:
         return None
-    when = parse_aware_datetime(
-        match.group("when"), source_timezone="America/Sao_Paulo"
-    )
+    when = parse_aware_datetime(match.group("when"), source_timezone="UTC")
     if when is None:
         return None
+    source = (
+        "mercadolivre.lightning_deal_configuration"
+        if match.re is _ML_LIGHTNING_RE
+        else "mercadolivre.html.finish_date"
+    )
     return PromotionObservation(
         status="active",
         promotion_type="lightning_deal",
         expires_at=when,
-        source="mercadolivre.html.finish_date",
-        timezone="America/Sao_Paulo",
+        source=source,
+        timezone="UTC",
         product_id=offer.product_id if offer else None,
         sku=offer.sku if offer else None,
         payload={"raw": match.group("when")},

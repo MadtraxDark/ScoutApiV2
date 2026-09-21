@@ -16,12 +16,22 @@
 
 - `supports_search=True`
 - SERP: `https://lista.mercadolivre.com.br/{query}`
-- Parser: cards `/p/MLB…` e `produto.mercadolivre.com.br/MLB-…`
+- Parser: prioriza `a.poly-component__title` / `a.ui-search-link` com
+  título; ignora carrosséis `#intervention_type=` (Norton/M365 etc.)
 - Usado por `POST /match` (ADR 0019 / 0025)
-- Redirect/`HTML` de `gz/account-verification` é **auth wall**
-  (`AUTH_REQUIRED` / `UPSTREAM_BLOCKED`), nunca SERP vazia → `NO_MATCH`
-- HTTP-first aceita SERP `ui-search` sem exigir widgets de PDP; falha
-  classificada escala Camoufox + proxy FALLBACK (Proxy Cost Mode)
+- Soft-block na lista pode ser:
+  1. **Snoopy PoW** (HTTP 200 fino com `snoopy-script`) — **resolver** com
+     Camoufox (ADR 0017); validado live 2026-09-21 (direct, sem proxy)
+  2. **`gz/account-verification`** (auth wall) — **resolver** com login
+     operador `MERCADOLIVRE_AUTH_*` / sessão seed (ADR 0018); se esgotar →
+     `AUTH_REQUIRED` (nunca SERP vazia / `NO_MATCH`)
+- HTTP-first (`curl_cffi`): SERP `ui-search` OK; Snoopy/auth wall → Camoufox
+  (+ proxy FALLBACK só após bloqueio classificado)
+
+Validação live (2026-09-21): identity-only `Gigabyte RTX 5060` → SERP com
+candidatos Gigabyte `/p/MLB…` → `auto_match` (`MLB50869989` Eagle OC) sem
+URL pré-fornecida. Report:
+`data/live-match-reports/ml_rtx5060_retest_20260921T190550Z.json`.
 
 ## Offer source
 
@@ -30,6 +40,15 @@
 - `original_price` from struck price `aria-label` when greater than `price`
 - Installments from `#pricing_price_subtitle` (`Nx` + amount) when present
 - Pix is **not** invented (often absent as a distinct total on ML)
+
+## Timed promotion
+
+- Oferta Relâmpago: `lightning_deal_configuration.finish_date` embutido no
+  HTML/JSON do PDP (às vezes sob chave `MLB…` / `MLBU…`)
+- Spider anexa `metadata.promotion` (`type=lightning_deal`) via
+  `mercadolivre_lightning_promotion` quando o campo existe
+- Sem o bloco → sem `metadata.promotion` (sem inventar timer)
+- Seller Promotions API exige token de vendedor — **fora** do path público
 
 ## Details source
 
@@ -66,7 +85,9 @@
 `prepare_fetch_url` / `canonicalize_url` preservam `pdp_filters=item_id:…` e
 removem tracking de ads (`matt_*`, `gclid`, `from`, …).
 
-See ADR 0025. Do **not** treat Snoopy HTML as product (`available=false` / fabricated price).
+See ADR 0025. Snoopy deve ser **resolvido** (Camoufox / ADR 0017); HTML de
+challenge nunca vira produto (`available=false` / preço fabricado).
+`UPSTREAM_BLOCKED` só após esgotar resolução.
 
 ## Identifiers semantics
 
@@ -78,19 +99,23 @@ See ADR 0025. Do **not** treat Snoopy HTML as product (`available=false` / fabri
 
 ## Known blocking
 
-- Bot Manager **Snoopy** PoW (`verifyChallenge`, `#continue-button`, `_bmc`)
-- SERP/lista: redirect para `gz/account-verification` (“acesse sua conta”) —
-  classificado como **auth wall** (`AUTH_REQUIRED`), não como SERP vazia.
+- Bot Manager **Snoopy** PoW (`verifyChallenge`, `#continue-button`, `_bmc`) —
+  comum na SERP lista via HTTP; Camoufox resolve (ADR 0017)
+- SERP/lista: às vezes redirect para `gz/account-verification` (“acesse sua
+  conta”) — **auth wall** (`AUTH_REQUIRED` após tentativa de bypass).
   Resolução: login com `MERCADOLIVRE_AUTH_EMAIL` / `MERCADOLIVRE_AUTH_PASSWORD`
-  (operador local) + proxy FALLBACK (ADR 0018). Sem credenciais → ERROR terminal.
+  (operador local) + proxy FALLBACK se necessário (ADR 0018)
 - `api.mercadolibre.com` frequentemente 403/401 sem app auth
-- Camoufox resolve Snoopy (ADR 0017) antes de parsear PDP
+- Camoufox resolve Snoopy (ADR 0017) antes de parsear PDP/SERP
 
 ## Important invariants
 
 - HTTP 200 ≠ PDP (Snoopy devolve 200 com title/meta sem oferta)
-- Nunca parsear HTML Snoopy como produto
-- Fail closed em preço ausente (`MissingPriceError`)
+- Challenge Snoopy **deve ser resolvido** (Camoufox + ADR 0017); auth wall
+  **deve** usar bypass (ADR 0018). Proibir bypass é inválido
+- HTML Snoopy ≠ produto: emitir `UPSTREAM_BLOCKED` para o fetch continuar
+  resolução — nunca fabricar `available=false` / preço / promo
+- Fail closed em preço ausente **após** PDP real (`MissingPriceError`)
 
 ## Known limitations
 

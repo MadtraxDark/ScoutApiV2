@@ -244,6 +244,20 @@ class ShopeeSpider(BaseStoreSpider):
         if pricing_meta:
             metadata["pricing"] = pricing_meta
 
+        from ...utils.timed_promotion import shopee_flash_promotion
+
+        promo = shopee_flash_promotion(
+            payload,
+            model=model,
+            model_id=model_id,
+            product_id=str(item_id),
+        )
+        if promo:
+            metadata["promotion"] = promo
+            source["promotion"] = promo.get("source", "flash_sale")
+        else:
+            source["promotion"] = "absent"
+
         return ProductOffer(
             store=self.store,
             country=self.country,

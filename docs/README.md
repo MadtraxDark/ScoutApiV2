@@ -44,6 +44,8 @@ Governança de documentação: [`.cursor/rules/documentation-governance.mdc`](..
 | KaBuM | [`crawler/stores/kabum.md`](crawler/stores/kabum.md) |
 | Magazine Luiza | [`crawler/stores/magazineluiza.md`](crawler/stores/magazineluiza.md) |
 | Mercado Livre | [`crawler/stores/mercadolivre.md`](crawler/stores/mercadolivre.md) |
+| Pichau | [`crawler/stores/pichau.md`](crawler/stores/pichau.md) |
+| TerabyteShop | [`crawler/stores/terabyteshop.md`](crawler/stores/terabyteshop.md) |
 | Shopee | [`crawler/stores/shopee.md`](crawler/stores/shopee.md) |
 | AliExpress | [`crawler/stores/aliexpress.md`](crawler/stores/aliexpress.md) |
 | Best Buy | [`crawler/stores/bestbuy.md`](crawler/stores/bestbuy.md) |

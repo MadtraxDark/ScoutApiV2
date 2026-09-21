@@ -38,6 +38,14 @@
 - Prefer captured PDP JSON (`get_pc` / embedded item payload)
 - Prices often in **micros** (divide by `100000` unless already decimal-scale)
 
+## Timed promotion
+
+- Flash / Oferta Relâmpago: bloco `flash_sale` / `deep_discount` com
+  `end_time` (unix) no payload ou na model selecionada
+- Spider anexa `metadata.promotion` (`type=flash_sale`) via
+  `shopee_flash_promotion` quando o fim absoluto existe
+- Fixtures sem flash → oferta normal sem campo `promotion`
+
 ## Details source
 
 - Same PDP payload: title, brand, specs, selected model attributes

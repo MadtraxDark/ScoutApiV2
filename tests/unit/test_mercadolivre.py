@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from scrapy.http import HtmlResponse, Request
 
-from scout_api.modules.crawler.core.exceptions import ParseError, RequestError
+from scout_api.modules.crawler.core.exceptions import RequestError
 from scout_api.modules.crawler.spiders.brazil.mercadolivre import MercadoLivreSpider
 from scout_api.modules.crawler.spiders.registry import resolve_store_spider
 
@@ -66,8 +66,15 @@ def test_mercadolivre_search_url_and_parse() -> None:
         "https://lista.mercadolivre.com.br/msi-rtx-5070",
         body=(
             b"<html><a class='ui-search-link' "
-            b"href='https://www.mercadolivre.com.br/gpu/p/MLB111'>"
-            b"card</a></html>"
+            b"href='https://www.mercadolivre.com.br/gpu/p/MLB111' "
+            b"title='MSI RTX 5070'>card</a>"
+            b"<a href='https://www.mercadolivre.com.br/norton/p/MLB999"
+            b"#intervention_type=digital_goods'>Norton</a>"
+            b"<a class='poly-component__title' "
+            b"href='https://www.mercadolivre.com.br/"
+            b"placa-de-video-gigabyte-geforce-rtx-5060/p/MLB222'>"
+            b"Placa De Video Gigabyte Geforce Rtx 5060</a>"
+            b"</html>"
         ),
         encoding="utf-8",
         request=Request("https://lista.mercadolivre.com.br/msi-rtx-5070"),
@@ -75,6 +82,12 @@ def test_mercadolivre_search_url_and_parse() -> None:
     candidates = spider.parse_search_results(serp)
     assert candidates
     assert candidates[0].product_id == "MLB111"
+    assert candidates[0].title and "MSI" in candidates[0].title
+    ids = {c.product_id for c in candidates}
+    assert "MLB999" not in ids  # intervention carousel skipped
+    assert "MLB222" in ids
+    gigabyte = next(c for c in candidates if c.product_id == "MLB222")
+    assert gigabyte.title and "Gigabyte" in gigabyte.title
 
 
 def test_mercadolivre_search_rejects_account_verification() -> None:
@@ -118,6 +131,7 @@ def test_mercadolivre_rejects_snoopy_challenge_html() -> None:
     )
     try:
         MercadoLivreSpider().extract_offer(challenge)
-        raise AssertionError("expected ParseError")
-    except ParseError as exc:
+        raise AssertionError("expected RequestError UPSTREAM_BLOCKED")
+    except RequestError as exc:
+        assert exc.code == "UPSTREAM_BLOCKED"
         assert "Snoopy" in str(exc) or "challenge" in str(exc).casefold()
