@@ -31,6 +31,7 @@ Governança de documentação: [`.cursor/rules/documentation-governance.mdc`](..
 | Segurança da API (auth/CORS/rate limit) | [`security/api-auth.md`](security/api-auth.md) + [ADR 0023](adr/0023-api-auth-supabase-deny-by-default.md) + [`.cursor/rules/security.mdc`](../.cursor/rules/security.mdc) |
 | Integração PriceScout | [`integration/pricescout.md`](integration/pricescout.md) |
 | Persistência PostgreSQL / Supabase | [`persistence/supabase-postgres.md`](persistence/supabase-postgres.md) + [ADR 0021](adr/0021-supabase-postgres-sqlalchemy.md) |
+| Imagens de produto (Drive + AVIF) | [`persistence/product-images.md`](persistence/product-images.md) + [ADR 0029](adr/0029-google-drive-product-images.md) |
 | Testes (comandos, markers, budgets) | [`testing.md`](testing.md) |
 | Performance / tempos / slow ops | [`performance.md`](performance.md) + [ADR 0028](adr/0028-performance-observability.md) + [`.cursor/rules/performance.mdc`](../.cursor/rules/performance.mdc) |
 | Baselines de performance | [`performance/baselines.md`](performance/baselines.md) |

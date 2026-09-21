@@ -1,7 +1,7 @@
 from scrapy.http import HtmlResponse
 
 from ..core.scrape_guard import ScrapeGuard
-from ..models.product import ProductDetails
+from ..models.product import ProductDetails, candidates_from_urls
 from ..spiders.base import BaseStoreSpider
 from .html_fetcher import HtmlFetcher
 from .product_scrape_service import (
@@ -33,14 +33,19 @@ class ProductDetailsService:
         proxy_used = _proxy_used(response)
         allow_images = include_images and spider.supports_images and not proxy_used
         if allow_images:
+            urls = spider.extract_images(response)
             details = details.model_copy(
-                update={"images": spider.extract_images(response)}
+                update={
+                    "images": urls,
+                    "image_candidates": candidates_from_urls(urls),
+                }
             )
         elif include_images:
             reason = "proxy-cost-mode" if proxy_used else "store-cost-policy"
             details = details.model_copy(
                 update={
                     "images": [],
+                    "image_candidates": [],
                     "metadata": {
                         **details.metadata,
                         "images_omitted": reason,

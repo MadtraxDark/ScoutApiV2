@@ -24,6 +24,7 @@ Política de quando criar/atualizar docs:
 | [0021](0021-supabase-postgres-sqlalchemy.md) | PostgreSQL no Supabase via SQLAlchemy (sem Data API) | Accepted |
 | [0023](0023-api-auth-supabase-deny-by-default.md) | Auth API Supabase JWT + deny-by-default + rate limit | Accepted |
 | [0028](0028-performance-observability.md) | Observabilidade de tempo + budgets por categoria | Accepted |
+| [0029](0029-google-drive-product-images.md) | Google Drive (conta dedicada OAuth) + imagens de produto | Accepted |
 
 ## Índice — crawler
 

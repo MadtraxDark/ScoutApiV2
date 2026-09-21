@@ -46,8 +46,30 @@ _PRODUCT_PRICE_ITEM_EXAMPLE: dict[str, Any] = {
     "variant": "128 GB Preto",
     "shipping_price": "0.00",
     "images": [],
+    "image_candidates": [],
     "last_changed_at": None,
 }
+
+
+class ImageCandidate(BaseModel):
+    """External gallery candidate from crawl — not a catalog ProductImage."""
+
+    source_url: str = Field(description="URL externa da imagem candidata.")
+    position: int = Field(ge=0, description="Ordem sugerida na galeria.")
+    alt: str | None = Field(
+        default=None, description="Texto alternativo quando houver."
+    )
+    width: int | None = Field(default=None, description="Largura quando conhecida.")
+    height: int | None = Field(default=None, description="Altura quando conhecida.")
+
+
+def candidates_from_urls(urls: list[str]) -> list[ImageCandidate]:
+    """Build positional candidates from spider URL lists (no Drive persist)."""
+    return [
+        ImageCandidate(source_url=url, position=index)
+        for index, url in enumerate(urls)
+        if url
+    ]
 
 
 class ProductOffer(BaseModel):
@@ -147,6 +169,13 @@ class ProductDetails(BaseModel):
     images: list[str] = Field(
         default_factory=list, description="URLs de imagens do produto."
     )
+    image_candidates: list[ImageCandidate] = Field(
+        default_factory=list,
+        description=(
+            "Candidatas externas para revisão no PriceScout "
+            "(ainda não persistem no Drive)."
+        ),
+    )
     metadata: dict[str, Any] = Field(
         default_factory=dict,
         description="Metadados auxiliares (origens de campos, flags de coleta).",
@@ -230,6 +259,13 @@ class ProductPriceItem(BaseModel):
     images: list[str] = Field(
         default_factory=list, description="URLs de imagens do produto."
     )
+    image_candidates: list[ImageCandidate] = Field(
+        default_factory=list,
+        description=(
+            "Candidatas externas para revisão no PriceScout "
+            "(ainda não persistem no Drive)."
+        ),
+    )
     scraped_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         description="Momento em que a oferta foi coletada.",
@@ -297,6 +333,11 @@ def compose_product_price_item(
         available=offer.available,
         availability=offer.availability,
         images=list(details.images),
+        image_candidates=(
+            list(details.image_candidates)
+            if details.image_candidates
+            else candidates_from_urls(list(details.images))
+        ),
         scraped_at=offer.scraped_at,
         last_changed_at=last_changed_at,
         metadata=metadata,

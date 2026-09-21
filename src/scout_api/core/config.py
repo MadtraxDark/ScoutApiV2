@@ -102,6 +102,19 @@ class Settings(BaseSettings):
     shopee_auth_password: str | None = None
     mercadolivre_auth_email: str | None = None
     mercadolivre_auth_password: str | None = None
+    # --- Product images / Google Drive (ADR 0029). Backend-only secrets. ---
+    google_drive_client_id: str | None = None
+    google_drive_client_secret: str | None = None
+    google_drive_refresh_token: str | None = None
+    google_drive_root_folder_id: str | None = None
+    image_max_bytes: int = 8_000_000
+    image_max_dimension: int = 4096
+    image_download_timeout_seconds: float = 30.0
+    image_max_redirects: int = 5
+    image_max_per_product: int = 20
+    image_avif_quality: int = 60
+    image_avif_max_concurrency: int = 2
+    image_media_cache_max_age_seconds: int = 86_400
 
     @field_validator("debug", mode="before")
     @classmethod

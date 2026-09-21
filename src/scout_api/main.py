@@ -65,6 +65,10 @@ app = FastAPI(
             "description": "Cadastro, listagem e consulta de produtos canônicos.",
         },
         {
+            "name": "Imagens",
+            "description": "Galeria de produto (Drive + AVIF) após aprovação.",
+        },
+        {
             "name": "Correspondência",
             "description": "Matching de produto entre lojas suportadas.",
         },

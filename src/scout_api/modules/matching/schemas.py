@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 from scout_api.core.http_url import AbsoluteHttpUrl
 from scout_api.modules.crawler.models.product import ProductOffer, ProductPriceItem
 from scout_api.modules.crawler.models.search import SearchCandidate
+from scout_api.modules.images.schemas import ApprovedImageInput, ProductImageView
 
 MatchDecision = Literal["auto_match", "review", "reject"]
 ListingStatus = Literal["active", "removed", "review"]
@@ -61,6 +62,8 @@ __all__ = [
     "ProductListResponse",
     "StoreInfo",
     "StoreListResponse",
+    "ApprovedImageInput",
+    "ProductImageView",
 ]
 
 
@@ -266,6 +269,13 @@ class ProductRegisterRequest(BaseModel):
     canonical_url: AbsoluteHttpUrl | None = Field(
         default=None, description="URL canônica do listing na loja."
     )
+    images: list[ApprovedImageInput] = Field(
+        default_factory=list,
+        description=(
+            "Imagens aprovadas na revisão (URLs externas). "
+            "Persistidas somente após este cadastro — nunca no crawl."
+        ),
+    )
 
 
 class ProductListingView(BaseModel):
@@ -299,6 +309,7 @@ class ProductView(BaseModel):
     created_at: datetime
     updated_at: datetime
     listings: list[ProductListingView] = Field(default_factory=list)
+    images: list[ProductImageView] = Field(default_factory=list)
 
 
 class ProductUpdateRequest(BaseModel):

@@ -40,7 +40,7 @@ PriceScout (localhost:3000)
 | list stores | `GET …/catalog/stores` | `GET /stores` | BACKEND_ENDPOINT_REQUIRED | registry crawler |
 | create/update store | POST/PATCH stores | — | OBSOLETE_FRONTEND_BEHAVIOR | somente leitura |
 | store markets | `GET …/store-markets` | derivado de `/stores` | FRONTEND_ADAPTER | countries do registry |
-| images CRUD | Drive/gallery APIs | — | OBSOLETE_FRONTEND_BEHAVIOR | sem persistência; empty state |
+| images CRUD | Drive/gallery APIs | `GET/POST/PATCH/DELETE /products/{id}/images` + `/content` | DIRECT_MAPPING | galeria pós-aprovação; `display_url` |
 | crawl offer | — | `POST /crawl/offer` | DIRECT_MAPPING | opcional FE |
 
 ## Decisões
@@ -65,8 +65,32 @@ Sem cache persistido no backend nesta integração. Preview = resultado de
 
 ### Imagens
 
-ScoutApiV2 extrai URLs opcionais no crawl (`include_images`); não há CRUD
-Drive/galeria. UI de galeria editável fica desabilitada / empty state.
+Crawl/preview (`POST /crawl` com `include_images=true`) devolve
+`image_candidates` (URLs externas) — **não** persiste no Drive.
+
+Após revisão no PriceScout, o import (`POST /products`) envia
+`images: [{ source_url, position, is_main }]`. Só então o ScoutApiV2 baixa,
+valida (SSRF), grava original no Drive da conta dedicada e gera AVIF.
+
+Galeria persistida: usar `display_url` (proxy autenticado). Não usar URL da
+loja depois da aprovação. Credenciais Drive nunca no frontend.
+
+Canônico: [`docs/persistence/product-images.md`](../persistence/product-images.md)
++ [ADR 0029](../adr/0029-google-drive-product-images.md).
+
+### Checklist frontend (PriceScout)
+
+1. Preview: `POST /crawl` com `include_images=true`; UI usa
+   `image_candidates` (ou `images[]` URLs) como candidatas externas.
+2. Permitir selecionar / remover / reordenar / marcar principal **antes** do
+   import; deixar claro que ainda não estão no Drive.
+3. Import: `POST /products` com `images: [{ source_url, position, is_main }]`
+   das aprovadas (idempotente no clique).
+4. Após cadastro: listar via `GET /products/{id}/images` ou campo `images` do
+   `ProductView`; renderizar só `display_url` (com Bearer).
+5. CRUD: `POST/PATCH/DELETE /products/{id}/images`; retry AVIF opcional.
+6. Não enviar `drive_file_id` / paths / credentials no body.
+7. Reutilizar `ImageViewer` / `ImageWithState` se já existirem.
 
 ### Progresso Match
 

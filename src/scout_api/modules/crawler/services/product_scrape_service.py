@@ -9,7 +9,7 @@ from ..core.distributed_cooldown import DistributedCooldown
 from ..core.distributed_single_flight import DistributedSingleFlight
 from ..core.redis_client import build_redis_gateway
 from ..core.scrape_guard import ScrapeGuard
-from ..models.product import ProductPriceItem, compose_product_price_item
+from ..models.product import ProductPriceItem, candidates_from_urls, compose_product_price_item
 from ..spiders.base import BaseStoreSpider
 from .html_fetcher import HtmlFetcher, build_html_fetcher
 from .store_resolver import resolve_store_spider
@@ -102,7 +102,9 @@ class ProductScrapeService:
         cached = self._guard.get_cached(url)
         if cached is not None:
             if not include_images and cached.images:
-                return cached.model_copy(update={"images": []})
+                return cached.model_copy(
+                    update={"images": [], "image_candidates": []}
+                )
             if include_images and cached.images:
                 return cached
             if not include_images:
@@ -114,6 +116,7 @@ class ProductScrapeService:
                 return cached.model_copy(
                     update={
                         "images": [],
+                        "image_candidates": [],
                         "metadata": {
                             **cached.metadata,
                             "images_omitted": "store-cost-policy",
@@ -125,7 +128,9 @@ class ProductScrapeService:
             again = self._guard.get_cached(url)
             if again is not None and (not include_images or again.images):
                 if not include_images and again.images:
-                    return again.model_copy(update={"images": []})
+                    return again.model_copy(
+                        update={"images": [], "image_candidates": []}
+                    )
                 return again
 
             spider = self._spider_for(url)
@@ -138,8 +143,12 @@ class ProductScrapeService:
             # Proxy cost mode: never extract galleries on paid egress.
             allow_images = include_images and spider.supports_images and not proxy_used
             if allow_images:
+                urls = spider.extract_images(response)
                 details = details.model_copy(
-                    update={"images": spider.extract_images(response)}
+                    update={
+                        "images": urls,
+                        "image_candidates": candidates_from_urls(urls),
+                    }
                 )
             item = compose_product_price_item(offer, details)
             if include_images and not allow_images:
@@ -147,6 +156,7 @@ class ProductScrapeService:
                 item = item.model_copy(
                     update={
                         "images": [],
+                        "image_candidates": [],
                         "metadata": {
                             **item.metadata,
                             "images_omitted": reason,

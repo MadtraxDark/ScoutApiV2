@@ -108,3 +108,39 @@ def test_openapi_includes_pricescout_routes(auth_settings: str) -> None:
     assert "delete" in paths["/products/{product_id}"]
     assert "/stores" in paths
     assert "/match/stream" in paths
+    # Product images gallery (ADR 0029)
+    assert "/products/{product_id}/images" in paths
+    assert "get" in paths["/products/{product_id}/images"]
+    assert "post" in paths["/products/{product_id}/images"]
+    assert "patch" in paths["/products/{product_id}/images"]
+    assert "delete" in paths["/products/{product_id}/images/{image_id}"]
+    assert (
+        "/products/{product_id}/images/{image_id}/content" in paths
+    )
+    assert (
+        "/products/{product_id}/images/{image_id}/retry-optimization"
+        in paths
+    )
+    # Register accepts approved images after preview review.
+    register_body = paths["/products"]["post"]["requestBody"]
+    schema_ref = register_body["content"]["application/json"]["schema"]
+    components = schema["components"]["schemas"]
+    register_name = schema_ref.get("$ref", "").split("/")[-1]
+    register_schema = components[register_name]
+    assert "images" in register_schema.get("properties", {})
+    # Crawl exposes external candidates (not persisted).
+    crawl_item = components.get("ProductPriceItem") or {}
+    crawl_props = crawl_item.get("properties", {})
+    assert "image_candidates" in crawl_props
+
+
+def test_images_gallery_requires_auth(auth_settings: str) -> None:
+    client = TestClient(app)
+    product_id = "00000000-0000-0000-0000-000000000001"
+    assert client.get(f"/products/{product_id}/images").status_code == 401
+    assert (
+        client.get(
+            f"/products/{product_id}/images/{product_id}/content"
+        ).status_code
+        == 401
+    )

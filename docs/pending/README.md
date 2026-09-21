@@ -86,6 +86,13 @@ Itens resolvidos **não** ficam no índice ativo.
 
 *(pendências ativas: 1)*
 
+Resolvida em 2026-09-21:
+
+- PENDING-013 PriceScout galeria FE + smoke Drive real — arquivo apagado;
+  OAuth Drive no `.env`, container API recriado, smoke
+  `scripts/smoke_google_drive_images.py` OK; import com `images[]` +
+  `display_url` no FE (`/admin/produtos/{id}`)
+
 Resolvida em 2026-09-20:
 
 - PENDING-011 Extratores profundos CategoryProfile Phase 5–7 — arquivo apagado;

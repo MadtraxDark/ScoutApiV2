@@ -52,6 +52,11 @@
   browser e Product Match devem expor timings por etapa. Pendências
   recorrentes: tipo `PERFORMANCE`. Ver `.cursor/rules/performance.mdc`,
   `docs/performance.md` e ADR 0028.
+- **Imagens de produto (crítico):** candidata do crawl ≠ imagem de catálogo;
+  upload no Drive **só após aprovação** humana; original nunca é apagado ao
+  gerar AVIF; credenciais Drive nunca vão ao frontend; download de URL
+  externa exige validação SSRF. Ver `docs/persistence/product-images.md` e
+  ADR 0029.
 
 ## Documentation
 

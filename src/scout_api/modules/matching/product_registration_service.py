@@ -13,6 +13,8 @@ from scout_api.modules.crawler.utils.product_identity import (
     canonical_model_key,
     canonical_variant_key,
 )
+from scout_api.modules.images.schemas import ApprovedImageInput, ProductImageView
+from scout_api.modules.images.service import ProductImageService, to_image_view
 from scout_api.modules.matching.identity import (
     normalize_brand,
     normalize_gtin,
@@ -103,6 +105,10 @@ class ProductRegistrationService:
                         "Produto existente pertencente a outro usuário",
                         code="FORBIDDEN",
                     )
+                if request.images:
+                    self._persist_images(product.id, request.images, owner=owner)
+                    product_view = self.get_product(product.id, viewer=owner)
+                    assert product_view is not None
                 return ProductRegisterResponse(
                     created=False,
                     listing_created=False,
@@ -141,6 +147,10 @@ class ProductRegistrationService:
                     listing_view = _to_listing_view(listing)
                 product_view = self.get_product(existing.id, viewer=owner)
                 assert product_view is not None
+                if request.images:
+                    self._persist_images(existing.id, request.images, owner=owner)
+                    product_view = self.get_product(existing.id, viewer=owner)
+                    assert product_view is not None
                 return ProductRegisterResponse(
                     created=False,
                     listing_created=listing_created,
@@ -186,6 +196,8 @@ class ProductRegistrationService:
             )
             listing_view = _to_listing_view(listing)
         self._session.flush()
+        if request.images:
+            self._persist_images(canonical.id, request.images, owner=owner)
         product_view = self.get_product(canonical.id, viewer=owner)
         assert product_view is not None
         return ProductRegisterResponse(
@@ -194,6 +206,16 @@ class ProductRegistrationService:
             product=product_view,
             listing=listing_view,
         )
+
+    def _persist_images(
+        self,
+        product_id: UUID,
+        images: list[ApprovedImageInput],
+        *,
+        owner: AuthenticatedPrincipal,
+    ) -> None:
+        image_service = ProductImageService(self._session)
+        image_service.persist_approved(product_id, images, owner=owner)
 
     def get_product(
         self,
@@ -210,7 +232,15 @@ class ProductRegistrationService:
         listings = list(canonical.listings or [])
         if not listings:
             listings = repo.list_listings_for_canonical(canonical.id)
-        return _to_product_view(canonical, listings)
+        from scout_api.modules.images.repository import ProductImageRepository
+
+        images = [
+            to_image_view(row)
+            for row in ProductImageRepository(self._session).list_for_product(
+                product_id
+            )
+        ]
+        return _to_product_view(canonical, listings, images=images)
 
     def list_products(
         self,
@@ -234,12 +264,13 @@ class ProductRegistrationService:
             offset=start,
         )
         items = [
-            _to_product_view(product, list(product.listings or []))
+            self.get_product(product.id, viewer=viewer)
             for product in rows
         ]
+        views = [item for item in items if item is not None]
         return ProductListResponse(
-            items=items,
-            count=len(items),
+            items=views,
+            count=len(views),
             limit=cap,
             offset=start,
             total=total,
@@ -300,6 +331,7 @@ class ProductRegistrationService:
                 "Produto canônico não encontrado",
                 code="PRODUCT_NOT_FOUND",
             )
+        ProductImageService(self._session).cleanup_product_images(product_id)
         repo.delete_canonical(product_id)
         self._session.flush()
 
@@ -390,7 +422,9 @@ class ProductRegistrationService:
                         break
                 if not matched:
                     continue
-            view = _to_product_view(product, list(product.listings or []))
+            view = self.get_product(product.id, viewer=viewer)
+            if view is None:
+                continue
             items.append(view)
             if len(items) >= cap:
                 break
@@ -428,7 +462,10 @@ class ProductRegistrationService:
 
 
 def _to_product_view(
-    product: CanonicalProduct, listings: list[StoreListing]
+    product: CanonicalProduct,
+    listings: list[StoreListing],
+    *,
+    images: list[ProductImageView] | None = None,
 ) -> ProductView:
     gtins = [
         ident.value_normalized
@@ -454,6 +491,7 @@ def _to_product_view(
         created_at=product.created_at,
         updated_at=product.updated_at,
         listings=[_to_listing_view(item) for item in listings],
+        images=list(images or []),
     )
 
 

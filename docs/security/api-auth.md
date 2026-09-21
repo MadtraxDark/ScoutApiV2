@@ -66,6 +66,12 @@ desabilitados.
 | `GET /products/{id}` | `products:read` | default |
 | `PATCH /products/{id}` | `products:write` | default |
 | `DELETE /products/{id}` | `products:write` | default |
+| `GET /products/{id}/images` | `products:read` | default |
+| `POST /products/{id}/images` | `products:write` | default |
+| `PATCH /products/{id}/images` | `products:write` | default |
+| `DELETE /products/{id}/images/{image_id}` | `products:write` | default |
+| `POST /products/{id}/images/{image_id}/retry-optimization` | `products:write` | default |
+| `GET /products/{id}/images/{image_id}/content` | `products:read` | default |
 | `GET /stores` | `products:read` | default |
 
 Roles: `user` (permissões de negócio) e `admin` (`AUTH_ADMIN_USER_IDS` ou

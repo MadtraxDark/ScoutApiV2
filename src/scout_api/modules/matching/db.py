@@ -5,6 +5,7 @@ from __future__ import annotations
 from sqlalchemy.engine import Engine
 
 from scout_api.core.database import Base
+from scout_api.modules.images import models as _image_models  # noqa: F401
 from scout_api.modules.matching import models as _models  # noqa: F401
 
 
