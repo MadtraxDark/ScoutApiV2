@@ -46,16 +46,21 @@ __all__ = [
     "MatchHit",
     "MatchStoreError",
     "MatchResponse",
+    "MatchProgressEvent",
     "OfferRefreshRequest",
     "OfferSnapshotView",
     "OfferEventView",
     "OfferRefreshResult",
     "OfferRefreshResponse",
     "ProductRegisterRequest",
+    "ProductUpdateRequest",
     "ProductListingView",
     "ProductView",
     "ProductRegisterResponse",
     "ProductSearchResponse",
+    "ProductListResponse",
+    "StoreInfo",
+    "StoreListResponse",
 ]
 
 
@@ -122,6 +127,27 @@ class MatchResponse(BaseModel):
     discovered_gtin: str | None = None
     gtin_source: str | None = None
     """``reference`` or ``auto_match:<store>`` when a trusted GTIN was learned."""
+
+
+class MatchProgressEvent(BaseModel):
+    """Evento SSE emitido durante ``POST /match/stream`` (execução única)."""
+
+    type: str = Field(
+        description=(
+            "store_started | searching | candidates_found | scraping_candidate | "
+            "matched | no_match | error | completed | search_progress"
+        )
+    )
+    store: str | None = None
+    display_name: str | None = None
+    stage: str = ""
+    status: Literal[
+        "pending", "running", "success", "warning", "error", "no_result"
+    ] = "running"
+    message: str = ""
+    candidate_count: int | None = None
+    sequence: int | None = None
+    result: MatchResponse | None = None
 
 
 class OfferRefreshRequest(BaseModel):
@@ -275,6 +301,21 @@ class ProductView(BaseModel):
     listings: list[ProductListingView] = Field(default_factory=list)
 
 
+class ProductUpdateRequest(BaseModel):
+    """Atualização explícita de campos editáveis do produto canônico."""
+
+    model_config = {"extra": "forbid"}
+
+    title: str | None = Field(default=None, min_length=1, max_length=512)
+    brand: str | None = Field(default=None, max_length=128)
+    model: str | None = Field(default=None, max_length=128)
+    variant: str | None = Field(default=None, max_length=256)
+    attributes: dict[str, Any] | None = Field(
+        default=None,
+        description="Atributos a mesclar (não substitui o mapa inteiro).",
+    )
+
+
 class ProductRegisterResponse(BaseModel):
     created: bool
     listing_created: bool = False
@@ -285,3 +326,28 @@ class ProductRegisterResponse(BaseModel):
 class ProductSearchResponse(BaseModel):
     items: list[ProductView] = Field(default_factory=list)
     count: int = Field(description="Número de produtos retornados.")
+
+
+class ProductListResponse(BaseModel):
+    items: list[ProductView] = Field(default_factory=list)
+    count: int = Field(description="Número de itens nesta página.")
+    limit: int
+    offset: int
+    total: int | None = Field(
+        default=None,
+        description="Total visível ao usuário quando calculado.",
+    )
+
+
+class StoreInfo(BaseModel):
+    key: str
+    country: str
+    currency: str
+    domains: list[str]
+    implemented: bool
+    supports_search: bool
+    supports_images: bool
+
+
+class StoreListResponse(BaseModel):
+    stores: list[StoreInfo] = Field(default_factory=list)

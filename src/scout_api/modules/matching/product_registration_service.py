@@ -22,9 +22,11 @@ from scout_api.modules.matching.models import CanonicalProduct, StoreListing
 from scout_api.modules.matching.repository import MatchingRepository
 from scout_api.modules.matching.schemas import (
     ProductListingView,
+    ProductListResponse,
     ProductRegisterRequest,
     ProductRegisterResponse,
     ProductSearchResponse,
+    ProductUpdateRequest,
     ProductView,
 )
 
@@ -209,6 +211,97 @@ class ProductRegistrationService:
         if not listings:
             listings = repo.list_listings_for_canonical(canonical.id)
         return _to_product_view(canonical, listings)
+
+    def list_products(
+        self,
+        *,
+        viewer: AuthenticatedPrincipal,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> ProductListResponse:
+        """List canonical products visible to the viewer (stable updated_at desc)."""
+        cap = max(1, min(limit, 100))
+        start = max(0, offset)
+        repo = MatchingRepository(self._session)
+        is_admin = viewer.role == UserRole.ADMIN
+        total = repo.count_canonical_products(
+            viewer_id=viewer.id, is_admin=is_admin
+        )
+        rows = repo.search_canonical_products(
+            viewer_id=viewer.id,
+            is_admin=is_admin,
+            limit=cap,
+            offset=start,
+        )
+        items = [
+            _to_product_view(product, list(product.listings or []))
+            for product in rows
+        ]
+        return ProductListResponse(
+            items=items,
+            count=len(items),
+            limit=cap,
+            offset=start,
+            total=total,
+        )
+
+    def update_product(
+        self,
+        product_id: UUID,
+        request: ProductUpdateRequest,
+        *,
+        owner: AuthenticatedPrincipal,
+    ) -> ProductView:
+        repo = MatchingRepository(self._session)
+        canonical = repo.get_canonical(product_id)
+        if canonical is None or not can_access_product(canonical, owner):
+            raise RequestError(
+                "Produto canônico não encontrado",
+                code="PRODUCT_NOT_FOUND",
+            )
+        attrs = dict(request.attributes or {})
+        if request.variant:
+            attrs.setdefault("variant", request.variant)
+        variant_key_value = None
+        if request.variant is not None or attrs:
+            string_attrs = {
+                k: str(v)
+                for k, v in {**(canonical.attributes or {}), **attrs}.items()
+                if isinstance(v, str)
+            }
+            if request.variant:
+                string_attrs["variant"] = request.variant
+            variant_key_value = variant_key(string_attrs)
+        repo.update_canonical(
+            canonical,
+            title=request.title,
+            brand=request.brand,
+            model=request.model,
+            variant_key=variant_key_value,
+            attributes=attrs or None,
+        )
+        self._session.flush()
+        view = self.get_product(product_id, viewer=owner)
+        assert view is not None
+        return view
+
+    def delete_product(
+        self,
+        product_id: UUID,
+        *,
+        owner: AuthenticatedPrincipal,
+    ) -> None:
+        repo = MatchingRepository(self._session)
+        canonical = repo.get_canonical(product_id)
+        if canonical is None:
+            return
+        if not can_access_product(canonical, owner):
+            raise RequestError(
+                "Produto canônico não encontrado",
+                code="PRODUCT_NOT_FOUND",
+            )
+        repo.delete_canonical(product_id)
+        self._session.flush()
 
     def search_products(
         self,

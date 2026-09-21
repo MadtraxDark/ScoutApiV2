@@ -62,7 +62,7 @@ app = FastAPI(
         },
         {
             "name": "Produtos",
-            "description": "Cadastro e consulta de produtos canônicos.",
+            "description": "Cadastro, listagem e consulta de produtos canônicos.",
         },
         {
             "name": "Correspondência",
@@ -85,7 +85,7 @@ if origins:
         CORSMiddleware,
         allow_origins=origins,
         allow_credentials=True,
-        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Authorization", "Content-Type", "Accept"],
         expose_headers=["Retry-After", "X-RateLimit-Limit", "X-RateLimit-Remaining"],
     )

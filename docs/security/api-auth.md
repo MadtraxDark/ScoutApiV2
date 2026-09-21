@@ -58,13 +58,20 @@ desabilitados.
 | `POST /crawl` | `crawl` | crawler |
 | `POST /crawl/offer` | `crawl` | crawler |
 | `POST /match` | `match` | crawler |
+| `POST /match/stream` | `match` | crawler |
 | `POST /offers/refresh` | `offers:refresh` | crawler |
 | `POST /products` | `products:write` | default |
+| `GET /products` | `products:read` | default |
 | `GET /products/search` | `products:read` | default |
 | `GET /products/{id}` | `products:read` | default |
+| `PATCH /products/{id}` | `products:write` | default |
+| `DELETE /products/{id}` | `products:write` | default |
+| `GET /stores` | `products:read` | default |
 
 Roles: `user` (permissões de negócio) e `admin` (`AUTH_ADMIN_USER_IDS` ou
 `app_metadata.role=admin`).
+
+Integração frontend: [`docs/integration/pricescout.md`](../integration/pricescout.md).
 
 ## Ownership (BOLA)
 
@@ -100,6 +107,10 @@ controle.
 
 `CORS_ALLOWED_ORIGINS` = lista CSV explícita. Wildcard `*` é ignorado/rejeitado
 com credentials.
+
+Métodos: `GET`, `POST`, `PATCH`, `DELETE`, `OPTIONS`.
+Headers: `Authorization`, `Content-Type`, `Accept`.
+Expostos: `Retry-After`, `X-RateLimit-Limit`, `X-RateLimit-Remaining`.
 
 ## Logs e erros
 

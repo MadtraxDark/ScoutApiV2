@@ -155,6 +155,7 @@ class MatchingRepository:
         is_admin: bool,
         brand: str | None = None,
         limit: int = 200,
+        offset: int = 0,
     ) -> list[CanonicalProduct]:
         """Load catalog rows visible to the viewer, optionally prefiltered by brand.
 
@@ -176,8 +177,61 @@ class MatchingRepository:
             stmt = stmt.where(
                 func.lower(CanonicalProduct.brand) == brand.strip().casefold()
             )
-        stmt = stmt.order_by(CanonicalProduct.updated_at.desc()).limit(limit)
+        stmt = (
+            stmt.order_by(CanonicalProduct.updated_at.desc())
+            .offset(max(0, offset))
+            .limit(limit)
+        )
         return list(self._session.scalars(stmt).all())
+
+    def count_canonical_products(
+        self,
+        *,
+        viewer_id: uuid.UUID,
+        is_admin: bool,
+    ) -> int:
+        stmt = select(func.count()).select_from(CanonicalProduct)
+        if not is_admin:
+            stmt = stmt.where(
+                or_(
+                    CanonicalProduct.owner_user_id.is_(None),
+                    CanonicalProduct.owner_user_id == viewer_id,
+                )
+            )
+        return int(self._session.scalar(stmt) or 0)
+
+    def delete_canonical(self, product_id: uuid.UUID) -> bool:
+        product = self.get_canonical(product_id)
+        if product is None:
+            return False
+        self._session.delete(product)
+        self._session.flush()
+        return True
+
+    def update_canonical(
+        self,
+        product: CanonicalProduct,
+        *,
+        title: str | None = None,
+        brand: str | None = None,
+        model: str | None = None,
+        variant_key: str | None = None,
+        attributes: dict[str, Any] | None = None,
+    ) -> CanonicalProduct:
+        if title is not None:
+            product.title = title[:512]
+        if brand is not None:
+            product.brand = brand or None
+        if model is not None:
+            product.model = model or None
+        if variant_key is not None:
+            product.variant_key = variant_key or None
+        if attributes is not None:
+            merged = dict(product.attributes or {})
+            merged.update(attributes)
+            product.attributes = merged
+        self._session.flush()
+        return product
 
     def get_or_create_canonical(
         self,
