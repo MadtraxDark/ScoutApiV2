@@ -187,6 +187,16 @@ class BaseStoreSpider(scrapy.Spider, ABC):
             values = []
         elif isinstance(raw, list):
             values = raw
+        elif isinstance(raw, dict):
+            # Nested gallery bags (e.g. Magalu ``media`` / catalog ``images``).
+            nested = raw.get("images")
+            if isinstance(nested, list):
+                values = list(nested)
+            elif isinstance(raw.get("details"), list):
+                main = raw.get("main")
+                values = ([main] if main else []) + list(raw["details"])
+            else:
+                values = [raw]
         else:
             values = [raw]
 
@@ -195,6 +205,15 @@ class BaseStoreSpider(scrapy.Spider, ABC):
         for value in values:
             candidate: Any = value
             if isinstance(value, dict):
+                nested_images = value.get("images")
+                if isinstance(nested_images, list):
+                    for nested in BaseStoreSpider.normalize_image_urls(
+                        nested_images, base_url=base_url
+                    ):
+                        if nested not in seen:
+                            seen.add(nested)
+                            result.append(nested)
+                    continue
                 candidate = (
                     value.get("url")
                     or value.get("contentUrl")

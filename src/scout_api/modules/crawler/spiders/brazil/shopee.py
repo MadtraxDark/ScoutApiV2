@@ -42,7 +42,7 @@ class ShopeeSpider(BaseStoreSpider):
 
     name = "shopee"
     store, country, currency = "shopee", "BR", "BRL"
-    supports_images = False
+    supports_images = True
     supports_search = True
     allowed_domains = ["shopee.com.br", "www.shopee.com.br"]
     start_urls: list[str] = []
@@ -333,9 +333,28 @@ class ShopeeSpider(BaseStoreSpider):
         )
 
     def extract_images(self, response: Response) -> list[str]:
-        """Shopee galleries are omitted by store cost policy (no CDN transfer)."""
-        del response
-        return []
+        """Gallery URLs from the already-fetched PDP payload (no CDN download)."""
+        from ...utils.image_pipeline import ImagePipelineStats, Timer
+
+        stats = ImagePipelineStats(
+            store=self.store, source="pdp-payload-product_images"
+        )
+        discovery = Timer()
+        payload = self._pdp_payload(response)
+        item = self._item(payload)
+        url_ids = self._url_identity(response.url)
+        model = self._selected_model(item, payload, response.url, url_ids)
+        stats.discovery_ms = discovery.ms()
+        parse = Timer()
+        urls = self._gallery_urls(payload, item, model)
+        stats.parse_ms = parse.ms()
+        stats.raw = len(urls)
+        stats.after_filter = len(urls)
+        stats.after_dedup = len(urls)
+        stats.mark_returned(urls)
+        stats.log()
+        response.meta["image_pipeline"] = stats
+        return urls
 
     # ------------------------------------------------------------------ payload
 

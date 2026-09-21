@@ -29,7 +29,19 @@
 
 ## Images source
 
-- Gallery when `include_images=true` (store supports images)
+- Primary: `__NEXT_DATA__` → `props.pageProps.data.item.media.images`
+  (template CDN URLs with `{w}x{h}`)
+- Materialize templates to a concrete public size (`1200x1200` verified on
+  `a-static.mlcdn.com.br`) — no guessed `small→large` rewrite
+- Prefer `a-static.mlcdn.com.br` over `m.magazineluiza.com.br/a-static/`
+- Main image (`item.image`) first; then gallery order; dedupe by content-hash
+  filename (not by resolution query)
+- Keep only assets for the selected product id (exclude other color/storage
+  thumbs from `attributes`)
+- JSON-LD `image` is **main only** — never treat it as the full gallery
+- When `include_images=true`: return official gallery URLs only (no binary
+  download in preview). CDN is public; proxy is for PDP fetch only.
+- `include_images=false` → `extract_images` not called
 
 ## Pricing semantics
 
@@ -79,6 +91,9 @@
 ## Live validation references
 
 - Soft-404 (URL inválida, **não** integração): `/p/240590700/` → `ParseError` soft-404
+- PDP viva (2026-09-21): iPhone 15 128GB Preto `/p/238035600/…` →
+  `include_images=true` retorna galeria completa (`media.images`, 10 URLs);
+  browser direto, sem proxy; CDN `a-static.mlcdn.com.br` público
 - PDP viva (2026-09-14): Galaxy Tab S10 Lite
   `…/p/jjhd6g4f9d/tb/sams/?seller_id=samsung` → oferta OK
   (`price`/`pix_price`/`seller=samsung`/`available`)
@@ -87,7 +102,9 @@
 ## Tests / fixtures
 
 - `tests/fixtures/magazineluiza/` (incl. `product_oops_soft_404.html` para
-  classificação de URL morta — não representa falha de loja),
-  coverage in `tests/unit/test_spider_parsing.py`
+  classificação de URL morta — não representa falha de loja;
+  `product_gallery_media.html` para galeria `media.images`),
+  coverage in `tests/unit/test_spider_parsing.py` e
+  `tests/unit/test_magalu_images.py`
 - Akamai sec-cpt detection/resolution: `tests/unit/test_html_fetcher.py`,
   `tests/unit/test_challenge_resolution.py`

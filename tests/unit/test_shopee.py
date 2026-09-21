@@ -73,8 +73,8 @@ def test_palit_details_and_images() -> None:
     assert details.gtin == "4710568870011"
     assert details.variant == "Modelo: GAMINGPRO OC"
     assert details.images == []
-    assert spider.supports_images is False
-    assert spider.extract_images(response) == []
+    assert spider.supports_images is True
+    assert spider.extract_images(response)
     # Gallery parser retained for fixtures/debug; not used in the live cost path.
     payload = spider._pdp_payload(response)
     item = spider._item(payload)
@@ -197,10 +197,10 @@ def test_include_images_gate(monkeypatch) -> None:  # type: ignore[no-untyped-de
     assert without.images == []
 
     with_images = service.scrape(KINGSTON_URL, include_images=True)
-    # Shopee store-cost policy: supports_images=False skips extract_images.
-    images.assert_not_called()
-    assert with_images.images == []
-    assert with_images.metadata.get("images_omitted") == "store-cost-policy"
+    # Gallery URLs come from the already-fetched PDP payload (no CDN download).
+    images.assert_called_once()
+    assert with_images.images
+    assert with_images.metadata.get("image_status") == "success"
 
 
 def test_palit_price_detail_extracts_pix_coupon_and_installment() -> None:

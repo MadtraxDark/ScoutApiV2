@@ -38,7 +38,10 @@ services?
 2. **Dual Camoufox:** perfil `direct` e perfil `default` (proxied / seed),
    orquestrados por `StoreAwareHtmlFetcher`.
 3. **Shopee minimal fetch:** capturar `/api/v4/pdp/get_pc`, early-stop (sem
-   networkidle), warm-up `once_per_session`, `supports_images=false`.
+   networkidle), warm-up `once_per_session`. Galeria: URLs podem ser
+   extraídas do payload já capturado quando `include_images=true` e o fetch
+   **não** usou proxy pago; default UX permanece off (`image_fetch_cost=high`).
+   Binários de imagem não trafegam no crawl/preview.
 4. **Cache de `ProductOffer`** no `ScrapeGuard` + single-flight por URL canônica.
 5. **Métricas** `fetch_cost_metrics` — dashboard DataImpulse permanece a fonte
    financeira.

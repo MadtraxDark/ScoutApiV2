@@ -42,7 +42,9 @@ PALIT_URL = (
 def test_proxy_policy_all_stores_fallback() -> None:
     assert proxy_policy_for_url(KINGSTON_URL) is ProxyPolicy.FALLBACK
     assert resolve_store_config(KINGSTON_URL) is not None
-    assert resolve_store_config(KINGSTON_URL).supports_images is False
+    assert resolve_store_config(KINGSTON_URL).supports_images is True
+    assert resolve_store_config(KINGSTON_URL).image_fetch_cost == "high"
+    assert resolve_store_config(KINGSTON_URL).default_include_images is False
     assert (
         proxy_policy_for_url("https://www.kabum.com.br/produto/1")
         is ProxyPolicy.FALLBACK

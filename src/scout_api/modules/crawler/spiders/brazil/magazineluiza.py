@@ -243,18 +243,150 @@ class MagazineLuizaSpider(BaseStoreSpider):
         )
 
     def extract_images(self, response: Response) -> list[str]:
+        """Official PDP gallery from ``item.media.images`` (NEXT_DATA).
+
+        Magalu ships template CDN URLs with ``{w}x{h}``. JSON-LD exposes only
+        the primary image — never treat that as the full gallery.
+        """
+        from ...utils.image_pipeline import ImagePipelineStats, Timer
+
+        stats = ImagePipelineStats(store=self.store)
+        discovery = Timer()
         state = self._next_data(response)
         item = self._state_item(state)
-        candidates = (
-            item.get("images")
-            or item.get("medias")
-            or item.get("media")
-            or item.get("gallery")
-        )
-        urls = self.normalize_image_urls(candidates, base_url=response.url)
-        if urls:
+        stats.discovery_ms = discovery.ms()
+
+        parse = Timer()
+        media = item.get("media") if isinstance(item.get("media"), dict) else {}
+        raw_gallery = media.get("images") if isinstance(media, dict) else None
+        source = "next-data-media.images"
+        if not isinstance(raw_gallery, list) or not raw_gallery:
+            # Legacy / fixture shape: flat ``item.images`` list of absolute URLs.
+            raw_gallery = item.get("images")
+            source = "next-data-item.images"
+        if not isinstance(raw_gallery, list) or not raw_gallery:
+            stats.source = "json-ld-fallback"
+            stats.parse_ms = parse.ms()
+            urls = super().extract_images(response)
+            stats.raw = len(urls)
+            stats.after_filter = len(urls)
+            stats.after_dedup = len(urls)
+            stats.mark_returned(urls)
+            stats.log()
+            response.meta["image_pipeline"] = stats
             return urls
-        return super().extract_images(response)
+
+        stats.source = source
+        stats.raw = len(raw_gallery)
+        stats.parse_ms = parse.ms()
+
+        filter_t = Timer()
+        product_id = str(item.get("id") or self._product_id(response.url) or "")
+        materialized: list[str] = []
+        for entry in raw_gallery:
+            for absolute in self.normalize_image_urls(entry, base_url=response.url):
+                resolved = self._materialize_cdn_template(absolute)
+                if self._is_official_gallery_url(resolved, product_id):
+                    materialized.append(resolved)
+        stats.after_filter = len(materialized)
+        stats.filter_ms = filter_t.ms()
+
+        dedup_t = Timer()
+        main_url = None
+        main_raw = item.get("image")
+        if isinstance(main_raw, str) and main_raw.strip():
+            main_candidates = self.normalize_image_urls(
+                main_raw, base_url=response.url
+            )
+            if main_candidates:
+                candidate = self._materialize_cdn_template(main_candidates[0])
+                if self._is_official_gallery_url(candidate, product_id):
+                    main_url = candidate
+        urls = self._dedupe_gallery_preserve_order(materialized, main_url=main_url)
+        stats.after_dedup = len(urls)
+        stats.dedup_ms = dedup_t.ms()
+        stats.mark_returned(urls)
+        stats.log()
+        response.meta["image_pipeline"] = stats
+        return urls
+
+    # Magalu CDN templates use ``{w}x{h}``; prefer a concrete high-res size that
+    # the public CDN accepts (verified live: 450/800/1000/1200 all 200).
+    _CDN_TEMPLATE_SIZE = "1200x1200"
+
+    @classmethod
+    def _materialize_cdn_template(cls, url: str) -> str:
+        text = url.strip()
+        if not text:
+            return text
+        text = text.replace("{w}x{h}", cls._CDN_TEMPLATE_SIZE)
+        text = text.replace("{w}", "1200").replace("{h}", "1200")
+        # Same asset is often mirrored on the mobile host; prefer public CDN.
+        text = text.replace(
+            "https://m.magazineluiza.com.br/a-static/",
+            "https://a-static.mlcdn.com.br/",
+        )
+        return text
+
+    @staticmethod
+    def _gallery_asset_identity(url: str) -> str:
+        """Identity by content hash filename — not by resolution query/path size."""
+        path = urlparse(url).path
+        name = path.rsplit("/", 1)[-1]
+        stem = name.rsplit(".", 1)[0].casefold()
+        return stem
+
+    @classmethod
+    def _is_official_gallery_url(cls, url: str, product_id: str) -> bool:
+        lowered = url.casefold()
+        if not lowered.startswith(("http://", "https://")):
+            return False
+        if any(
+            marker in lowered
+            for marker in (
+                "logo",
+                "selo-",
+                "badge",
+                "/sellers/",
+                "review",
+                "avatar",
+                "banner",
+                "icon",
+                "/embed/",
+                "ugc-magalu-videos",
+            )
+        ):
+            return False
+        host = (urlparse(url).hostname or "").casefold()
+        if "mlcdn.com.br" not in host and "magazineluiza.com.br" not in host:
+            return False
+        path = urlparse(url).path.casefold()
+        # Real Magalu CDN embeds ``/{seller}/{product_id}/{hash}.jpg`` — keep
+        # only the selected product id (exclude other color/storage variants).
+        if product_id and (
+            "/magazineluiza/" in path or re.search(r"/[a-f0-9]{32}\.", path)
+        ):
+            return f"/{product_id.casefold()}/" in path
+        return True
+
+    @classmethod
+    def _dedupe_gallery_preserve_order(
+        cls, urls: list[str], *, main_url: str | None
+    ) -> list[str]:
+        ordered: list[str] = []
+        seen: set[str] = set()
+        if main_url:
+            identity = cls._gallery_asset_identity(main_url)
+            if identity and identity not in seen:
+                seen.add(identity)
+                ordered.append(main_url)
+        for url in urls:
+            identity = cls._gallery_asset_identity(url)
+            if not identity or identity in seen:
+                continue
+            seen.add(identity)
+            ordered.append(url)
+        return ordered
 
     @staticmethod
     def _next_data(response: Response) -> dict[str, Any]:

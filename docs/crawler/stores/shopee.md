@@ -3,8 +3,9 @@
 ## Markets / country
 
 - `store=shopee`, `country=BR`, `currency=BRL`
+- `supports_images=True` (URLs from already-fetched PDP payload)
+- `image_fetch_cost=high` → PriceScout checkbox default **off**
 - Domain: `shopee.com.br`
-- `supports_images=False` (store + Proxy Cost Mode)
 
 ## Identifiers
 
@@ -45,7 +46,15 @@
 
 ## Images source
 
-- Omitted by policy (`supports_images=False`); do not enable gallery over proxy
+- Gallery URLs from PDP payload (`product_images` / selected model) when
+  `include_images=true` and egress is **not** paid proxy
+- Preview returns URLs only — no CDN binary download in crawl
+- Shopee image CDN (`down-br.img.susercontent.com`) is typically public; paid
+  proxy remains for protected PDP fetch, not for later Drive ingest of approved
+  URLs
+- When proxy was used for the PDP: `images_omitted: proxy-cost-mode`
+- Default checkbox off (`image_fetch_cost=high`) because the PDP path itself is
+  browser-heavy
 
 ## Variant model
 

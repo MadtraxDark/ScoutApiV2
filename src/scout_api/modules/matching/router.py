@@ -209,6 +209,8 @@ def list_stores(
             implemented=config.implemented,
             supports_search=key in search_keys,
             supports_images=config.supports_images,
+            image_fetch_cost=config.image_fetch_cost,
+            default_include_images=config.default_include_images,
         )
         for key, config in STORE_CONFIGS.items()
     ]

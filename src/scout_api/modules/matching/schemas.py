@@ -358,6 +358,20 @@ class StoreInfo(BaseModel):
     implemented: bool
     supports_search: bool
     supports_images: bool
+    image_fetch_cost: Literal["low", "high", "unsupported"] = Field(
+        default="low",
+        description=(
+            "Custo relativo de extrair URLs da galeria (não baixa binários). "
+            "Usado pelo frontend para default do checkbox include_images."
+        ),
+    )
+    default_include_images: bool = Field(
+        default=True,
+        description=(
+            "Sugestão de default para include_images no preview "
+            "(true quando supports_images e image_fetch_cost=low)."
+        ),
+    )
 
 
 class StoreListResponse(BaseModel):

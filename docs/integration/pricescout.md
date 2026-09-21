@@ -63,10 +63,17 @@ Autorização real = permissões JWT no backend.
 Sem cache persistido no backend nesta integração. Preview = resultado de
 `POST /crawl` mantido no estado do cliente até import ou descarte.
 
+O frontend expõe o checkbox **Buscar imagens do produto** depois que a URL
+casa com uma loja do `GET /stores`. O default vem de
+`default_include_images` / `image_fetch_cost` do registry (não de `if store ==`
+no FE). Envia `include_images` real no body.
+
 ### Imagens
 
 Crawl/preview (`POST /crawl` com `include_images=true`) devolve
 `image_candidates` (URLs externas) — **não** persiste no Drive.
+Falha de galeria não derruba o produto: metadata `image_status` /
+`image_error` / `image_pipeline` permite UX de sucesso parcial.
 
 Após revisão no PriceScout, o import (`POST /products`) envia
 `images: [{ source_url, position, is_main }]`. Só então o ScoutApiV2 baixa,
@@ -80,17 +87,21 @@ Canônico: [`docs/persistence/product-images.md`](../persistence/product-images.
 
 ### Checklist frontend (PriceScout)
 
-1. Preview: `POST /crawl` com `include_images=true`; UI usa
+1. Após URL reconhecida: mostrar checkbox; default = `default_include_images`
+   da loja.
+2. Preview: `POST /crawl` com `include_images` conforme checkbox; UI usa
    `image_candidates` (ou `images[]` URLs) como candidatas externas.
-2. Permitir selecionar / remover / reordenar / marcar principal **antes** do
+3. Se `image_status` for `error`/`empty`/`omitted` com produto OK: avisar
+   “Produto encontrado, mas não foi possível carregar a galeria.”
+4. Permitir selecionar / remover / reordenar / marcar principal **antes** do
    import; deixar claro que ainda não estão no Drive.
-3. Import: `POST /products` com `images: [{ source_url, position, is_main }]`
+5. Import: `POST /products` com `images: [{ source_url, position, is_main }]`
    das aprovadas (idempotente no clique).
-4. Após cadastro: listar via `GET /products/{id}/images` ou campo `images` do
+6. Após cadastro: listar via `GET /products/{id}/images` ou campo `images` do
    `ProductView`; renderizar só `display_url` (com Bearer).
-5. CRUD: `POST/PATCH/DELETE /products/{id}/images`; retry AVIF opcional.
-6. Não enviar `drive_file_id` / paths / credentials no body.
-7. Reutilizar `ImageViewer` / `ImageWithState` se já existirem.
+7. CRUD: `POST/PATCH/DELETE /products/{id}/images`; retry AVIF opcional.
+8. Não enviar `drive_file_id` / paths / credentials no body.
+9. Reutilizar `ImageViewer` / `ImageWithState` se já existirem.
 
 ### Progresso Match
 

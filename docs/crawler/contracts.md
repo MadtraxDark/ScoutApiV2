@@ -31,6 +31,18 @@ Fetch (Camoufox / urllib / curl_cffi@ML) → Store Adapter (spider) → Offer | 
 | Match (identity) | `MatchResponse` | `ProductMatchService.match_from_item` | same pipeline from a synthetic identity item (no reference URL scrape) |
 | Refresh | `OfferRefreshResponse` | `POST /offers/refresh` | re-scrape + offer history diff |
 
+Preview returns **gallery URLs only** (no binary download). Drive ingest happens
+after human approval (`POST /products` images). Observability when images are
+requested: `metadata.image_status`, `image_error`, `image_pipeline`
+(`images_found_raw` / `after_filter` / `after_dedup` / `images_returned` +
+stage timings). Gallery extraction failure is partial success — offer/details
+still return.
+
+Store capabilities for UX defaults (`GET /stores`): `supports_images`,
+`image_fetch_cost` (`low`|`high`|`unsupported`), `default_include_images`
+(true when supports_images and cost is `low`). Clients must not hardcode
+per-store checkbox defaults.
+
 ADR: [0011](../adr/0011-offer-vs-product-details.md), [0012](../adr/0012-optional-image-extraction.md),
 [0019](../adr/0019-product-matching.md),
 [0024](../adr/0024-product-match-evidence-cascade.md),

@@ -9,8 +9,13 @@ from ..core.distributed_cooldown import DistributedCooldown
 from ..core.distributed_single_flight import DistributedSingleFlight
 from ..core.redis_client import build_redis_gateway
 from ..core.scrape_guard import ScrapeGuard
-from ..models.product import ProductPriceItem, candidates_from_urls, compose_product_price_item
+from ..models.product import (
+    ProductPriceItem,
+    candidates_from_urls,
+    compose_product_price_item,
+)
 from ..spiders.base import BaseStoreSpider
+from ..utils.image_pipeline import ImagePipelineStats
 from .html_fetcher import HtmlFetcher, build_html_fetcher
 from .store_resolver import resolve_store_spider
 
@@ -87,6 +92,75 @@ def _proxy_used(response: HtmlResponse) -> bool:
     return bool(metrics.get("proxy_used"))
 
 
+def _merge_image_metadata(
+    base: dict[str, Any],
+    *,
+    stats: ImagePipelineStats | None = None,
+    omitted: str | None = None,
+) -> dict[str, Any]:
+    metadata = dict(base)
+    if omitted:
+        metadata["images_omitted"] = omitted
+        metadata["image_status"] = "omitted"
+        metadata["image_error"] = None
+    if stats is not None:
+        metadata.update(stats.to_metadata())
+    return metadata
+
+
+def extract_images_for_response(
+    spider: BaseStoreSpider,
+    response: HtmlResponse,
+    *,
+    include_images: bool,
+    proxy_used: bool,
+) -> tuple[list[str], dict[str, Any]]:
+    """Run gallery extraction with partial-success + observability.
+
+    Preview returns URLs only — never downloads image binaries here.
+    Proxy Cost Mode still skips gallery parsing on paid egress.
+    """
+    if not include_images:
+        return [], {}
+
+    if not spider.supports_images:
+        stats = ImagePipelineStats(
+            store=spider.store, status="omitted", source="store-cost-policy"
+        )
+        stats.log()
+        return [], _merge_image_metadata({}, stats=stats, omitted="store-cost-policy")
+
+    if proxy_used:
+        stats = ImagePipelineStats(
+            store=spider.store, status="omitted", source="proxy-cost-mode"
+        )
+        stats.log()
+        return [], _merge_image_metadata({}, stats=stats, omitted="proxy-cost-mode")
+
+    try:
+        urls = spider.extract_images(response)
+        maybe_stats = response.meta.get("image_pipeline")
+        if isinstance(maybe_stats, ImagePipelineStats):
+            stats = maybe_stats
+        else:
+            stats = ImagePipelineStats(store=spider.store, source="extract_images")
+            stats.raw = len(urls)
+            stats.after_filter = len(urls)
+            stats.after_dedup = len(urls)
+            stats.mark_returned(urls)
+            stats.log()
+        return urls, _merge_image_metadata({}, stats=stats)
+    except Exception as exc:  # noqa: BLE001 — gallery must not fail the product
+        stats = ImagePipelineStats(
+            store=spider.store,
+            status="error",
+            error=str(exc)[:300],
+            source="extract_images",
+        )
+        stats.log()
+        return [], _merge_image_metadata({}, stats=stats)
+
+
 class ProductScrapeService:
     """Orchestrate a full product scrape from offer + details extractors."""
 
@@ -117,10 +191,15 @@ class ProductScrapeService:
                     update={
                         "images": [],
                         "image_candidates": [],
-                        "metadata": {
-                            **cached.metadata,
-                            "images_omitted": "store-cost-policy",
-                        },
+                        "metadata": _merge_image_metadata(
+                            cached.metadata,
+                            omitted="store-cost-policy",
+                            stats=ImagePipelineStats(
+                                store=spider_probe.store,
+                                status="omitted",
+                                source="store-cost-policy",
+                            ),
+                        ),
                     }
                 )
 
@@ -140,28 +219,24 @@ class ProductScrapeService:
             offer = spider.extract_offer(response)
             details = spider.extract_details(response)
             proxy_used = _proxy_used(response)
-            # Proxy cost mode: never extract galleries on paid egress.
-            allow_images = include_images and spider.supports_images and not proxy_used
-            if allow_images:
-                urls = spider.extract_images(response)
+            urls, image_meta = extract_images_for_response(
+                spider,
+                response,
+                include_images=include_images,
+                proxy_used=proxy_used,
+            )
+            if include_images:
                 details = details.model_copy(
                     update={
                         "images": urls,
                         "image_candidates": candidates_from_urls(urls),
+                        "metadata": {**details.metadata, **image_meta},
                     }
                 )
             item = compose_product_price_item(offer, details)
-            if include_images and not allow_images:
-                reason = "proxy-cost-mode" if proxy_used else "store-cost-policy"
+            if include_images and image_meta:
                 item = item.model_copy(
-                    update={
-                        "images": [],
-                        "image_candidates": [],
-                        "metadata": {
-                            **item.metadata,
-                            "images_omitted": reason,
-                        },
-                    }
+                    update={"metadata": {**item.metadata, **image_meta}}
                 )
             self._guard.store_success(url, item)
             return item

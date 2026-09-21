@@ -6,6 +6,7 @@ from ..spiders.base import BaseStoreSpider
 from .html_fetcher import HtmlFetcher
 from .product_scrape_service import (
     _proxy_used,
+    extract_images_for_response,
     get_shared_html_fetcher,
     get_shared_scrape_guard,
 )
@@ -31,25 +32,18 @@ class ProductDetailsService:
         response = self._fetch(spider.prepare_fetch_url(url))
         details = spider.extract_details(response)
         proxy_used = _proxy_used(response)
-        allow_images = include_images and spider.supports_images and not proxy_used
-        if allow_images:
-            urls = spider.extract_images(response)
+        urls, image_meta = extract_images_for_response(
+            spider,
+            response,
+            include_images=include_images,
+            proxy_used=proxy_used,
+        )
+        if include_images:
             details = details.model_copy(
                 update={
                     "images": urls,
                     "image_candidates": candidates_from_urls(urls),
-                }
-            )
-        elif include_images:
-            reason = "proxy-cost-mode" if proxy_used else "store-cost-policy"
-            details = details.model_copy(
-                update={
-                    "images": [],
-                    "image_candidates": [],
-                    "metadata": {
-                        **details.metadata,
-                        "images_omitted": reason,
-                    },
+                    "metadata": {**details.metadata, **image_meta},
                 }
             )
         return details
