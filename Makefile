@@ -49,6 +49,9 @@ up:
 migrate:
 	alembic upgrade head
 
+migrate-docker:
+	docker compose exec api alembic upgrade head
+
 test:
 	python -m pytest -m "not live and not slow"
 

@@ -27,4 +27,17 @@ mkdir -p "$PROFILE_DIR"
 # Named volumes are root-owned by default; the API runs as non-root `app`.
 chown -R app:app "$PROFILE_ROOT"
 
+# Apply pending schema migrations before API/workers start.
+# Concurrent container starts are safe (Alembic Postgres advisory lock).
+# Disable with AUTO_MIGRATE=false when a one-shot migrate job already ran.
+_should_migrate=1
+case "${AUTO_MIGRATE:-true}" in
+  0|false|False|FALSE|no|No|NO|off|Off|OFF) _should_migrate=0 ;;
+esac
+if [ "$_should_migrate" -eq 1 ] && [ -n "${DATABASE_URL:-}" ]; then
+  echo "alembic_upgrade_head: starting"
+  runuser -u app -- alembic upgrade head
+  echo "alembic_upgrade_head: done"
+fi
+
 exec runuser -u app -- "$@"

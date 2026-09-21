@@ -127,3 +127,8 @@ class ProductImage(Base):
         foreign_keys=[canonical_product_id],
         lazy="select",
     )
+
+
+# Register the FK target mapper for standalone workers (image-optimizer) that
+# import ProductImage without going through the FastAPI matching stack.
+from scout_api.modules.matching import models as _matching_models  # noqa: E402, F401

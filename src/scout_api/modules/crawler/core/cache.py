@@ -308,6 +308,11 @@ def _backend_name(backend: CacheBackend) -> str:
 
 
 def _emit(event: str, **fields: Any) -> None:
+    # cache_miss is polled every ~100–300ms by distributed single-flight
+    # followers; keep it at DEBUG so INFO logs stay actionable.
+    if event in {"cache_miss", "cache_hit"}:
+        logger.debug(event, extra=fields)
+        return
     logger.info(event, extra=fields)
 
 

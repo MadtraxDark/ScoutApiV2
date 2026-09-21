@@ -16,10 +16,11 @@ Copie `.env.example` para `.env` e ajuste os valores conforme o ambiente. O `.en
 
 ## Docker
 
-Execute `docker compose up --build`. A API ficará disponível em `http://localhost:8000`; `GET /health` verifica a disponibilidade (`status` + `database`).
+Execute `docker compose up --build`. A API ficará disponível em `http://localhost:8000`; `GET /health` verifica a disponibilidade (`status` + `database`). O entrypoint aplica `alembic upgrade head` automaticamente no boot (`AUTO_MIGRATE=true`).
 
 Para apontar ao Postgres do Supabase em vez do serviço Compose, defina
-`DATABASE_URL` no `.env` (SSL/`sslmode=require`) e rode `alembic upgrade head`.
+`DATABASE_URL` no `.env` (SSL/`sslmode=require`). Migrations sobem com o
+container; no host use `make migrate` se necessário.
 Detalhes: [`docs/persistence/supabase-postgres.md`](docs/persistence/supabase-postgres.md).
 
 O perfil Camoufox é um bind mount em `./data/camoufox-profiles` (compartilhado com o seed local). Para aquecer a sessão Shopee/WAF com janela:
@@ -104,9 +105,9 @@ Auth / Google). Públicos: `GET /health` e `/auth/*` de sessão. Detalhes:
 PostgreSQL: fonte de verdade (Compose local **ou** Supabase hospedado).
 Configure `DATABASE_URL` com driver `postgresql+psycopg` (ver `.env.example` e
 [`docs/persistence/supabase-postgres.md`](docs/persistence/supabase-postgres.md)).
-Migrations: `alembic upgrade head` (use URI direct/session `:5432`, não
-transaction pooler `:6543`). A API não usa a Supabase Data API; o frontend não
-acessa o banco.
+Migrations: automáticas no boot do container; no host `alembic upgrade head`
+/ `make migrate` (URI direct/session `:5432`, não transaction pooler `:6543`).
+A API não usa a Supabase Data API; o frontend não acessa o banco.
 
 Redis: serviço `redis` no Compose (cache/coordenação, não persistente). Opcional
 fora do Compose — sem `REDIS_URL` a API usa só memória local.

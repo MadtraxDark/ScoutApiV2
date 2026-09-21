@@ -55,8 +55,13 @@ class DistributedSingleFlight:
         self._poll_min = max(0.01, float(poll_min_seconds))
         self._poll_max = max(self._poll_min, float(poll_max_seconds))
 
-    def try_acquire(self, url: str) -> LockAcquireResult:
-        """Try to acquire the flight lock for ``url``."""
+    def try_acquire(self, url: str, *, quiet: bool = False) -> LockAcquireResult:
+        """Try to acquire the flight lock for ``url``.
+
+        ``quiet=True`` suppresses the follower INFO log — used by the wait-loop
+        poll (every ~100–300ms) so Docker logs are not flooded while a leader
+        scrapes.
+        """
         key = flight_lock_key(url)
         token = uuid.uuid4().hex
         ttl_ms = self._lock_ttl_seconds * 1000
@@ -80,7 +85,10 @@ class DistributedSingleFlight:
                 },
             )
             return LockAcquireResult(token=token, redis_ok=True)
-        logger.info(
+        # First transition to follower stays at INFO via distributed_lock_wait;
+        # subsequent poll retries use quiet=True → DEBUG only.
+        log = logger.debug if quiet else logger.info
+        log(
             "singleflight_follower",
             extra={"event": "singleflight_follower"},
         )
@@ -131,8 +139,13 @@ class DistributedSingleFlight:
         while time.monotonic() < deadline:
             cached = poll_result()
             if cached is not None:
+                logger.info(
+                    "singleflight_follower_resolved",
+                    extra={"event": "singleflight_follower_resolved"},
+                )
                 return cached
-            stolen = self.try_acquire(url)
+            # quiet: do not INFO-spam on every poll while the leader holds the lock
+            stolen = self.try_acquire(url, quiet=True)
             if not stolen.redis_ok:
                 return fn()
             if stolen.token is not None:

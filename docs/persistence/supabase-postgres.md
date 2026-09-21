@@ -47,10 +47,11 @@ Valores de exemplo: [`.env.example`](../../.env.example).
      `DATABASE_URL=postgresql+psycopg://scout:scout@localhost:5432/scoutapi`  
    Não use `localhost` dentro do container — aponta para o próprio `api`, não
    para o serviço `postgres`.
-3. `docker compose up --build`
-4. Aplique migrations (entrypoint **não** roda Alembic sozinho):
-   `docker compose exec api alembic upgrade head`  
-   (ou `alembic upgrade head` no host com URL `localhost`).
+3. `docker compose up --build` — o entrypoint aplica `alembic upgrade head`
+   automaticamente antes de subir API/workers (`AUTO_MIGRATE=true` por
+   padrão; desligue com `AUTO_MIGRATE=false` se um job one-shot já migrou).
+4. Manual, se precisar: `docker compose exec api alembic upgrade head`
+   (ou `alembic upgrade head` / `make migrate` no host com URL `localhost`).
 5. `GET /health` → `database: ok` quando o Postgres responder.
    Se `database: unavailable`, `/match` com `persist=true` (default) responde
    `503 DATABASE_UNAVAILABLE`.
@@ -74,7 +75,9 @@ IPv6 e falha com `Network is unreachable` — use o **session pooler** IPv4
    desliga prepared statements. **Não** rode Alembic em `:6543`.
 5. Force SSL: `?sslmode=require` (ou deixe o auto-append da app).
 6. Configure `DATABASE_URL` no secret store / Compose de produção.
-7. Rode `alembic upgrade head` no deploy (job one-shot ou release step).
+7. No Compose/containers ScoutApiV2 o entrypoint já aplica
+   `alembic upgrade head` no boot. Em outros deploys, rode no release step
+   (ou deixe `AUTO_MIGRATE=true` no entrypoint da imagem).
 8. Não habilite políticas que exponham tabelas de matching ao anon key.
 
 ## Modelo de produto (ADR 0019)
@@ -116,10 +119,12 @@ chaves no repository.
 ### Aplicar migrations
 
 ```bash
+# Containers: automático no boot (docker-entrypoint.sh).
+# Host / verificação:
 make migrate
 # ou
 alembic upgrade head
-alembic current   # deve mostrar 0022_store_listing_dedup (head)
+alembic current   # deve mostrar o revision head atual (ex.: 0026_…)
 ```
 
 Regras:
