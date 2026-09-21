@@ -30,6 +30,11 @@ from scout_api.modules.matching.schemas import (
     OfferRefreshResult,
     OfferSnapshotView,
 )
+from scout_api.modules.monitoring.hooks import (
+    mark_check_failure,
+    mark_check_success,
+    mark_removed_listing,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -174,6 +179,9 @@ class OfferRefreshService:
                         before=previous_payload,
                         after={"error": str(exc), "code": exc.code},
                     )
+                mark_check_failure(
+                    listing, error=f"{exc.code}: {exc}", now=datetime.now(UTC)
+                )
                 return OfferRefreshResult(
                     listing_id=listing.id,
                     store=listing.store,
@@ -190,6 +198,7 @@ class OfferRefreshService:
             # Product page gone / unparseable as product → treat as removed.
             diff = diff_offers(previous_payload, None, removed=True)
             repo.mark_listing_removed(listing)
+            mark_removed_listing(listing)
             repo.append_event(
                 listing,
                 "offer_removed",
@@ -235,6 +244,39 @@ class OfferRefreshService:
                     event_type=event_type,
                     before=previous_payload,
                     after=current_payload,
+                    detected_at=now,
+                )
+            )
+
+        promo_events = mark_check_success(
+            listing,
+            offer=offer,
+            event_names=list(diff.events),
+            now=now,
+        )
+        for promo_event in promo_events:
+            repo.append_event(
+                listing,
+                promo_event,
+                before=previous_payload,
+                after={
+                    "promotion_status": listing.promotion_status,
+                    "promotion_expires_at": listing.promotion_expires_at.isoformat()
+                    if listing.promotion_expires_at
+                    else None,
+                    "promotion_payload": listing.promotion_payload,
+                },
+            )
+            event_views.append(
+                OfferEventView(
+                    event_type=promo_event,  # type: ignore[arg-type]
+                    before=previous_payload,
+                    after={
+                        "promotion_status": listing.promotion_status,
+                        "promotion_expires_at": listing.promotion_expires_at.isoformat()
+                        if listing.promotion_expires_at
+                        else None,
+                    },
                     detected_at=now,
                 )
             )

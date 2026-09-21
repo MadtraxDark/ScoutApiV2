@@ -32,6 +32,7 @@ Governança de documentação: [`.cursor/rules/documentation-governance.mdc`](..
 | Integração PriceScout | [`integration/pricescout.md`](integration/pricescout.md) |
 | Persistência PostgreSQL / Supabase | [`persistence/supabase-postgres.md`](persistence/supabase-postgres.md) + [ADR 0021](adr/0021-supabase-postgres-sqlalchemy.md) |
 | Imagens de produto (Drive + AVIF) | [`persistence/product-images.md`](persistence/product-images.md) + [ADR 0029](adr/0029-google-drive-product-images.md) |
+| Monitoramento periódico de ofertas | [`monitoring.md`](monitoring.md) + [ADR 0030](adr/0030-persistent-offer-monitoring.md) + [`crawler/promotions.md`](crawler/promotions.md) |
 | Testes (comandos, markers, budgets) | [`testing.md`](testing.md) |
 | Performance / tempos / slow ops | [`performance.md`](performance.md) + [ADR 0028](adr/0028-performance-observability.md) + [`.cursor/rules/performance.mdc`](../.cursor/rules/performance.mdc) |
 | Baselines de performance | [`performance/baselines.md`](performance/baselines.md) |

@@ -7,6 +7,7 @@ import re
 import time
 from collections.abc import Callable
 from dataclasses import replace
+from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import UUID
 
@@ -776,6 +777,11 @@ class ProductMatchService:
             repo.append_event(
                 ref_listing, "offer_created", after={"url": reference.url}
             )
+            from scout_api.modules.monitoring.hooks import initialize_listing_schedule
+
+            initialize_listing_schedule(
+                ref_listing, checked_at=ref_offer.scraped_at or datetime.now(UTC)
+            )
         if learned and learned.source != "reference":
             repo.append_event(
                 ref_listing,
@@ -801,6 +807,11 @@ class ProductMatchService:
                 listing,
                 "offer_created",
                 after={"url": hit.product.url, "decision": hit.decision},
+            )
+            from scout_api.modules.monitoring.hooks import initialize_listing_schedule
+
+            initialize_listing_schedule(
+                listing, checked_at=offer.scraped_at or datetime.now(UTC)
             )
         self._session.flush()
         return canonical.id

@@ -12,6 +12,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Index,
+    Integer,
     Numeric,
     String,
     Text,
@@ -109,6 +110,21 @@ class StoreListing(Base):
         ),
         Index("ix_store_listings_canonical_product", "canonical_product_id"),
         Index("ix_store_listings_gtin", "gtin"),
+        # Scheduler hot path: due monitored active listings.
+        Index(
+            "ix_store_listings_monitor_due",
+            "next_check_at",
+            postgresql_where=text(
+                "monitoring_enabled IS TRUE AND status = 'active'"
+            ),
+            sqlite_where=text("monitoring_enabled = 1 AND status = 'active'"),
+        ),
+        Index(
+            "ix_store_listings_promo_expires",
+            "promotion_expires_at",
+            postgresql_where=text("promotion_status = 'active'"),
+            sqlite_where=text("promotion_status = 'active'"),
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -137,6 +153,70 @@ class StoreListing(Base):
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
     )
 
+    # --- Persistent monitoring schedule (ADR 0030). Clock lives in PostgreSQL. ---
+    monitoring_enabled: Mapped[bool] = mapped_column(
+        Boolean, default=True, nullable=False
+    )
+    last_checked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    last_successful_check_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    next_check_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    next_regular_check_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    last_price_changed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    last_availability_changed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    consecutive_failures: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False
+    )
+    last_check_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    last_check_scheduled_for: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    last_check_delay_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    check_claimed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    check_claim_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    check_worker_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+    # Current promotion state (history preserved via offer_events + snapshots).
+    promotion_status: Mapped[str] = mapped_column(
+        String(32), default="none", nullable=False
+    )
+    promotion_type: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    promotion_starts_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    promotion_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    promotion_price: Mapped[Decimal | None] = mapped_column(
+        Numeric(18, 4), nullable=True
+    )
+    promotion_original_price: Mapped[Decimal | None] = mapped_column(
+        Numeric(18, 4), nullable=True
+    )
+    promotion_conditions: Mapped[dict[str, Any]] = mapped_column(
+        JSON, nullable=False, default=dict
+    )
+    promotion_source: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    promotion_timezone: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    promotion_payload: Mapped[dict[str, Any]] = mapped_column(
+        JSON, nullable=False, default=dict
+    )
+
     canonical_product: Mapped[CanonicalProduct] = relationship(
         back_populates="listings"
     )
@@ -145,6 +225,28 @@ class StoreListing(Base):
     )
     events: Mapped[list[OfferEvent]] = relationship(
         back_populates="listing", cascade="all, delete-orphan"
+    )
+
+
+class MonitorSchedulerState(Base):
+    """Singleton-ish heartbeat row for monitor worker observability."""
+
+    __tablename__ = "monitor_scheduler_state"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    worker_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    last_heartbeat_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    last_sweep_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    last_claimed_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    last_processed_count: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
     )
 
 

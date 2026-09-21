@@ -25,6 +25,7 @@ Política de quando criar/atualizar docs:
 | [0023](0023-api-auth-supabase-deny-by-default.md) | Auth API Supabase JWT + deny-by-default + rate limit | Accepted |
 | [0028](0028-performance-observability.md) | Observabilidade de tempo + budgets por categoria | Accepted |
 | [0029](0029-google-drive-product-images.md) | Google Drive (conta dedicada OAuth) + imagens de produto | Accepted |
+| [0030](0030-persistent-offer-monitoring.md) | Monitoramento persistente de ofertas (PostgreSQL-driven) | Accepted |
 
 ## Índice — crawler
 
@@ -47,6 +48,7 @@ Política de quando criar/atualizar docs:
 | [0025](0025-mercadolivre-curl-cffi-http-first.md) | Mercado Livre HTTP-first com curl_cffi + Camoufox | Accepted |
 | [0026](0026-product-identity-brand-model-variant.md) | Identidade canônica brand / model / variant + busca opcional | Accepted |
 | [0027](0027-category-profile-product-identity.md) | CategoryProfile registry para identidade e filtros | Accepted |
+| [0030](0030-persistent-offer-monitoring.md) | Monitoramento persistente + promo expiry | Accepted |
 
 ## Quando criar ADR
 

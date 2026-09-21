@@ -522,6 +522,20 @@ def _product_variant_keys(product: CanonicalProduct) -> set[str]:
 
 
 def _to_listing_view(listing: StoreListing) -> ProductListingView:
+    from decimal import Decimal
+
+    from scout_api.modules.monitoring.promotion import is_promotion_commercially_active
+
+    latest = None
+    if listing.snapshots:
+        latest = max(listing.snapshots, key=lambda snap: snap.scraped_at)
+    payload = (latest.payload if latest is not None else {}) or {}
+    pix_raw = payload.get("pix_price")
+    original_raw = payload.get("original_price")
+    pix_price = Decimal(str(pix_raw)) if pix_raw not in (None, "") else None
+    original_price = (
+        Decimal(str(original_raw)) if original_raw not in (None, "") else None
+    )
     return ProductListingView(
         id=listing.id,
         store=listing.store,
@@ -537,4 +551,22 @@ def _to_listing_view(listing: StoreListing) -> ProductListingView:
         confidence=listing.confidence,
         created_at=listing.created_at,
         updated_at=listing.updated_at,
+        monitoring_enabled=bool(listing.monitoring_enabled),
+        last_checked_at=listing.last_checked_at,
+        next_check_at=listing.next_check_at,
+        last_successful_check_at=listing.last_successful_check_at,
+        consecutive_failures=int(listing.consecutive_failures or 0),
+        price=latest.price if latest is not None else None,
+        currency=latest.currency if latest is not None else None,
+        seller=latest.seller if latest is not None else None,
+        availability=latest.availability if latest is not None else None,
+        available=latest.available if latest is not None else None,
+        pix_price=pix_price,
+        original_price=original_price,
+        promotion_status=listing.promotion_status or "none",
+        promotion_expires_at=listing.promotion_expires_at,
+        promotion_type=listing.promotion_type,
+        promotion_price=listing.promotion_price,
+        promotion_conditions=dict(listing.promotion_conditions or {}),
+        promotion_commercially_active=is_promotion_commercially_active(listing),
     )

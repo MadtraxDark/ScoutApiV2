@@ -20,6 +20,11 @@ OfferEventType = Literal[
     "out_of_stock",
     "new_offer",
     "scrape_failed",
+    "offer_created",
+    "gtin_learned",
+    "promotion_activated",
+    "promotion_expired",
+    "promotion_updated",
 ]
 
 

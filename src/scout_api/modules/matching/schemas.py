@@ -26,6 +26,10 @@ OfferEventType = Literal[
     "out_of_stock",
     "new_offer",
     "scrape_failed",
+    "gtin_learned",
+    "promotion_activated",
+    "promotion_expired",
+    "promotion_updated",
 ]
 RefreshStatus = Literal[
     "unchanged",
@@ -296,6 +300,29 @@ class ProductListingView(BaseModel):
     )
     created_at: datetime
     updated_at: datetime
+    # Monitoring / commercial snapshot for PriceScout (ADR 0030).
+    monitoring_enabled: bool = True
+    last_checked_at: datetime | None = None
+    next_check_at: datetime | None = None
+    last_successful_check_at: datetime | None = None
+    consecutive_failures: int = 0
+    price: Decimal | None = Field(
+        default=None,
+        description="Último preço persistido (snapshot).",
+        examples=["4799.00"],
+    )
+    currency: str | None = None
+    seller: str | None = None
+    availability: str | None = None
+    available: bool | None = None
+    pix_price: Decimal | None = Field(default=None, examples=["4559.05"])
+    original_price: Decimal | None = Field(default=None, examples=["5299.00"])
+    promotion_status: str = "none"
+    promotion_expires_at: datetime | None = None
+    promotion_type: str | None = None
+    promotion_price: Decimal | None = None
+    promotion_conditions: dict[str, Any] = Field(default_factory=dict)
+    promotion_commercially_active: bool = False
 
 
 class ProductView(BaseModel):

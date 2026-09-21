@@ -115,6 +115,17 @@ class Settings(BaseSettings):
     image_avif_quality: int = 60
     image_avif_max_concurrency: int = 2
     image_media_cache_max_age_seconds: int = 86_400
+    # --- Persistent offer monitoring (ADR 0030). Clock lives in PostgreSQL. ---
+    offer_refresh_interval_hours: int = 12
+    offer_monitor_enabled: bool = True
+    offer_monitor_sweep_interval_seconds: int = 30
+    offer_monitor_batch_size: int = 10
+    offer_monitor_lease_seconds: int = 300
+    offer_monitor_retry_base_seconds: int = 300
+    offer_monitor_retry_max_seconds: int = 3600
+    offer_monitor_jitter_seconds: int = 600
+    offer_promotion_grace_seconds: int = 60
+    offer_monitor_stale_heartbeat_seconds: int = 300
 
     @field_validator("debug", mode="before")
     @classmethod

@@ -137,8 +137,10 @@ class MatchingRepository:
     def list_listings_for_canonical(
         self, canonical_id: uuid.UUID
     ) -> list[StoreListing]:
-        stmt = select(StoreListing).where(
-            StoreListing.canonical_product_id == canonical_id
+        stmt = (
+            select(StoreListing)
+            .where(StoreListing.canonical_product_id == canonical_id)
+            .options(selectinload(StoreListing.snapshots))
         )
         return list(self._session.scalars(stmt).all())
 
@@ -480,6 +482,12 @@ class MatchingRepository:
                 if existing is None:
                     raise
                 listing = existing
+            else:
+                from scout_api.modules.monitoring.hooks import (
+                    initialize_listing_schedule,
+                )
+
+                initialize_listing_schedule(listing, checked_at=None)
         else:
             listing.canonical_product_id = canonical.id
             listing.product_id = item.product_id
@@ -546,6 +554,9 @@ class MatchingRepository:
     def mark_listing_removed(self, listing: StoreListing) -> None:
         listing.status = "removed"
         listing.updated_at = _utcnow()
+        from scout_api.modules.monitoring.hooks import mark_removed_listing
+
+        mark_removed_listing(listing)
         self._session.flush()
 
     def commit(self) -> None:

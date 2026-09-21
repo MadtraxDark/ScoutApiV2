@@ -83,8 +83,9 @@ Itens resolvidos **não** ficam no índice ativo.
 | ID | Título | Status | Tipo | Prioridade | Área |
 |---|---|---|---|---|---|
 | [PENDING-012](PENDING-012-mercadolivre-serp-account-verification.md) | Mercado Livre SERP account-verification (auth wall) | OPEN | INCOMPLETE | P1 | crawler/mercadolivre |
+| [PENDING-014](PENDING-014-promo-timer-spider-wiring.md) | Extrair timers de promo em spiders live (Pichau/ML/Shopee) | OPEN | INCOMPLETE | P2 | crawler/promotions |
 
-*(pendências ativas: 1)*
+*(pendências ativas: 2)*
 
 Resolvida em 2026-09-21:
 
