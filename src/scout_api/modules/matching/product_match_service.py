@@ -189,6 +189,7 @@ class ProductMatchService:
             persist=request.persist,
             include_images=request.include_images,
             max_candidates_per_store=request.max_candidates_per_store,
+            canonical_product_id=request.canonical_product_id,
             clear_reference_price=False,
             on_progress=on_progress,
         )
@@ -202,6 +203,7 @@ class ProductMatchService:
         persist: bool = False,
         include_images: bool = False,
         max_candidates_per_store: int = 5,
+        canonical_product_id: UUID | None = None,
         clear_reference_price: bool = True,
         on_progress: ProgressCallback | None = None,
     ) -> MatchResponse:
@@ -223,6 +225,7 @@ class ProductMatchService:
             persist=persist,
             include_images=include_images,
             max_candidates_per_store=max_candidates_per_store,
+            canonical_product_id=canonical_product_id,
             on_progress=on_progress,
         )
 
@@ -236,6 +239,7 @@ class ProductMatchService:
         persist: bool,
         include_images: bool,
         max_candidates_per_store: int,
+        canonical_product_id: UUID | None = None,
         on_progress: ProgressCallback | None = None,
     ) -> MatchResponse:
         queries = build_search_queries(ref_identity)
@@ -284,8 +288,8 @@ class ProductMatchService:
                     code="SEARCH_UNSUPPORTED",
                     message=f"Busca ao vivo não disponível para {store_key}",
                 )
+                # SEARCH_UNSUPPORTED is ERROR, never silent NO_MATCH/unmatched.
                 errors.append(err)
-                unmatched.append(store_key)
                 emit(
                     type="error",
                     store=store_key,
@@ -619,7 +623,12 @@ class ProductMatchService:
                     "Persistência requer DATABASE_URL / sessão SQLAlchemy",
                     code="DATABASE_UNAVAILABLE",
                 )
-            canonical_id = self._persist(reference, matches, learned)
+            canonical_id = self._persist(
+                reference,
+                matches,
+                learned,
+                canonical_product_id=canonical_product_id,
+            )
 
         response = MatchResponse(
             canonical_product_id=canonical_id,
@@ -743,17 +752,36 @@ class ProductMatchService:
         reference: ProductPriceItem,
         matches: list[MatchHit],
         learned: TrustedGtin | None,
+        *,
+        canonical_product_id: UUID | None = None,
     ) -> UUID:
         assert self._session is not None
         repo = MatchingRepository(self._session)
         ref_identity = identity_from_price_item(reference)
         if learned and not ref_identity.gtin:
             ref_identity = identity_with_gtin(ref_identity, learned.gtin)
-        canonical = repo.upsert_canonical_from_identity(
-            ref_identity,
-            title=reference.title,
-            attributes=dict(ref_identity.variant_attrs),
-        )
+
+        if canonical_product_id is not None:
+            canonical = repo.get_canonical(canonical_product_id)
+            if canonical is None:
+                raise RequestError(
+                    "canonical_product_id não encontrado",
+                    code="NOT_FOUND",
+                )
+            # Enrich existing product identity without creating a duplicate.
+            if ref_identity.brand and not canonical.brand:
+                canonical.brand = ref_identity.brand
+            if ref_identity.model and not canonical.model:
+                canonical.model = ref_identity.model
+            if not canonical.title and reference.title:
+                canonical.title = reference.title[:512]
+            self._session.flush()
+        else:
+            canonical = repo.upsert_canonical_from_identity(
+                ref_identity,
+                title=reference.title,
+                attributes=dict(ref_identity.variant_attrs),
+            )
         if learned:
             created = repo.ensure_gtin_identifier(
                 canonical, learned.gtin, source=learned.source
@@ -764,12 +792,14 @@ class ProductMatchService:
                     extra={"gtin": learned.gtin, "source": learned.source},
                 )
 
+        allow_reparent = canonical_product_id is not None
         ref_listing = repo.upsert_listing(
             canonical=canonical,
             item=reference,
             decision="auto_match",
             confidence=Decimal("1.0000"),
             status="active",
+            allow_reparent=allow_reparent,
         )
         ref_offer = product_offer_from_price_item(reference)
         if repo.latest_snapshot(ref_listing.id) is None:
@@ -799,6 +829,7 @@ class ProductMatchService:
                 decision=hit.decision,
                 confidence=hit.confidence,
                 status=status,
+                allow_reparent=allow_reparent,
             )
             hit.listing_id = listing.id
             offer = product_offer_from_price_item(hit.product)
@@ -834,6 +865,10 @@ class ProductMatchService:
             selected = [s.strip().lower() for s in requested if s.strip()]
         else:
             selected = list(available)
+        # "Outras lojas": never re-search the reference store itself.
+        ref_store = (reference.store or "").strip().lower()
+        if ref_store:
+            selected = [s for s in selected if s != ref_store]
         return order_stores_for_match(
             selected,
             reference_store=reference.store,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -24,6 +25,8 @@ from scout_api.modules.matching.offer_diff import (
     fingerprint_from_offer,
     snapshot_dict_from_offer,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _utcnow() -> datetime:
@@ -444,6 +447,7 @@ class MatchingRepository:
         decision: str,
         confidence: Decimal,
         status: str = "active",
+        allow_reparent: bool = False,
     ) -> StoreListing:
         listing = self.find_listing_by_store_identity(
             store=item.store,
@@ -488,21 +492,44 @@ class MatchingRepository:
                 )
 
                 initialize_listing_schedule(listing, checked_at=None)
-        else:
-            listing.canonical_product_id = canonical.id
-            listing.product_id = item.product_id
-            listing.sku = (
-                item.sku.strip() if item.sku and item.sku.strip() else listing.sku
+                return listing
+
+        # Existing listing path (found upfront or after IntegrityError).
+        if listing.canonical_product_id != canonical.id:
+            if not allow_reparent:
+                logger.warning(
+                    "listing_reparent_skipped",
+                    extra={
+                        "listing_id": str(listing.id),
+                        "existing_canonical": str(listing.canonical_product_id),
+                        "requested_canonical": str(canonical.id),
+                        "store": listing.store,
+                    },
+                )
+                return listing
+            logger.info(
+                "listing_reparented",
+                extra={
+                    "listing_id": str(listing.id),
+                    "from_canonical": str(listing.canonical_product_id),
+                    "to_canonical": str(canonical.id),
+                },
             )
-            listing.gtin = item.gtin
-            listing.url = item.url
-            listing.canonical_url = item.canonical_url
-            listing.match_decision = decision
-            listing.confidence = confidence
-            listing.status = status
-            listing.title = item.title[:512] if item.title else listing.title
-            listing.updated_at = _utcnow()
-            self._session.flush()
+            listing.canonical_product_id = canonical.id
+
+        listing.product_id = item.product_id
+        listing.sku = (
+            item.sku.strip() if item.sku and item.sku.strip() else listing.sku
+        )
+        listing.gtin = item.gtin
+        listing.url = item.url
+        listing.canonical_url = item.canonical_url
+        listing.match_decision = decision
+        listing.confidence = confidence
+        listing.status = status
+        listing.title = item.title[:512] if item.title else listing.title
+        listing.updated_at = _utcnow()
+        self._session.flush()
         return listing
 
     def latest_snapshot(self, listing_id: uuid.UUID) -> OfferSnapshot | None:

@@ -81,6 +81,13 @@ class MatchRequest(BaseModel):
     reference_url: AbsoluteHttpUrl = Field(
         description="URL do produto de referência usado como base do matching."
     )
+    canonical_product_id: UUID | None = Field(
+        default=None,
+        description=(
+            "Quando informado, persiste matches neste produto canônico "
+            "existente (evita reparentar listings e criar duplicata)."
+        ),
+    )
     stores: list[str] | None = Field(
         default=None,
         description="Lista de lojas a consultar; se omitida, usa o conjunto padrão.",
@@ -272,6 +279,41 @@ class ProductRegisterRequest(BaseModel):
     )
     canonical_url: AbsoluteHttpUrl | None = Field(
         default=None, description="URL canônica do listing na loja."
+    )
+    price: Decimal | None = Field(
+        default=None,
+        gt=0,
+        description=(
+            "Preço atual observado no preview/crawl. "
+            "Quando informado com listing, cria o OfferSnapshot inicial."
+        ),
+        examples=["4799.00"],
+    )
+    pix_price: Decimal | None = Field(
+        default=None,
+        gt=0,
+        description="Preço no Pix observado no preview, quando houver.",
+        examples=["4559.05"],
+    )
+    original_price: Decimal | None = Field(
+        default=None,
+        gt=0,
+        description="Preço original/list price observado no preview.",
+        examples=["5299.00"],
+    )
+    currency: str | None = Field(
+        default=None,
+        max_length=8,
+        description="Moeda ISO do preço (ex.: BRL). Default BRL se houver preço.",
+    )
+    seller: str | None = Field(
+        default=None,
+        max_length=256,
+        description="Vendedor observado no preview.",
+    )
+    available: bool | None = Field(
+        default=None,
+        description="Disponibilidade booleana observada no preview.",
     )
     images: list[ApprovedImageInput] = Field(
         default_factory=list,

@@ -111,13 +111,15 @@ class ProductRegistrationService:
                     )
                 if request.images:
                     self._persist_images(product.id, request.images, owner=owner)
-                    product_view = self.get_product(product.id, viewer=owner)
-                    assert product_view is not None
+                self._seed_offer_snapshot(repo, existing_listing, request)
+                product_view = self.get_product(product.id, viewer=owner)
+                assert product_view is not None
+                listing = repo.get_listing(existing_listing.id) or existing_listing
                 return ProductRegisterResponse(
                     created=False,
                     listing_created=False,
                     product=product_view,
-                    listing=_to_listing_view(existing_listing),
+                    listing=_to_listing_view(listing),
                 )
 
         attrs = dict(request.attributes or {})
@@ -198,6 +200,7 @@ class ProductRegistrationService:
                 gtin=gtin,
                 title=request.title,
             )
+            self._seed_offer_snapshot(repo, listing, request)
             listing_view = _to_listing_view(listing)
         self._session.flush()
         if request.images:
@@ -444,7 +447,7 @@ class ProductRegistrationService:
             or f"scout://{request.store}/{country}/{request.product_id}"
         )
         url = str(request.url or request.canonical_url or canonical_url)
-        return repo.get_or_create_listing(
+        listing, created = repo.get_or_create_listing(
             canonical=canonical,
             store=request.store,
             country=country,
@@ -458,6 +461,58 @@ class ProductRegistrationService:
             confidence=Decimal("1.0000"),
             status="active",
         )
+        ProductRegistrationService._seed_offer_snapshot(repo, listing, request)
+        return listing, created
+
+    @staticmethod
+    def _seed_offer_snapshot(
+        repo: MatchingRepository,
+        listing: StoreListing,
+        request: ProductRegisterRequest,
+    ) -> None:
+        """Persist preview commercial fields as the first OfferSnapshot.
+
+        Import without a snapshot leaves listings with null prices in the UI
+        (``Não informado``) until ``/offers/refresh`` or ``/match`` with
+        ``persist=true``. Seeding from the crawl preview closes that gap.
+        """
+        if repo.latest_snapshot(listing.id) is not None:
+            return
+        card = request.price
+        pix = request.pix_price
+        seed_price = card or pix or request.original_price
+        if seed_price is None:
+            return
+        from datetime import UTC, datetime
+
+        from scout_api.modules.crawler.models.product import ProductOffer
+        from scout_api.modules.monitoring.hooks import initialize_listing_schedule
+
+        available = True if request.available is None else bool(request.available)
+        offer = ProductOffer(
+            store=listing.store,
+            country=listing.country,
+            product_id=listing.product_id,
+            sku=listing.sku,
+            seller=request.seller,
+            url=listing.url,
+            canonical_url=listing.canonical_url,
+            currency=(request.currency or "BRL").upper(),
+            price=seed_price,
+            original_price=request.original_price,
+            pix_price=pix,
+            availability="available" if available else "out_of_stock",
+            available=available,
+            scraped_at=datetime.now(UTC),
+            metadata={"source": "product_register_preview"},
+        )
+        repo.append_snapshot_from_offer(listing, offer)
+        repo.append_event(
+            listing,
+            "offer_created",
+            after={"url": listing.url, "source": "product_register_preview"},
+        )
+        initialize_listing_schedule(listing, checked_at=offer.scraped_at)
 
 
 def _to_product_view(

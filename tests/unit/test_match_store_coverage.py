@@ -74,11 +74,35 @@ def test_match_includes_all_implemented_stores_dynamically() -> None:
         | {m.store for m in resp.matches}
         | {e.store for e in resp.errors}
     )
-    # Every implemented catalog key must appear as a terminal outcome.
-    assert set(implemented).issubset(covered)
+    # Every implemented catalog key except the reference store must appear.
+    expected = set(implemented) - {"mercadolivre"}
+    assert expected.issubset(covered)
+    assert "mercadolivre" not in covered
     assert any(
         e.code == "SEARCH_UNSUPPORTED" and e.store == "visaovip" for e in resp.errors
     )
+    # SEARCH_UNSUPPORTED is ERROR, never silent unmatched/NO_MATCH.
+    assert "visaovip" not in resp.unmatched_stores
+
+
+def test_match_excludes_reference_store_even_when_requested() -> None:
+    scrape = MagicMock()
+    scrape.scrape.return_value = _item()
+    search = MagicMock()
+    search.is_search_supported.return_value = True
+    search.search.return_value = []
+
+    resp = ProductMatchService(scrape_service=scrape, search_service=search).match(
+        MatchRequest(
+            reference_url="https://www.mercadolivre.com.br/p/MLB1",
+            stores=["mercadolivre", "kabum"],
+            persist=False,
+        )
+    )
+    searched_stores = {call.args[0] for call in search.search.call_args_list}
+    assert searched_stores == {"kabum"}
+    assert "mercadolivre" not in resp.unmatched_stores
+    assert "kabum" in resp.unmatched_stores
 
 
 def test_scrape_upstream_error_is_not_silent_unmatched() -> None:

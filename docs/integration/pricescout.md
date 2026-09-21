@@ -35,7 +35,8 @@ PriceScout (localhost:3000)
 | get/discard preview | preview TTL | — | OBSOLETE_FRONTEND_BEHAVIOR | estado local FE |
 | import | `POST …/import` | `POST /products` | FRONTEND_ADAPTER | `ProductRegisterRequest` |
 | other-store prices | `POST …/other-store-prices` | `POST /match` | FRONTEND_ADAPTER | URL de listing |
-| other-store stream | SSE variants | `POST /match/stream` | BACKEND_ENDPOINT_REQUIRED | SSE real (1 execução) |
+| other-store stream | SSE variants | `POST /match/stream` | DIRECT_MAPPING | SSE real (1 execução) + refresh prévio |
+| other-store refresh | (fase stream legado) | `POST /offers/refresh` | DIRECT_MAPPING | antes do match no FE |
 | offers refresh | — | `POST /offers/refresh` | DIRECT_MAPPING | integrar |
 | list stores | `GET …/catalog/stores` | `GET /stores` | BACKEND_ENDPOINT_REQUIRED | registry crawler |
 | create/update store | POST/PATCH stores | — | OBSOLETE_FRONTEND_BEHAVIOR | somente leitura |
@@ -112,6 +113,24 @@ Canônico: [`docs/persistence/product-images.md`](../persistence/product-images.
 `POST /match/stream` emite SSE na **mesma** execução do match (sem segunda
 chamada). Eventos: `store_started`, `searching`, `candidates_found`,
 `scraping_candidate`, `matched`, `no_match`, `error`, `completed`.
+
+Fluxo PriceScout do botão **Buscar preços em outras lojas**:
+
+1. `POST /offers/refresh` — atualiza snapshots das ofertas já persistidas
+2. `POST /match/stream` — descoberta em outras lojas (execução única SSE)
+3. `GET /products/{id}` — recarrega ofertas persistidas na UI
+
+Regras:
+
+- `reference_url` vem da listing mais confiável (URL canônica, disponível,
+  com preço, preferindo a loja de origem) — nunca `variants[0]` cego.
+- A loja de referência **não** entra na descoberta (“outras lojas”).
+- `SEARCH_UNSUPPORTED` → `errors[]` (nunca `unmatched_stores`).
+- Import (`POST /products`) pode enviar `price` / `pix_price` /
+  `original_price` do preview para seed do `OfferSnapshot` inicial.
+- `persist=true` e `include_review=true` no fluxo de busca do painel.
+- O FE envia `canonical_product_id` no match para persistir no mesmo
+  produto da página (evita duplicata / reparent silencioso de listing).
 
 ## CORS
 

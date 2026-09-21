@@ -257,3 +257,39 @@ def test_service_blocks_other_owner_product(session: Session) -> None:
         )
     assert exc.value.code == "FORBIDDEN"
     assert service.get_product(first.product.id, viewer=other) is None
+
+
+def test_service_register_seeds_offer_snapshot_from_preview_prices(
+    session: Session,
+) -> None:
+    service = ProductRegistrationService(session)
+    response = service.register(
+        ProductRegisterRequest(
+            title="Notebook com preço",
+            brand="Lenovo",
+            model="Slim 3",
+            store="kabum",
+            country="BR",
+            product_id="222",
+            canonical_url="https://www.kabum.com.br/produto/222",
+            price=Decimal("3499.90"),
+            pix_price=Decimal("3299.90"),
+            original_price=Decimal("3999.00"),
+            currency="BRL",
+            seller="KaBuM!",
+            available=True,
+        ),
+        owner=_OWNER,
+    )
+    session.commit()
+    assert response.listing is not None
+    assert response.listing.price == Decimal("3499.90")
+    assert response.listing.pix_price == Decimal("3299.90")
+    assert response.listing.original_price == Decimal("3999.00")
+    assert response.listing.currency == "BRL"
+    assert response.listing.seller == "KaBuM!"
+
+    fetched = service.get_product(response.product.id, viewer=_OWNER)
+    assert fetched is not None
+    assert fetched.listings[0].price == Decimal("3499.90")
+    assert fetched.listings[0].pix_price == Decimal("3299.90")
