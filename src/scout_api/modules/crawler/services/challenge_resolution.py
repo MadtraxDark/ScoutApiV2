@@ -1,8 +1,8 @@
 """Challenge / CAPTCHA / auth-wall classification and resolution (ADR 0017, 0018).
 
 Amazon image captchas are solved offline with ``amazoncaptcha`` (no API key).
-Login walls use operator credentials from env (never committed) plus session
-re-navigation.
+Auth walls: operator credentials (Amazon/Shopee) or credential-free session
+bypass (Mercado Livre Snoopy + origin warm + resume). Never commit secrets.
 """
 
 from __future__ import annotations
@@ -44,8 +44,6 @@ class StoreAuthCredentials:
     amazon_password: str | None = None
     shopee_email: str | None = None
     shopee_password: str | None = None
-    mercadolivre_email: str | None = None
-    mercadolivre_password: str | None = None
 
 
 _AMAZON_CAPTCHA_IMG_RE = re.compile(
@@ -83,6 +81,14 @@ def classify_challenge(
             resolvable=False,
             detail="cloudflare-or-waf-hard-block",
         )
+    # Mercado Livre: Snoopy PoW often coexists with /gz/account-verification
+    # wrappers — resolve PoW/session before treating the page as a login form.
+    if is_mercadolivre_snoopy_challenge(html):
+        return ChallengeAssessment(
+            kind=ChallengeKind.MERCADOLIVRE_SNOOPY,
+            resolvable=True,
+            detail="mercadolivre-snoopy-pow",
+        )
     if is_shopee_traffic_block(url or "", html) or is_auth_wall_page(
         html, url=url, title=title
     ):
@@ -98,12 +104,6 @@ def classify_challenge(
 
     title_text = (title or "").strip().casefold()
     lower = (html or "")[:40_000].casefold()
-    if is_mercadolivre_snoopy_challenge(html):
-        return ChallengeAssessment(
-            kind=ChallengeKind.MERCADOLIVRE_SNOOPY,
-            resolvable=True,
-            detail="mercadolivre-snoopy-pow",
-        )
     if is_amazon_robot_check(html, title=title) or "validatecaptcha" in lower:
         return ChallengeAssessment(
             kind=ChallengeKind.AMAZON_IMAGE_CAPTCHA,
@@ -359,7 +359,12 @@ class ChallengeResolver:
                     )
             logged_in = self._login_shopee(page)
         elif self._is_mercadolivre_host(host):
-            logged_in = self._login_mercadolivre(page)
+            # Credential-free session bypass (Snoopy + origin warm + resume).
+            return self._bypass_mercadolivre_auth_wall(
+                page,
+                page_url=page_url,
+                resume_url=resume_url,
+            )
         else:
             logged_in = self._login_generic(page)
 
@@ -502,87 +507,99 @@ class ChallengeResolver:
             return False
         return True
 
-    def _login_mercadolivre(self, page: Any) -> bool:
-        """Login on gz/account-verification / enter-email flow (operator env)."""
-        creds = self.credentials
-        email = (creds.mercadolivre_email if creds else None) or ""
-        password = (creds.mercadolivre_password if creds else None) or ""
-        if not email.strip() or not password.strip():
-            logger.info("mercadolivre_auth_credentials_missing")
-            return False
+    def _bypass_mercadolivre_auth_wall(
+        self,
+        page: Any,
+        *,
+        page_url: str,
+        resume_url: str | None,
+    ) -> bool:
+        """Clear ML soft-auth without ``MERCADOLIVRE_AUTH_*`` credentials.
 
-        # Landing often shows "Já tenho conta" before the email form.
+        Strategy (ADR 0018): resolve Snoopy/PoW if present, soft-dismiss
+        continue buttons, warm the public origin, then reopen the ``go`` /
+        resume URL. Persistent Camoufox profile cookies are reused; password
+        login is intentionally not used.
+        """
+        from .html_fetcher import (  # noqa: PLC0415
+            is_auth_wall_page,
+            is_mercadolivre_snoopy_challenge,
+        )
+
+        html = _safe_content(page)
+        if is_mercadolivre_snoopy_challenge(html) or (
+            "continue-button" in html.casefold()
+        ):
+            self._resolve_mercadolivre_snoopy(page)
+
         _click_first(
             page,
             (
-                "button:has-text('Já tenho conta')",
-                "a:has-text('Já tenho conta')",
-                "button:has-text('Ya tengo cuenta')",
-                "a:has-text('Ya tengo cuenta')",
-            ),
-        )
-        try:
-            page.wait_for_timeout(1_200)
-        except Exception:
-            pass
-
-        email_ok = _fill_first(
-            page,
-            (
-                "input[type='email']",
-                "input[name='user_id']",
-                "input#user_id",
-                "input[name='email']",
-            ),
-            email.strip(),
-        )
-        if not email_ok:
-            logger.warning("mercadolivre_auth_email_field_missing")
-            return False
-        _click_first(
-            page,
-            (
+                "#continue-button:not([disabled])",
+                "button#continue-button",
+                "button.micro-landing-button",
+                "button:has-text('Continuar navegando')",
+                "a:has-text('Continuar navegando')",
+                "button:has-text('Entendi')",
                 "button:has-text('Continuar')",
-                "button[type='submit']",
-                "button:has-text('Continue')",
             ),
         )
         try:
-            page.wait_for_timeout(1_500)
-        except Exception:
-            pass
-        password_ok = _fill_first(
-            page,
-            (
-                "input[type='password']",
-                "input[name='password']",
-                "input#password",
-            ),
-            password.strip(),
-        )
-        if not password_ok:
-            logger.warning("mercadolivre_auth_password_field_missing")
-            return False
-        _click_first(
-            page,
-            (
-                "button:has-text('Entrar')",
-                "button[type='submit']",
-                "button:has-text('Iniciar sesión')",
-                "button:has-text('Log in')",
-            ),
-        )
-        try:
-            page.wait_for_timeout(min(self.soft_wait_ms, 5_000))
+            page.wait_for_timeout(min(2_000, self.soft_wait_ms))
         except Exception:
             pass
 
-        from .html_fetcher import is_auth_wall_page  # noqa: PLC0415
+        target = (
+            resume_url
+            or extract_auth_resume_url(page_url, fallback=None)
+            or "https://lista.mercadolivre.com.br/"
+        )
+        goto_timeout = max(15_000, self.soft_wait_ms * 2)
+
+        # Origin warm mints public session cookies without an account login.
+        try:
+            page.goto(
+                "https://www.mercadolivre.com.br/",
+                wait_until="domcontentloaded",
+                timeout=goto_timeout,
+            )
+            page.wait_for_timeout(min(2_500, self.soft_wait_ms))
+        except Exception:
+            logger.warning("mercadolivre_origin_warm_failed", exc_info=True)
+
+        home_html = _safe_content(page)
+        if is_mercadolivre_snoopy_challenge(home_html):
+            self._resolve_mercadolivre_snoopy(page)
+
+        try:
+            page.goto(target, wait_until="domcontentloaded", timeout=goto_timeout)
+            page.wait_for_timeout(min(3_000, self.soft_wait_ms))
+        except Exception:
+            logger.warning(
+                "mercadolivre_auth_bypass_resume_failed",
+                exc_info=True,
+                extra={"url": target[:160]},
+            )
+            return False
+
+        target_html = _safe_content(page)
+        if is_mercadolivre_snoopy_challenge(target_html):
+            self._resolve_mercadolivre_snoopy(page)
+            target_html = _safe_content(page)
 
         cur_url = _safe_url(page) or ""
-        cur_html = _safe_content(page)
-        if is_auth_wall_page(cur_html, url=cur_url, title=_safe_title(page)):
+        if is_auth_wall_page(
+            target_html, url=cur_url, title=_safe_title(page)
+        ):
+            logger.info(
+                "mercadolivre_auth_bypass_wall_persists",
+                extra={"url": cur_url[:160]},
+            )
             return False
+        logger.info(
+            "mercadolivre_auth_bypass_ok",
+            extra={"url": cur_url[:160]},
+        )
         return True
 
     def _login_generic(self, page: Any) -> bool:
@@ -849,6 +866,9 @@ class ChallengeResolver:
                         document.querySelector('script[type=\"application/ld+json\"]')
                         || document.querySelector('.ui-pdp-price')
                         || document.querySelector('h1.ui-pdp-title')
+                        || document.querySelector('.ui-search-layout')
+                        || document.querySelector('a.poly-component__title')
+                        || document.querySelector('.ui-search-results')
                     );
                 }""",
                 timeout=wait_ms,

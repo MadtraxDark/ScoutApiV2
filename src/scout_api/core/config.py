@@ -100,8 +100,6 @@ class Settings(BaseSettings):
     amazon_auth_password: str | None = None
     shopee_auth_email: str | None = None
     shopee_auth_password: str | None = None
-    mercadolivre_auth_email: str | None = None
-    mercadolivre_auth_password: str | None = None
     # --- Product images / Google Drive (ADR 0029). Backend-only secrets. ---
     google_drive_client_id: str | None = None
     google_drive_client_secret: str | None = None

@@ -55,8 +55,8 @@ class MercadoLivreSpider(BaseStoreSpider):
             and "ui-search-layout" not in html.casefold()
         ):
             raise RequestError(
-                "Mercado Livre exige login/sessão (account-verification); "
-                "configure MERCADOLIVRE_AUTH_EMAIL/PASSWORD ou faça seed da sessão",
+                "Mercado Livre exige sessão/browser (account-verification); "
+                "o fetch tenta bypass Camoufox (Snoopy + warm) e proxy FALLBACK",
                 code="AUTH_REQUIRED",
                 url=page_url or None,
                 retryable=True,

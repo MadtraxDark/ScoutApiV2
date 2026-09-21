@@ -1,13 +1,11 @@
 """Open a headed Camoufox window to seed the persistent browser profile.
 
-Use this once (or when Shopee trust expires) so Docker scrapes reuse cookies /
-device binding for signed ``get_pc`` calls.
+Use this once (or when trust expires) so Docker scrapes reuse cookies /
+device binding.
 
-Google SSO often freezes or is blocked inside automated browsers. Prefer
-Shopee email/password (or phone) login when seeding.
-
-Example:
+Examples:
     python scripts/seed_camoufox_profile.py --login
+    python scripts/seed_camoufox_profile.py --mercadolivre
     python scripts/seed_camoufox_profile.py --url https://shopee.com.br/...
 """
 
@@ -31,6 +29,8 @@ from scout_api.modules.crawler.services.html_fetcher import (  # noqa: E402
 
 DEFAULT_URL = "https://shopee.com.br/"
 LOGIN_URL = "https://shopee.com.br/buyer/login"
+ML_HOME_URL = "https://www.mercadolivre.com.br/"
+ML_LISTA_URL = "https://lista.mercadolivre.com.br/informatica"
 HOST_PROFILES_ROOT = ROOT / "data" / "camoufox-profiles"
 HOST_PROFILE_DIR = HOST_PROFILES_ROOT / "default"
 
@@ -94,6 +94,11 @@ def main() -> int:
         help=f"Open {LOGIN_URL} (prefer e-mail/senha; avoid Google SSO).",
     )
     parser.add_argument(
+        "--mercadolivre",
+        action="store_true",
+        help="Warm Mercado Livre session (home + lista) without password env.",
+    )
+    parser.add_argument(
         "--no-proxy",
         action="store_true",
         help="Ignore CAMOUFOX_PROXY_URL (not recommended for Shopee).",
@@ -104,7 +109,14 @@ def main() -> int:
         help="Enable Camoufox humanize (can freeze Google OAuth; off by default).",
     )
     args = parser.parse_args()
-    start_url = args.url or (LOGIN_URL if args.login else DEFAULT_URL)
+    if args.url:
+        start_url = args.url
+    elif args.mercadolivre:
+        start_url = ML_HOME_URL
+    elif args.login:
+        start_url = LOGIN_URL
+    else:
+        start_url = DEFAULT_URL
 
     settings = get_settings()
     profile = _profile_dir(settings.camoufox_user_data_dir)
@@ -149,18 +161,32 @@ def main() -> int:
     print(f"Profile: {profile}")
     print(f"Opening: {start_url}")
     print()
-    print("IMPORTANTE — login Shopee:")
-    print("  • Prefira e-mail/senha ou telefone (NÃO Google).")
-    print("  • Google SSO costuma travar/bloquear no Camoufox.")
-    print("  • Se uma popup abrir, use essa janela; depois volte aqui.")
-    print()
-    print("Depois do login: abra um produto, volte ao terminal, Enter.")
+    if args.mercadolivre:
+        print("IMPORTANTE — Mercado Livre (sem senha no .env):")
+        print("  • Deixe a home carregar; se Snoopy aparecer, clique Continuar.")
+        print("  • Em seguida abra uma lista (ex. informática) e uma PDP.")
+        print("  • Não é necessário login de conta para o bypass automático.")
+        print()
+        print("Depois do warm: volte ao terminal e pressione Enter.")
+    else:
+        print("IMPORTANTE — login Shopee:")
+        print("  • Prefira e-mail/senha ou telefone (NÃO Google).")
+        print("  • Google SSO costuma travar/bloquear no Camoufox.")
+        print("  • Se uma popup abrir, use essa janela; depois volte aqui.")
+        print()
+        print("Depois do login: abra um produto, volte ao terminal, Enter.")
 
     try:
         with Camoufox(**launch) as browser:  # type: ignore[no-untyped-call]
             _attach_popup_handler(browser)
             page = _first_page(browser)
             page.goto(start_url, wait_until="domcontentloaded")
+            if args.mercadolivre and not args.url:
+                try:
+                    page.wait_for_timeout(2_500)
+                    page.goto(ML_LISTA_URL, wait_until="domcontentloaded")
+                except Exception as exc:
+                    print(f"Aviso: falha ao abrir lista ML ({exc})")
             try:
                 input("\nPress Enter to save profile and exit… ")
             except EOFError:

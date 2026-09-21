@@ -47,8 +47,6 @@ def get_shared_html_fetcher() -> HtmlFetcher:
         amazon_auth_password=settings.amazon_auth_password,
         shopee_auth_email=settings.shopee_auth_email,
         shopee_auth_password=settings.shopee_auth_password,
-        mercadolivre_auth_email=settings.mercadolivre_auth_email,
-        mercadolivre_auth_password=settings.mercadolivre_auth_password,
     )
 
 

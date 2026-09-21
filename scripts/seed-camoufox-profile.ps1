@@ -1,6 +1,7 @@
 param(
     [string]$Url = "",
     [switch]$Login,
+    [switch]$MercadoLivre,
     [switch]$NoProxy,
     [switch]$Humanize
 )
@@ -35,7 +36,10 @@ if (-not $python) {
 }
 
 $argList = @("scripts\seed_camoufox_profile.py")
-if ($Login) {
+if ($MercadoLivre) {
+    $argList += "--mercadolivre"
+}
+elseif ($Login) {
     $argList += "--login"
 }
 if ($Url) {
@@ -49,7 +53,11 @@ if ($Humanize) {
 }
 
 Write-Host "Launching headed Camoufox seed..."
-Write-Host "Dica: use e-mail/senha da Shopee. Login Google costuma travar."
+if ($MercadoLivre) {
+    Write-Host "ML: warm home/lista — sem senha; feche Snoopy se aparecer."
+} else {
+    Write-Host "Dica: use e-mail/senha da Shopee. Login Google costuma travar."
+}
 & $python @argList
 $exit = $LASTEXITCODE
 

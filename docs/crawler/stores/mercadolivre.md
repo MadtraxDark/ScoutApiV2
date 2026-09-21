@@ -22,9 +22,11 @@
 - Soft-block na lista pode ser:
   1. **Snoopy PoW** (HTTP 200 fino com `snoopy-script`) — **resolver** com
      Camoufox (ADR 0017); validado live 2026-09-21 (direct, sem proxy)
-  2. **`gz/account-verification`** (auth wall) — **resolver** com login
-     operador `MERCADOLIVRE_AUTH_*` / sessão seed (ADR 0018); se esgotar →
-     `AUTH_REQUIRED` (nunca SERP vazia / `NO_MATCH`)
+  2. **`gz/account-verification`** — bypass **sem** `MERCADOLIVRE_AUTH_*`:
+     Snoopy/Continuar → warm `www.mercadolivre.com.br` → reopen `go`/resume
+     (ADR 0018). Profile persistente Camoufox opcional
+     (`make seed-mercadolivre`). Se esgotar → `AUTH_REQUIRED` + proxy
+     FALLBACK (nunca SERP vazia / `NO_MATCH`)
 - HTTP-first (`curl_cffi`): SERP `ui-search` OK; Snoopy/auth wall → Camoufox
   (+ proxy FALLBACK só após bloqueio classificado)
 
@@ -101,10 +103,9 @@ challenge nunca vira produto (`available=false` / preço fabricado).
 
 - Bot Manager **Snoopy** PoW (`verifyChallenge`, `#continue-button`, `_bmc`) —
   comum na SERP lista via HTTP; Camoufox resolve (ADR 0017)
-- SERP/lista: às vezes redirect para `gz/account-verification` (“acesse sua
-  conta”) — **auth wall** (`AUTH_REQUIRED` após tentativa de bypass).
-  Resolução: login com `MERCADOLIVRE_AUTH_EMAIL` / `MERCADOLIVRE_AUTH_PASSWORD`
-  (operador local) + proxy FALLBACK se necessário (ADR 0018)
+- SERP/lista: às vezes `gz/account-verification` — bypass credential-free
+  (warm + resume + Snoopy); `AUTH_REQUIRED` só após esgotar; proxy FALLBACK
+  elegível (ADR 0018). **Não** há dependência de `MERCADOLIVRE_AUTH_*`
 - `api.mercadolibre.com` frequentemente 403/401 sem app auth
 - Camoufox resolve Snoopy (ADR 0017) antes de parsear PDP/SERP
 
@@ -112,7 +113,8 @@ challenge nunca vira produto (`available=false` / preço fabricado).
 
 - HTTP 200 ≠ PDP (Snoopy devolve 200 com title/meta sem oferta)
 - Challenge Snoopy **deve ser resolvido** (Camoufox + ADR 0017); auth wall
-  **deve** usar bypass (ADR 0018). Proibir bypass é inválido
+  **deve** usar bypass de sessão (warm/resume/Snoopy — ADR 0018), sem
+  exigir env de senha ML. Proibir bypass é inválido
 - HTML Snoopy ≠ produto: emitir `UPSTREAM_BLOCKED` para o fetch continuar
   resolução — nunca fabricar `available=false` / preço / promo
 - Fail closed em preço ausente **após** PDP real (`MissingPriceError`)

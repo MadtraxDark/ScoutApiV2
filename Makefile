@@ -2,7 +2,7 @@
 
 SHOPEE_SEED_URL ?= https://shopee.com.br/Kingston-HyperX-Fury-DDR4-PC-RAM-4-Gb-8-16-DDR4-2133-2400-2666-3200-Mhz-Mem%C3%B3ria-De-Mesa-i.341936748.29277977480
 
-.PHONY: help spiders spiders-logs spiders-down seed-shopee seed-shopee-login up test test-unit test-integration test-live test-full test-performance lint format typecheck migrate
+.PHONY: help spiders spiders-logs spiders-down seed-shopee seed-shopee-login seed-mercadolivre up test test-unit test-integration test-live test-full test-performance lint format typecheck migrate
 
 help:
 	@echo "Comandos disponíveis:"
@@ -11,6 +11,7 @@ help:
 	@echo "  make spiders-down       Para o ambiente em modo spiders"
 	@echo "  make seed-shopee        Abre Camoufox headed para aquecer o profile (PDP Shopee)"
 	@echo "  make seed-shopee-login  Abre a página de login da Shopee no Camoufox headed"
+	@echo "  make seed-mercadolivre  Abre Camoufox headed na home/lista ML (warm de sessão)"
 	@echo "  make up                 Inicia a API reconstruindo a imagem"
 	@echo "  make migrate            Aplica migrations Alembic (DATABASE_URL)"
 	@echo "  make test               Suite rápida (unit + integration determinística; exclui live/slow)"
@@ -38,6 +39,9 @@ seed-shopee:
 
 seed-shopee-login:
 	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/seed-camoufox-profile.ps1 -Login
+
+seed-mercadolivre:
+	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/seed-camoufox-profile.ps1 -MercadoLivre
 
 up:
 	docker compose up --build

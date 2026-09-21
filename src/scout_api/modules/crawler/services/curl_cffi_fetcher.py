@@ -202,8 +202,8 @@ class CurlCffiHtmlFetcher:
             )
 
         text = body.decode("utf-8", errors="replace")
-        # Soft blocks (Snoopy) often return HTTP 200 — return body so the
-        # progressive wrapper can escalate to Camoufox instead of raising here.
+        # Soft blocks (Snoopy / account-verification) often return HTTP 200 —
+        # return body so progressive wrappers escalate to Camoufox + bypass.
         if is_mercadolivre_snoopy_challenge(text) or is_challenge_page(text):
             html_response = HtmlResponse(
                 url=final_url,
@@ -221,6 +221,25 @@ class CurlCffiHtmlFetcher:
             }
             return html_response
         if is_auth_wall_page(text, url=final_url):
+            # ML account-verification: escalate to Camoufox session bypass
+            # (credential-free). Other stores still raise AUTH_REQUIRED.
+            host = _host_of(final_url).casefold()
+            if "mercadolivre." in host or "mercadolibre." in host:
+                html_response = HtmlResponse(
+                    url=final_url,
+                    status=status,
+                    headers={"Content-Type": "text/html; charset=utf-8"},
+                    body=body,
+                    encoding="utf-8",
+                    request=Request(final_url),
+                )
+                html_response.meta["fetch_metrics"] = {
+                    "fetch_strategy": "curl-cffi-direct",
+                    "browser_used": False,
+                    "proxy_used": False,
+                    "soft_auth_wall": True,
+                }
+                return html_response
             raise RequestError(
                 "A loja bloqueou a requisição (auth wall)",
                 code="AUTH_REQUIRED",

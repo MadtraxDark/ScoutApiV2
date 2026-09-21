@@ -1738,8 +1738,6 @@ def build_html_fetcher(
     amazon_auth_password: str | None = None,
     shopee_auth_email: str | None = None,
     shopee_auth_password: str | None = None,
-    mercadolivre_auth_email: str | None = None,
-    mercadolivre_auth_password: str | None = None,
 ) -> HtmlFetcher:
     """Build the shared store-aware fetcher (direct + optional proxied Camoufox)."""
     from .challenge_resolution import (
@@ -1775,8 +1773,6 @@ def build_html_fetcher(
             amazon_password=amazon_auth_password,
             shopee_email=shopee_auth_email,
             shopee_password=shopee_auth_password,
-            mercadolivre_email=mercadolivre_auth_email,
-            mercadolivre_password=mercadolivre_auth_password,
         ),
     )
 

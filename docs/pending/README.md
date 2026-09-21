@@ -90,8 +90,8 @@ Resolvida em 2026-09-21:
 - PENDING-012 Mercado Livre SERP account-verification / soft-block — arquivo
   apagado; lista live via Camoufox resolve Snoopy; parser SERP com título +
   skip intervention ads; match identity-only Gigabyte RTX 5060 →
-  `auto_match` (`MLB50869989`); auth wall `MERCADOLIVRE_AUTH_*` permanece
-  como caminho quando o gate de login voltar
+  `auto_match` (`MLB50869989`); bypass ML credential-free (sem
+  `MERCADOLIVRE_AUTH_*`)
 
 Resolvida em 2026-09-21:
 

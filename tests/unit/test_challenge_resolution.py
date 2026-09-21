@@ -600,3 +600,90 @@ def test_camoufox_blocks_shopee_traffic_as_auth_required(tmp_path: Any) -> None:
     assert exc.value.code == "AUTH_REQUIRED"
     assert "falta de login" in str(exc.value).casefold()
     assert "SHOPEE_AUTH_EMAIL" in str(exc.value)
+
+
+def test_classify_prefers_ml_snoopy_over_account_verification() -> None:
+    html = (
+        "<html><body>"
+        "<button id='continue-button' disabled>Continuar</button>"
+        "<script src='https://http2.mlstatic.com/frontend-assets/"
+        "snoopy-generation-web/latest/snoopy-script.js'></script>"
+        "<p>account-verification</p>"
+        "</body></html>"
+    )
+    assessment = classify_challenge(
+        html,
+        title="Mercado Livre",
+        url=(
+            "https://www.mercadolivre.com.br/gz/account-verification"
+            "?go=https%3A%2F%2Flista.mercadolivre.com.br%2Frtx"
+        ),
+    )
+    assert assessment is not None
+    assert assessment.kind is ChallengeKind.MERCADOLIVRE_SNOOPY
+
+
+def test_ml_auth_bypass_without_credentials() -> None:
+    """account-verification clears via warm+resume — no MERCADOLIVRE_AUTH_*."""
+
+    class FakePage:
+        def __init__(self) -> None:
+            self.url = (
+                "https://www.mercadolivre.com.br/gz/account-verification"
+                "?go=https%3A%2F%2Flista.mercadolivre.com.br%2Frtx-5060"
+            )
+            self._mode = "wall"
+
+        def goto(self, url: str, **kwargs: Any) -> None:
+            del kwargs
+            self.url = url
+            if "lista.mercadolivre" in url:
+                self._mode = "serp"
+            elif "www.mercadolivre.com.br" in url and "/gz/" not in url:
+                self._mode = "home"
+            else:
+                self._mode = "wall"
+
+        def content(self) -> str:
+            if self._mode == "serp":
+                return (
+                    "<html><body class='ui-search-layout'>"
+                    "<a class='poly-component__title' href='/p/MLB1'>GPU</a>"
+                    "</body></html>"
+                )
+            if self._mode == "home":
+                return "<html><body>Mercado Livre</body></html>"
+            return (
+                "<html><body>Olá! Para continuar, acesse sua conta"
+                "<p>account-verification</p></body></html>"
+            )
+
+        def title(self) -> str:
+            return "Mercado Livre"
+
+        def wait_for_timeout(self, ms: int) -> None:
+            del ms
+
+        def wait_for_function(self, *args: Any, **kwargs: Any) -> None:
+            del args, kwargs
+
+        def query_selector(self, selector: str) -> None:
+            del selector
+            return None
+
+    page = FakePage()
+    resolver = ChallengeResolver(
+        max_attempts=1,
+        soft_wait_ms=1,
+        enabled=True,
+        auth_bypass_enabled=True,
+        credentials=None,
+    )
+    ok = resolver._bypass_mercadolivre_auth_wall(
+        page,
+        page_url=page.url,
+        resume_url="https://lista.mercadolivre.com.br/rtx-5060",
+    )
+    assert ok is True
+    assert "lista.mercadolivre" in page.url
+    assert "ui-search-layout" in page.content()
