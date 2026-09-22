@@ -135,6 +135,65 @@ def test_crawl_rejects_alg_none(auth_settings: str) -> None:
         verify_access_token(token, settings=get_settings())
 
 
+def test_token_without_aud_still_verifies_hs256(auth_settings: str) -> None:
+    """Supabase claim shape can omit aud; signature + sub/exp must still pass."""
+    now = datetime.now(UTC)
+    token = jwt.encode(
+        {
+            "sub": str(uuid4()),
+            "exp": now + timedelta(minutes=15),
+            "iat": now,
+            "role": "authenticated",
+        },
+        auth_settings,
+        algorithm="HS256",
+    )
+    principal = verify_access_token(token, settings=get_settings())
+    assert principal.id is not None
+
+
+def test_auth_server_fallback_when_local_signature_fails(
+    auth_settings: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from scout_api.modules.auth import jwt_service as jwt_mod
+
+    user_id = uuid4()
+
+    class FakeResponse:
+        status_code = 200
+
+        def json(self) -> dict:
+            return {
+                "id": str(user_id),
+                "email": "user@example.com",
+                "user_metadata": {"full_name": "Fallback User"},
+                "app_metadata": {"provider": "google"},
+            }
+
+    monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
+    monkeypatch.setenv("SUPABASE_ANON_KEY", "test-anon-key")
+    get_settings.cache_clear()
+    monkeypatch.setattr(
+        jwt_mod.httpx,
+        "get",
+        lambda *args, **kwargs: FakeResponse(),
+    )
+    # Wrong secret → local HS256 fails → /auth/v1/user fallback.
+    bad = jwt.encode(
+        {
+            "sub": str(user_id),
+            "aud": "authenticated",
+            "exp": datetime.now(UTC) + timedelta(minutes=15),
+        },
+        "not-the-configured-secret-value-xxxxxx",
+        algorithm="HS256",
+    )
+    principal = verify_access_token(bad, settings=get_settings())
+    assert principal.id == user_id
+    assert principal.display_name == "Fallback User"
+    get_settings.cache_clear()
+
+
 def test_valid_token_allows_crawl(auth_settings: str) -> None:
     from decimal import Decimal
 
@@ -261,6 +320,66 @@ def test_rate_limit_buckets_are_per_identity(auth_settings: str) -> None:
     a2 = limiter.check(scope="crawler", identity="u:aaa", limit=1, window_seconds=60)
     assert a.allowed and b.allowed
     assert a2.allowed is False
+
+
+def test_redis_fixed_window_expires_only_on_first_hit(auth_settings: str) -> None:
+    """Regression: EXPIRE-on-every-INCR made continuous SPA polling never reset."""
+
+    class _FakeRedis:
+        def __init__(self) -> None:
+            self.counts: dict[str, int] = {}
+            self.ttls: dict[str, int] = {}
+            self.expire_calls = 0
+
+        def eval(self, script: str, numkeys: int, key: str, window: int):
+            assert numkeys == 1
+            assert "INCR" in script.upper() or "incr" in script
+            count = self.counts.get(key, 0) + 1
+            self.counts[key] = count
+            if count == 1 or self.ttls.get(key, -1) < 0:
+                self.ttls[key] = int(window)
+                self.expire_calls += 1
+            return [count, self.ttls[key]]
+
+    class _FakeGateway:
+        def __init__(self, client: _FakeRedis) -> None:
+            self._client = client
+
+        def get_client(self):
+            return self._client
+
+    client = _FakeRedis()
+    limiter = RateLimiter(
+        settings=get_settings(), redis_gateway=_FakeGateway(client)
+    )
+    for _ in range(5):
+        ok = limiter.check(
+            scope="poll", identity="u:poller", limit=10, window_seconds=60
+        )
+        assert ok.allowed
+    assert client.expire_calls == 1
+    assert client.counts["rl:poll:u:poller"] == 5
+
+
+def test_poll_and_default_buckets_are_independent(auth_settings: str) -> None:
+    limiter = RateLimiter(settings=get_settings(), redis_gateway=None)
+    for _ in range(3):
+        assert limiter.check(
+            scope="poll", identity="u:same", limit=3, window_seconds=60
+        ).allowed
+    assert (
+        limiter.check(
+            scope="poll", identity="u:same", limit=3, window_seconds=60
+        ).allowed
+        is False
+    )
+    # Exhausting poll must not block default (or crawler start).
+    assert limiter.check(
+        scope="default", identity="u:same", limit=1, window_seconds=60
+    ).allowed
+    assert limiter.check(
+        scope="crawler", identity="u:same", limit=1, window_seconds=60
+    ).allowed
 
 
 def test_log_redaction_strips_secrets() -> None:

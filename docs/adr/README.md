@@ -29,6 +29,7 @@ Política de quando criar/atualizar docs:
 | [0031](0031-durable-image-optimization-queue.md) | Fila durável PostgreSQL para otimização AVIF | Accepted |
 | [0034](0034-secondary-exchange-rates.md) | Câmbio secundário sem API comercial (providers web + PostgreSQL) | Accepted |
 | [0035](0035-media-access-cookie.md) | Cookie HttpOnly para auth de mídia (`<img>`) | Accepted |
+| [0036](0036-persistent-product-match-runs.md) | Product Match persistente + polling (sem SSE) | Accepted |
 
 ## Índice — crawler
 

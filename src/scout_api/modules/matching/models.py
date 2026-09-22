@@ -114,9 +114,7 @@ class StoreListing(Base):
         Index(
             "ix_store_listings_monitor_due",
             "next_check_at",
-            postgresql_where=text(
-                "monitoring_enabled IS TRUE AND status = 'active'"
-            ),
+            postgresql_where=text("monitoring_enabled IS TRUE AND status = 'active'"),
             sqlite_where=text("monitoring_enabled = 1 AND status = 'active'"),
         ),
         Index(
@@ -300,3 +298,244 @@ class OfferEvent(Base):
     )
 
     listing: Mapped[StoreListing] = relationship(back_populates="events")
+
+
+# ---------------------------------------------------------------------------
+# Persistent Product Match runs (ADR 0036) — replace SSE-owned lifecycle.
+# ---------------------------------------------------------------------------
+
+ACTIVE_MATCH_RUN_STATUSES = ("pending", "running")
+TERMINAL_MATCH_RUN_STATUSES = ("completed", "failed", "cancelled")
+
+
+class ProductMatchRun(Base):
+    """One durable execution of \"buscar preços em outras lojas\"."""
+
+    __tablename__ = "product_match_runs"
+    __table_args__ = (
+        Index("ix_product_match_runs_product_started", "product_id", "started_at"),
+        Index("ix_product_match_runs_status", "status"),
+        # At most one active run per product (PostgreSQL partial unique).
+        Index(
+            "uq_product_match_runs_active_product",
+            "product_id",
+            unique=True,
+            postgresql_where=text("status IN ('pending', 'running')"),
+            sqlite_where=text("status IN ('pending', 'running')"),
+        ),
+        # Worker claim hot path.
+        Index(
+            "ix_product_match_runs_claim_due",
+            "status",
+            "claim_expires_at",
+            postgresql_where=text("status IN ('pending', 'running')"),
+            sqlite_where=text("status IN ('pending', 'running')"),
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    product_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("canonical_products.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
+    requested_by: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), nullable=True, index=True
+    )
+    reference_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
+    finished_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
+    )
+    last_activity_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
+
+    total_duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    stores_total: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    stores_completed: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    matches_found: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    no_matches: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    errors: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    failure_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    failure_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Durable lease / claim (same pattern as ADR 0030 / 0031).
+    attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    claimed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    claim_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    worker_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+    product: Mapped[CanonicalProduct] = relationship()
+    store_runs: Mapped[list[MatchStoreRun]] = relationship(
+        back_populates="run",
+        cascade="all, delete-orphan",
+        order_by="MatchStoreRun.started_at",
+    )
+
+
+class MatchStoreRun(Base):
+    """Per-store outcome for one ProductMatchRun."""
+
+    __tablename__ = "match_store_runs"
+    __table_args__ = (
+        Index("ix_match_store_runs_run_id", "run_id"),
+        UniqueConstraint("run_id", "store", name="uq_match_store_runs_run_store"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    run_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("product_match_runs.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    store: Mapped[str] = mapped_column(String(64), nullable=False)
+    store_display_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    # match | no_match | error | running | pending
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
+
+    started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    finished_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    queries: Mapped[list[Any]] = mapped_column(JSON, nullable=False, default=list)
+    queries_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    candidates_found: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    candidates_evaluated: Mapped[int] = mapped_column(
+        Integer, default=0, nullable=False
+    )
+
+    matched_listing_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True), nullable=True
+    )
+    matched_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    matched_title: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    matched_price: Mapped[Decimal | None] = mapped_column(Numeric(18, 4), nullable=True)
+    matched_currency: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    matched_confidence: Mapped[Decimal | None] = mapped_column(
+        Numeric(5, 4), nullable=True
+    )
+    matched_reasons: Mapped[list[Any]] = mapped_column(
+        JSON, nullable=False, default=list
+    )
+
+    error_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    browser_used: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    proxy_used: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+
+    search_duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    candidate_fetch_duration_ms: Mapped[int | None] = mapped_column(
+        Integer, nullable=True
+    )
+    matcher_duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    browser_duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    retry_duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    run: Mapped[ProductMatchRun] = relationship(back_populates="store_runs")
+    candidates: Mapped[list[MatchCandidateLog]] = relationship(
+        back_populates="store_run",
+        cascade="all, delete-orphan",
+        order_by="MatchCandidateLog.sequence",
+    )
+
+
+class MatchCandidateLog(Base):
+    """Observable candidate evaluation evidence (no HTML / secrets)."""
+
+    __tablename__ = "match_candidate_logs"
+    __table_args__ = (Index("ix_match_candidate_logs_store_run", "store_run_id"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    store_run_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("match_store_runs.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    sequence: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    title: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    store_product_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    decision: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    confidence: Mapped[Decimal | None] = mapped_column(Numeric(5, 4), nullable=True)
+    reasons: Mapped[list[Any]] = mapped_column(JSON, nullable=False, default=list)
+    duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    store_run: Mapped[MatchStoreRun] = relationship(back_populates="candidates")
+
+
+class UserNotification(Base):
+    """Persistent user notification (toast is ephemeral; this is durable)."""
+
+    __tablename__ = "user_notifications"
+    __table_args__ = (
+        Index("ix_user_notifications_user_created", "user_id", "created_at"),
+        Index(
+            "ix_user_notifications_user_unread",
+            "user_id",
+            "created_at",
+            postgresql_where=text("read_at IS NULL"),
+            sqlite_where=text("read_at IS NULL"),
+        ),
+        # Idempotent terminal notification per match run + type.
+        UniqueConstraint(
+            "match_run_id",
+            "type",
+            name="uq_user_notifications_match_run_type",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True), nullable=False, index=True
+    )
+    type: Mapped[str] = mapped_column(String(64), nullable=False)
+    product_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("canonical_products.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    match_run_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("product_match_runs.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    title: Mapped[str] = mapped_column(String(256), nullable=False)
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    metadata_json: Mapped[dict[str, Any]] = mapped_column(
+        "metadata", JSON, nullable=False, default=dict
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
+    read_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )

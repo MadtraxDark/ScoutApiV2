@@ -8,7 +8,7 @@ import threading
 import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import UUID
@@ -73,6 +73,33 @@ from scout_api.modules.matching.store_search_service import StoreSearchService
 logger = logging.getLogger(__name__)
 
 ProgressCallback = Callable[[MatchProgressEvent], None]
+
+
+@dataclass(frozen=True)
+class MatchStoreOutcome:
+    """Observable per-store result for durable MatchRun logging."""
+
+    store: str
+    display_name: str
+    status: str  # match | no_match | error
+    duration_ms: int
+    queries: tuple[str, ...]
+    candidates_found: int
+    candidates_evaluated: int
+    search_duration_ms: int
+    candidate_fetch_duration_ms: int
+    matched_url: str | None = None
+    matched_title: str | None = None
+    matched_price: Decimal | None = None
+    matched_currency: str | None = None
+    matched_confidence: Decimal | None = None
+    matched_reasons: tuple[str, ...] = ()
+    error_code: str | None = None
+    error_message: str | None = None
+    candidates: tuple[dict[str, object], ...] = ()
+
+
+StoreOutcomeCallback = Callable[[MatchStoreOutcome], None]
 
 # Fallback when the spider registry has no eligible match stores.
 MVP_SEARCH_STORES = (
@@ -199,6 +226,7 @@ class ProductMatchService:
         request: MatchRequest,
         *,
         on_progress: ProgressCallback | None = None,
+        on_store_outcome: StoreOutcomeCallback | None = None,
     ) -> MatchResponse:
         """Match from a live reference URL (scrape → search → score)."""
         if on_progress is not None:
@@ -226,6 +254,7 @@ class ProductMatchService:
             canonical_product_id=request.canonical_product_id,
             clear_reference_price=False,
             on_progress=on_progress,
+            on_store_outcome=on_store_outcome,
         )
 
     def match_from_item(
@@ -240,6 +269,7 @@ class ProductMatchService:
         canonical_product_id: UUID | None = None,
         clear_reference_price: bool = True,
         on_progress: ProgressCallback | None = None,
+        on_store_outcome: StoreOutcomeCallback | None = None,
     ) -> MatchResponse:
         """Match using an already-normalized reference item (no reference scrape).
 
@@ -261,6 +291,7 @@ class ProductMatchService:
             max_candidates_per_store=max_candidates_per_store,
             canonical_product_id=canonical_product_id,
             on_progress=on_progress,
+            on_store_outcome=on_store_outcome,
         )
 
     def _match_with_reference(
@@ -275,6 +306,7 @@ class ProductMatchService:
         max_candidates_per_store: int,
         canonical_product_id: UUID | None = None,
         on_progress: ProgressCallback | None = None,
+        on_store_outcome: StoreOutcomeCallback | None = None,
     ) -> MatchResponse:
         # Product Match never needs gallery bytes — ignore caller flag for cost.
         include_images = False
@@ -345,6 +377,22 @@ class ProductMatchService:
                     status="error",
                     message=err.message,
                 )
+                if on_store_outcome is not None:
+                    on_store_outcome(
+                        MatchStoreOutcome(
+                            store=store_key,
+                            display_name=display_name,
+                            status="error",
+                            duration_ms=0,
+                            queries=(),
+                            candidates_found=0,
+                            candidates_evaluated=0,
+                            search_duration_ms=0,
+                            candidate_fetch_duration_ms=0,
+                            error_code=err.code,
+                            error_message=err.message,
+                        )
+                    )
                 return
 
             store_t0 = time.perf_counter()
@@ -361,6 +409,8 @@ class ProductMatchService:
             scrape_ms_total = 0.0
             last_scrape_error: MatchStoreError | None = None
             seen_query_keys: set[str] = set()
+            executed_queries: list[str] = []
+            candidate_logs: list[dict[str, object]] = []
             for query in local_queries:
                 qkey = _normalize_query_key(query)
                 if qkey and qkey in seen_query_keys:
@@ -380,6 +430,7 @@ class ProductMatchService:
                     status="running",
                     message=f"Buscando: {query}",
                 )
+                executed_queries.append(query)
                 try:
                     search_t0 = time.perf_counter()
                     cache_key = (store_key, qkey, max_candidates_per_store)
@@ -540,6 +591,20 @@ class ProductMatchService:
                     score = self._engine.score(
                         local_identity, identity_from_price_item(product)
                     )
+                    if len(candidate_logs) < 40:
+                        candidate_logs.append(
+                            {
+                                "title": product.title,
+                                "url": product.url or product.canonical_url,
+                                "store_product_id": product.product_id,
+                                "decision": score.decision,
+                                "confidence": score.confidence,
+                                "reasons": [
+                                    f"{r.code}:{r.detail}" for r in score.reasons[:8]
+                                ],
+                                "duration_ms": int(round(scrape_ms)),
+                            }
+                        )
                     if score.decision == "reject":
                         continue
                     if score.decision == "review" and not include_review:
@@ -622,6 +687,7 @@ class ProductMatchService:
             if store_key in best_by_store:
                 with state_lock:
                     matches.append(best_by_store[store_key])
+                hit = best_by_store[store_key]
                 emit(
                     type="matched",
                     store=store_key,
@@ -630,6 +696,37 @@ class ProductMatchService:
                     status="success",
                     message=f"Match em {display_name}",
                 )
+                if on_store_outcome is not None:
+                    offer = hit.product
+                    price = None
+                    currency = None
+                    if offer is not None:
+                        price = offer.pix_price or offer.original_price
+                        currency = offer.currency
+                    on_store_outcome(
+                        MatchStoreOutcome(
+                            store=store_key,
+                            display_name=display_name,
+                            status="match",
+                            duration_ms=int(round(store_elapsed_ms)),
+                            queries=tuple(executed_queries),
+                            candidates_found=candidates_seen,
+                            candidates_evaluated=scrapes_done,
+                            search_duration_ms=int(round(search_ms_total)),
+                            candidate_fetch_duration_ms=int(round(scrape_ms_total)),
+                            matched_url=(
+                                offer.url or offer.canonical_url if offer else None
+                            ),
+                            matched_title=offer.title if offer else None,
+                            matched_price=price,
+                            matched_currency=currency,
+                            matched_confidence=hit.confidence,
+                            matched_reasons=tuple(
+                                f"{r.code}:{r.detail}" for r in hit.reasons[:12]
+                            ),
+                            candidates=tuple(candidate_logs),
+                        )
+                    )
             else:
                 with state_lock:
                     unmatched.append(store_key)
@@ -646,6 +743,23 @@ class ProductMatchService:
                         status="error",
                         message=last_error.message,
                     )
+                    if on_store_outcome is not None:
+                        on_store_outcome(
+                            MatchStoreOutcome(
+                                store=store_key,
+                                display_name=display_name,
+                                status="error",
+                                duration_ms=int(round(store_elapsed_ms)),
+                                queries=tuple(executed_queries),
+                                candidates_found=candidates_seen,
+                                candidates_evaluated=scrapes_done,
+                                search_duration_ms=int(round(search_ms_total)),
+                                candidate_fetch_duration_ms=int(round(scrape_ms_total)),
+                                error_code=last_error.code,
+                                error_message=last_error.message,
+                                candidates=tuple(candidate_logs),
+                            )
+                        )
                 elif (
                     scrapes_done > 0
                     and scrape_failures >= scrapes_done
@@ -661,6 +775,23 @@ class ProductMatchService:
                         status="error",
                         message=last_scrape_error.message,
                     )
+                    if on_store_outcome is not None:
+                        on_store_outcome(
+                            MatchStoreOutcome(
+                                store=store_key,
+                                display_name=display_name,
+                                status="error",
+                                duration_ms=int(round(store_elapsed_ms)),
+                                queries=tuple(executed_queries),
+                                candidates_found=candidates_seen,
+                                candidates_evaluated=scrapes_done,
+                                search_duration_ms=int(round(search_ms_total)),
+                                candidate_fetch_duration_ms=int(round(scrape_ms_total)),
+                                error_code=last_scrape_error.code,
+                                error_message=last_scrape_error.message,
+                                candidates=tuple(candidate_logs),
+                            )
+                        )
                 else:
                     emit(
                         type="no_match",
@@ -670,6 +801,21 @@ class ProductMatchService:
                         status="no_result",
                         message=f"Sem correspondência em {display_name}",
                     )
+                    if on_store_outcome is not None:
+                        on_store_outcome(
+                            MatchStoreOutcome(
+                                store=store_key,
+                                display_name=display_name,
+                                status="no_match",
+                                duration_ms=int(round(store_elapsed_ms)),
+                                queries=tuple(executed_queries),
+                                candidates_found=candidates_seen,
+                                candidates_evaluated=scrapes_done,
+                                search_duration_ms=int(round(search_ms_total)),
+                                candidate_fetch_duration_ms=int(round(scrape_ms_total)),
+                                candidates=tuple(candidate_logs),
+                            )
+                        )
 
         def run_stores(store_list: list[str], *, parallel: bool) -> None:
             if not store_list:

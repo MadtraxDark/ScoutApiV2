@@ -107,7 +107,10 @@ def test_openapi_includes_pricescout_routes(auth_settings: str) -> None:
     assert "patch" in paths["/products/{product_id}"]
     assert "delete" in paths["/products/{product_id}"]
     assert "/stores" in paths
-    assert "/match/stream" in paths
+    assert "/match/stream" not in paths
+    assert "/products/{product_id}/match-runs" in paths
+    assert "/match-runs/{run_id}" in paths
+    assert "/notifications" in paths
     # Product images gallery (ADR 0029)
     assert "/products/{product_id}/images" in paths
     assert "get" in paths["/products/{product_id}/images"]

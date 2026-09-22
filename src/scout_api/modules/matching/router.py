@@ -2,36 +2,49 @@
 
 from __future__ import annotations
 
-import json
-import queue
-import threading
-from collections.abc import Generator, Iterator
+from collections.abc import Generator
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, status
-from fastapi.responses import StreamingResponse
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from scout_api.core.config import get_settings
 from scout_api.core.database import get_db_session
 from scout_api.core.db_errors import classify_database_error
-from scout_api.modules.auth.deps import enforce_rate_limit, require_permission
+from scout_api.modules.auth.deps import (
+    enforce_rate_limit,
+    require_authenticated_user,
+    require_permission,
+)
 from scout_api.modules.auth.schemas import AuthenticatedPrincipal
 from scout_api.modules.crawler.core.exceptions import ParseError, RequestError
 from scout_api.modules.crawler.schemas import CrawlErrorResponse
 from scout_api.modules.crawler.spiders.registry import stores_supporting_search
 from scout_api.modules.crawler.stores import STORE_CONFIGS
+from scout_api.modules.matching.match_run_serializers import (
+    match_run_to_detail,
+    match_run_to_status,
+    notification_to_view,
+)
+from scout_api.modules.matching.match_run_service import (
+    MatchRunService,
+    NotificationService,
+)
 from scout_api.modules.matching.offer_refresh_service import OfferRefreshService
 from scout_api.modules.matching.product_match_service import ProductMatchService
 from scout_api.modules.matching.product_registration_service import (
     ProductRegistrationService,
 )
 from scout_api.modules.matching.schemas import (
-    MatchProgressEvent,
     MatchRequest,
     MatchResponse,
+    MatchRunDetailView,
+    MatchRunListResponse,
+    MatchRunStatusView,
+    NotificationListResponse,
+    NotificationView,
     OfferRefreshRequest,
     OfferRefreshResponse,
     ProductListResponse,
@@ -42,11 +55,17 @@ from scout_api.modules.matching.schemas import (
     ProductView,
     StoreInfo,
     StoreListResponse,
+    UnreadCountResponse,
 )
 
-router = APIRouter(
-    dependencies=[Depends(enforce_rate_limit("default"))],
-)
+# Rate scopes are per-route (not router-wide) so:
+# - crawler POSTs do not also burn the default bucket;
+# - SPA polling uses the dedicated `poll` bucket (ADR 0036).
+_RL_DEFAULT = Depends(enforce_rate_limit("default"))
+_RL_POLL = Depends(enforce_rate_limit("poll"))
+_RL_CRAWLER = Depends(enforce_rate_limit("crawler"))
+
+router = APIRouter()
 
 
 def _optional_db_session() -> Generator[Session | None, None, None]:
@@ -93,6 +112,36 @@ def get_registration_service(
     return ProductRegistrationService(session=session)
 
 
+def get_match_run_service(
+    session: Annotated[Session | None, Depends(_optional_db_session)],
+) -> MatchRunService:
+    if session is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "code": "DATABASE_UNAVAILABLE",
+                "message": "DATABASE_URL não configurada",
+                "retryable": False,
+            },
+        )
+    return MatchRunService(session)
+
+
+def get_notification_service(
+    session: Annotated[Session | None, Depends(_optional_db_session)],
+) -> NotificationService:
+    if session is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "code": "DATABASE_UNAVAILABLE",
+                "message": "DATABASE_URL não configurada",
+                "retryable": False,
+            },
+        )
+    return NotificationService(session)
+
+
 @router.post(
     "/products",
     response_model=ProductRegisterResponse,
@@ -114,7 +163,7 @@ def get_registration_service(
         },
     },
     status_code=status.HTTP_200_OK,
-    dependencies=[Depends(require_permission("products:write"))],
+    dependencies=[Depends(require_permission("products:write")), _RL_DEFAULT],
     summary="Cadastrar produto",
     description=(
         "Cadastra um produto canônico ou reutiliza um já existente "
@@ -158,7 +207,7 @@ def register_product(
         },
     },
     status_code=status.HTTP_200_OK,
-    dependencies=[Depends(require_permission("products:read"))],
+    dependencies=[Depends(require_permission("products:read")), _RL_DEFAULT],
     summary="Listar produtos",
     description=(
         "Lista produtos canônicos visíveis ao usuário autenticado, "
@@ -187,7 +236,7 @@ def list_products(
         401: {"model": CrawlErrorResponse, "description": "Não autenticado."},
     },
     status_code=status.HTTP_200_OK,
-    dependencies=[Depends(require_permission("products:read"))],
+    dependencies=[Depends(require_permission("products:read")), _RL_DEFAULT],
     summary="Listar lojas do crawler",
     description=(
         "Retorna o registry estático de lojas do crawler "
@@ -237,7 +286,7 @@ def list_stores(
         },
     },
     status_code=status.HTTP_200_OK,
-    dependencies=[Depends(require_permission("products:read"))],
+    dependencies=[Depends(require_permission("products:read")), _RL_DEFAULT],
     summary="Buscar produtos",
     description=(
         "Filtra o catálogo canônico por brand, model, variant e atributos "
@@ -347,7 +396,7 @@ def search_products(
         },
     },
     status_code=status.HTTP_200_OK,
-    dependencies=[Depends(require_permission("products:read"))],
+    dependencies=[Depends(require_permission("products:read")), _RL_DEFAULT],
     summary="Consultar produto",
     description=(
         "Retorna o produto canônico e seus listings vinculados, "
@@ -389,7 +438,7 @@ def get_product(
         },
     },
     status_code=status.HTTP_200_OK,
-    dependencies=[Depends(require_permission("products:write"))],
+    dependencies=[Depends(require_permission("products:write")), _RL_DEFAULT],
     summary="Atualizar produto",
     description="Atualiza campos editáveis do produto canônico (title, brand, model, variant, attributes).",
 )
@@ -428,7 +477,7 @@ def update_product(
             "description": "Banco de dados indisponível ou não configurado.",
         },
     },
-    dependencies=[Depends(require_permission("products:write"))],
+    dependencies=[Depends(require_permission("products:write")), _RL_DEFAULT],
     summary="Excluir produto",
     description=(
         "Remove o produto canônico e listings associados (cascade). "
@@ -486,7 +535,7 @@ def delete_product(
     status_code=status.HTTP_200_OK,
     dependencies=[
         Depends(require_permission("match")),
-        Depends(enforce_rate_limit("crawler")),
+        _RL_CRAWLER,
     ],
     summary="Corresponder produto entre lojas",
     description=(
@@ -541,14 +590,17 @@ def match_product(
 
 
 @router.post(
-    "/match/stream",
+    "/products/{product_id}/match-runs",
+    response_model=MatchRunStatusView,
     tags=["Correspondência"],
+    status_code=status.HTTP_202_ACCEPTED,
     responses={
         401: {"model": CrawlErrorResponse, "description": "Não autenticado."},
         403: {"model": CrawlErrorResponse, "description": "Sem permissão de matching."},
+        404: {"model": CrawlErrorResponse, "description": "Produto não encontrado."},
         422: {
             "model": CrawlErrorResponse,
-            "description": "URL inválida, loja sem suporte ou falha de parsing.",
+            "description": "Produto sem URL de referência.",
         },
         429: {
             "model": CrawlErrorResponse,
@@ -556,101 +608,270 @@ def match_product(
         },
         503: {
             "model": CrawlErrorResponse,
-            "description": "Banco indisponível quando persist=true.",
+            "description": "Banco indisponível.",
         },
     },
-    status_code=status.HTTP_200_OK,
     dependencies=[
         Depends(require_permission("match")),
-        Depends(enforce_rate_limit("crawler")),
+        _RL_CRAWLER,
     ],
-    summary="Corresponder produto com progresso SSE",
+    summary="Iniciar busca em outras lojas",
     description=(
-        "Executa o mesmo Product Match de POST /match uma única vez, "
-        "emitindo eventos SSE de progresso por loja até o resultado final."
+        "Cria uma Match Run persistente e responde imediatamente (202). "
+        "O Product Match continua em background; consulte o status via polling. "
+        "Se já existir Run ativa, devolve a existente com already_active=true."
     ),
 )
-def match_product_stream(
-    payload: MatchRequest,
-    service: Annotated[ProductMatchService, Depends(get_match_service)],
-) -> StreamingResponse:
-    if payload.persist and get_settings().database_url is None:
+def start_match_run(
+    product_id: Annotated[UUID, Path(description="ID do produto canônico.")],
+    principal: Annotated[
+        AuthenticatedPrincipal, Depends(require_authenticated_user)
+    ],
+    service: Annotated[MatchRunService, Depends(get_match_run_service)],
+) -> MatchRunStatusView:
+    try:
+        run, created = service.start(product_id, principal=principal)
+        return match_run_to_status(run, already_active=not created)
+    except LookupError:
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail={
-                "code": "DATABASE_UNAVAILABLE",
-                "message": (
-                    "DATABASE_URL não configurada; "
-                    "use persist=false ou configure o Postgres"
-                ),
+                "code": "PRODUCT_NOT_FOUND",
+                "message": "Produto não encontrado.",
                 "retryable": False,
             },
+        ) from None
+    except ValueError as exc:
+        if str(exc) == "REFERENCE_URL_MISSING":
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail={
+                    "code": "REFERENCE_URL_MISSING",
+                    "message": "O produto não possui URL de referência para busca.",
+                    "retryable": False,
+                },
+            ) from exc
+        raise
+    except SQLAlchemyError as exc:
+        raise _http_for_database_error(exc) from exc
+
+
+@router.get(
+    "/products/{product_id}/match-runs/active",
+    response_model=MatchRunStatusView,
+    tags=["Correspondência"],
+    responses={
+        204: {"description": "Nenhuma busca ativa."},
+        401: {"model": CrawlErrorResponse, "description": "Não autenticado."},
+        403: {"model": CrawlErrorResponse, "description": "Sem permissão."},
+        404: {"model": CrawlErrorResponse, "description": "Produto não encontrado."},
+    },
+    dependencies=[Depends(require_permission("match")), _RL_POLL],
+    summary="Consultar busca ativa do produto",
+    description="Retorna a Match Run ativa (pending/running) ou 204 se não houver.",
+)
+def get_active_match_run(
+    product_id: Annotated[UUID, Path(description="ID do produto canônico.")],
+    principal: Annotated[
+        AuthenticatedPrincipal, Depends(require_authenticated_user)
+    ],
+    service: Annotated[MatchRunService, Depends(get_match_run_service)],
+    response: Response,
+) -> MatchRunStatusView | Response:
+    try:
+        run = service.get_active(product_id, principal=principal)
+    except LookupError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "PRODUCT_NOT_FOUND",
+                "message": "Produto não encontrado.",
+                "retryable": False,
+            },
+        ) from None
+    if run is None:
+        response.status_code = status.HTTP_204_NO_CONTENT
+        return response
+    return match_run_to_status(run)
+
+
+@router.get(
+    "/products/{product_id}/match-runs",
+    response_model=MatchRunListResponse,
+    tags=["Correspondência"],
+    dependencies=[Depends(require_permission("match")), _RL_DEFAULT],
+    summary="Histórico de buscas do produto",
+    description="Lista Match Runs do produto (mais recentes primeiro).",
+)
+def list_match_runs(
+    product_id: Annotated[UUID, Path(description="ID do produto canônico.")],
+    principal: Annotated[
+        AuthenticatedPrincipal, Depends(require_authenticated_user)
+    ],
+    service: Annotated[MatchRunService, Depends(get_match_run_service)],
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> MatchRunListResponse:
+    try:
+        rows = service.list_history(
+            product_id, principal=principal, limit=limit, offset=offset
         )
+    except LookupError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "PRODUCT_NOT_FOUND",
+                "message": "Produto não encontrado.",
+                "retryable": False,
+            },
+        ) from None
+    return MatchRunListResponse(items=[match_run_to_status(row) for row in rows])
 
-    def event_stream() -> Iterator[str]:
-        progress_q: queue.SimpleQueue[MatchProgressEvent | BaseException | None] = (
-            queue.SimpleQueue()
-        )
 
-        def on_progress(event: MatchProgressEvent) -> None:
-            progress_q.put(event)
+@router.get(
+    "/match-runs/{run_id}",
+    response_model=MatchRunStatusView,
+    tags=["Correspondência"],
+    dependencies=[Depends(require_permission("match")), _RL_POLL],
+    summary="Status da Match Run",
+    description="Payload compacto para polling (sem candidates/logs).",
+)
+def get_match_run_status(
+    run_id: Annotated[UUID, Path(description="ID da Match Run.")],
+    principal: Annotated[
+        AuthenticatedPrincipal, Depends(require_authenticated_user)
+    ],
+    service: Annotated[MatchRunService, Depends(get_match_run_service)],
+) -> MatchRunStatusView:
+    try:
+        run = service.get_status(run_id, principal=principal)
+    except LookupError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "RUN_NOT_FOUND",
+                "message": "Match Run não encontrada.",
+                "retryable": False,
+            },
+        ) from None
+    return match_run_to_status(run)
 
-        def worker() -> None:
-            try:
-                service.match(payload, on_progress=on_progress)
-            except BaseException as exc:  # noqa: BLE001 — delivered via SSE
-                progress_q.put(exc)
-            finally:
-                progress_q.put(None)
 
-        thread = threading.Thread(target=worker, daemon=True)
-        thread.start()
-        while True:
-            item = progress_q.get()
-            if item is None:
-                break
-            if isinstance(item, BaseException):
-                if isinstance(item, RequestError):
-                    detail = {
-                        "type": "error",
-                        "stage": "error",
-                        "status": "error",
-                        "message": str(item),
-                        "code": item.code,
-                    }
-                elif isinstance(item, ParseError):
-                    detail = {
-                        "type": "error",
-                        "stage": "error",
-                        "status": "error",
-                        "message": str(item),
-                        "code": "PARSE_ERROR",
-                    }
-                else:
-                    detail = {
-                        "type": "error",
-                        "stage": "error",
-                        "status": "error",
-                        "message": "Falha interna no Product Match",
-                        "code": "INTERNAL_ERROR",
-                    }
-                yield f"data: {json.dumps(detail, default=str)}\n\n"
-                break
-            yield (
-                "data: "
-                + item.model_dump_json(exclude_none=False)
-                + "\n\n"
-            )
+@router.get(
+    "/match-runs/{run_id}/details",
+    response_model=MatchRunDetailView,
+    tags=["Correspondência"],
+    dependencies=[Depends(require_permission("match")), _RL_DEFAULT],
+    summary="Relatório detalhado da Match Run",
+    description="Summary + resultados por loja + candidates relevantes.",
+)
+def get_match_run_details(
+    run_id: Annotated[UUID, Path(description="ID da Match Run.")],
+    principal: Annotated[
+        AuthenticatedPrincipal, Depends(require_authenticated_user)
+    ],
+    service: Annotated[MatchRunService, Depends(get_match_run_service)],
+) -> MatchRunDetailView:
+    try:
+        run = service.get_details(run_id, principal=principal)
+    except LookupError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "RUN_NOT_FOUND",
+                "message": "Match Run não encontrada.",
+                "retryable": False,
+            },
+        ) from None
+    return match_run_to_detail(run)
 
-    return StreamingResponse(
-        event_stream(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",
-            "Connection": "keep-alive",
-        },
+
+@router.get(
+    "/notifications",
+    response_model=NotificationListResponse,
+    tags=["Notificações"],
+    dependencies=[Depends(require_authenticated_user), _RL_POLL],
+    summary="Listar notificações",
+    description="Central persistente de notificações do usuário autenticado.",
+)
+def list_notifications(
+    principal: Annotated[
+        AuthenticatedPrincipal, Depends(require_authenticated_user)
+    ],
+    service: Annotated[NotificationService, Depends(get_notification_service)],
+    limit: Annotated[int, Query(ge=1, le=100)] = 30,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    unread_only: Annotated[bool, Query()] = False,
+) -> NotificationListResponse:
+    items = service.list_for_user(
+        principal.id, limit=limit, offset=offset, unread_only=unread_only
     )
+    unread = service.unread_count(principal.id)
+    return NotificationListResponse(
+        items=[notification_to_view(row) for row in items],
+        unread_count=unread,
+    )
+
+
+@router.get(
+    "/notifications/unread-count",
+    response_model=UnreadCountResponse,
+    tags=["Notificações"],
+    dependencies=[Depends(require_authenticated_user), _RL_POLL],
+    summary="Contagem de não lidas",
+)
+def notifications_unread_count(
+    principal: Annotated[
+        AuthenticatedPrincipal, Depends(require_authenticated_user)
+    ],
+    service: Annotated[NotificationService, Depends(get_notification_service)],
+) -> UnreadCountResponse:
+    return UnreadCountResponse(unread_count=service.unread_count(principal.id))
+
+
+@router.post(
+    "/notifications/{notification_id}/read",
+    response_model=NotificationView,
+    tags=["Notificações"],
+    dependencies=[Depends(require_authenticated_user), _RL_DEFAULT],
+    summary="Marcar notificação como lida",
+)
+def mark_notification_read(
+    notification_id: Annotated[UUID, Path()],
+    principal: Annotated[
+        AuthenticatedPrincipal, Depends(require_authenticated_user)
+    ],
+    service: Annotated[NotificationService, Depends(get_notification_service)],
+) -> NotificationView:
+    try:
+        row = service.mark_read(notification_id, user_id=principal.id)
+    except LookupError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "NOTIFICATION_NOT_FOUND",
+                "message": "Notificação não encontrada.",
+                "retryable": False,
+            },
+        ) from None
+    return notification_to_view(row)
+
+
+@router.post(
+    "/notifications/read-all",
+    response_model=UnreadCountResponse,
+    tags=["Notificações"],
+    dependencies=[Depends(require_authenticated_user), _RL_DEFAULT],
+    summary="Marcar todas as notificações como lidas",
+)
+def mark_all_notifications_read(
+    principal: Annotated[
+        AuthenticatedPrincipal, Depends(require_authenticated_user)
+    ],
+    service: Annotated[NotificationService, Depends(get_notification_service)],
+) -> UnreadCountResponse:
+    service.mark_all_read(principal.id)
+    return UnreadCountResponse(unread_count=0)
 
 
 @router.post(
@@ -680,7 +901,7 @@ def match_product_stream(
     status_code=status.HTTP_200_OK,
     dependencies=[
         Depends(require_permission("offers:refresh")),
-        Depends(enforce_rate_limit("crawler")),
+        _RL_CRAWLER,
     ],
     summary="Atualizar ofertas",
     description=(

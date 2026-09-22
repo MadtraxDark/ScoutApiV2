@@ -52,6 +52,11 @@
   browser e Product Match devem expor timings por etapa. Pendências
   recorrentes: tipo `PERFORMANCE`. Ver `.cursor/rules/performance.mdc`,
   `docs/performance.md` e ADR 0028.
+- **Product Match persistente (crítico):** a busca em outras lojas é um job
+  de backend (`ProductMatchRun`), não uma conexão SSE nem lifecycle da página
+  React. Uma Run ativa por produto; polling leve; toast efêmero ≠ central de
+  notificações persistente; logs observáveis (sem chain-of-thought). Ver
+  ADR 0036 e `docs/integration/pricescout.md`.
 - **Imagens de produto (crítico):** candidata do crawl ≠ imagem de catálogo;
   upload no Drive **só após aprovação** humana; original nunca é apagado ao
   gerar AVIF; credenciais Drive nunca vão ao frontend; download de URL

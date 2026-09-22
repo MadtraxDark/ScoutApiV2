@@ -244,6 +244,7 @@ def enforce_rate_limit(
             "default": settings.rate_limit_default_per_minute,
             "auth": settings.rate_limit_auth_per_minute,
             "crawler": settings.rate_limit_crawler_per_minute,
+            "poll": settings.rate_limit_poll_per_minute,
         }
         limit = limits.get(scope, settings.rate_limit_default_per_minute)
         identity = client_ip(request, settings)

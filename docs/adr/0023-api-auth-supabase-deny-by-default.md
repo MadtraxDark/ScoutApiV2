@@ -40,7 +40,8 @@ Adotar **B**:
 4. Autorização separada (`require_permission` / `require_admin`) e ownership
    via `canonical_products.owner_user_id` = JWT `sub`.
 5. Rate limit Redis-first + fallback memória (`RateLimiter`), escopos
-   `default` / `auth` / `crawler`.
+   `default` / `auth` / `crawler` (e `poll` para status leve — ver
+   `docs/security/api-auth.md`).
 6. Schemas públicos whitelist (`PublicUser`); redaction de logs; erros
    sanitizados; CORS explícito; OpenAPI desligado em production.
 

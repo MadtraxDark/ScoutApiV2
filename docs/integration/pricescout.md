@@ -34,9 +34,12 @@ PriceScout (localhost:3000)
 | preview | `POST …/preview` | `POST /crawl` | FRONTEND_ADAPTER | mapper preview |
 | get/discard preview | preview TTL | — | OBSOLETE_FRONTEND_BEHAVIOR | estado local FE |
 | import | `POST …/import` | `POST /products` | FRONTEND_ADAPTER | `ProductRegisterRequest` |
-| other-store prices | `POST …/other-store-prices` | `POST /match` | FRONTEND_ADAPTER | URL de listing |
-| other-store stream | SSE variants | `POST /match/stream` | DIRECT_MAPPING | SSE real (1 execução) + refresh prévio (cache compartilhado) |
-| other-store refresh | (fase stream legado) | `POST /offers/refresh` | DIRECT_MAPPING | antes do match no FE; PDP cacheia ProductPriceItem |
+| other-store prices | sync legado | `POST /match` | DIRECT_MAPPING | tooling / sync |
+| other-store match run | job + poll | `POST /products/{id}/match-runs` + `GET /match-runs/{id}` | DIRECT_MAPPING | job persistente (ADR 0036); sem SSE |
+| other-store active | — | `GET /products/{id}/match-runs/active` | DIRECT_MAPPING | banner / botão |
+| other-store history/detail | — | `GET …/match-runs` + `GET /match-runs/{id}/details` | DIRECT_MAPPING | log consultável |
+| notifications | — | `GET/POST /notifications*` | DIRECT_MAPPING | central persistente |
+| other-store refresh | (opcional) | `POST /offers/refresh` | DIRECT_MAPPING | refresh de listings existentes |
 | offers refresh | — | `POST /offers/refresh` | DIRECT_MAPPING | integrar |
 | list stores | `GET …/catalog/stores` | `GET /stores` | DIRECT_MAPPING | registry `STORE_CONFIGS` + `display_name` + `match_enabled` |
 | create/update store | POST/PATCH stores | — | OBSOLETE_FRONTEND_BEHAVIOR | somente leitura |
@@ -114,32 +117,32 @@ Canônico: [`docs/persistence/product-images.md`](../persistence/product-images.
 10. Listagem: **não** ignorar `primary_image_url` do `ProductView`; **não**
     usar `source_url` da loja como capa.
 
-### Progresso Match
+### Progresso Match (job persistente — ADR 0036)
 
-`POST /match/stream` emite SSE na **mesma** execução do match (sem segunda
-chamada). Eventos: `store_started`, `searching`, `candidates_found`,
-`scraping_candidate`, `matched`, `no_match`, `error`, `completed`.
+SSE (`POST /match/stream`) foi **removido**. O fluxo do botão
+**Buscar preços em outras lojas** é:
 
-Fluxo PriceScout do botão **Buscar preços em outras lojas**:
-
-1. `POST /offers/refresh` — atualiza snapshots das ofertas já persistidas
-2. `POST /match/stream` — descoberta em outras lojas (execução única SSE)
-3. `GET /products/{id}` — recarrega ofertas persistidas na UI
+1. `POST /products/{id}/match-runs` → **202** + `id` / `status` / `started_at`
+   (se já houver Run ativa, devolve a existente com `already_active=true`)
+2. Product Match roda em background (worker com lease PostgreSQL)
+3. Frontend: polling leve em `GET /match-runs/{id}` +
+   `GET /products/{id}/match-runs/active` para banner/botão
+   (rate scope `poll`, bucket separado do CRUD — ver
+   [`docs/security/api-auth.md`](../security/api-auth.md))
+4. Ao terminal (`completed`/`failed`): refetch `GET /products/{id}`,
+   toast efêmero, notificação persistente, log em
+   `GET /match-runs/{id}/details`
 
 Regras:
 
-- `reference_url` vem da listing mais confiável (URL canônica, disponível,
-  com preço, preferindo a loja de origem) — nunca `variants[0]` cego.
+- A busca **não** pertence à página React; sair/reload não cancela a Run.
+- No máximo uma Run `pending|running` por produto (índice único parcial).
+- `reference_url` é resolvida no backend a partir das listings do produto.
 - A loja de referência **não** entra na descoberta (“outras lojas”).
-- `SEARCH_UNSUPPORTED` → `errors[]` (nunca `unmatched_stores`).
-- Labels de loja: API envia `display_name` em `GET /stores` e
-  `store_display_name` / `display_name` nos eventos SSE e `MatchHit`.
-  O PriceScout **não** deve renderizar o slug (`amazon_br`) como label.
-- Import (`POST /products`) pode enviar `price` / `pix_price` /
-  `original_price` do preview para seed do `OfferSnapshot` inicial.
-- `persist=true` e `include_review=true` no fluxo de busca do painel.
-- O FE envia `canonical_product_id` no match para persistir no mesmo
-  produto da página (evita duplicata / reparent silencioso de listing).
+- `SEARCH_UNSUPPORTED` → store status `error` (nunca `no_match`).
+- Labels: `store_display_name` / `GET /stores.display_name` — não renderizar slug.
+- Toast ≠ Notification Center ≠ banner ≠ log detalhado.
+- Proibido `alert()` / `confirm()` / `prompt()` nesse fluxo (PriceScout).
 
 ## CORS
 

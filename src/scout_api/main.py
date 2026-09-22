@@ -39,15 +39,25 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     # Image AVIF poller connects only on first sweep (ADR 0031).
     from scout_api.modules.exchange.worker import (
         start_scheduler as start_exchange_scheduler,
+    )
+    from scout_api.modules.exchange.worker import (
         stop_scheduler as stop_exchange_scheduler,
     )
     from scout_api.modules.images.worker import start_scheduler, stop_scheduler
+    from scout_api.modules.matching.match_run_worker import (
+        start_scheduler as start_match_run_scheduler,
+    )
+    from scout_api.modules.matching.match_run_worker import (
+        stop_scheduler as stop_match_run_scheduler,
+    )
 
     start_scheduler()
     start_exchange_scheduler()
+    start_match_run_scheduler()
     try:
         yield
     finally:
+        stop_match_run_scheduler()
         stop_exchange_scheduler()
         stop_scheduler()
         dispose_database_engine()
@@ -84,6 +94,10 @@ app = FastAPI(
         {
             "name": "Correspondência",
             "description": "Matching de produto entre lojas suportadas.",
+        },
+        {
+            "name": "Notificações",
+            "description": "Central persistente de notificações do usuário.",
         },
         {
             "name": "Ofertas",

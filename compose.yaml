@@ -24,6 +24,7 @@ services:
       RATE_LIMIT_DEFAULT_PER_MINUTE: ${RATE_LIMIT_DEFAULT_PER_MINUTE:-120}
       RATE_LIMIT_AUTH_PER_MINUTE: ${RATE_LIMIT_AUTH_PER_MINUTE:-20}
       RATE_LIMIT_CRAWLER_PER_MINUTE: ${RATE_LIMIT_CRAWLER_PER_MINUTE:-10}
+      RATE_LIMIT_POLL_PER_MINUTE: ${RATE_LIMIT_POLL_PER_MINUTE:-300}
       REDIS_URL: redis://redis:6379/0
       REDIS_CONNECT_TIMEOUT_SECONDS: ${REDIS_CONNECT_TIMEOUT_SECONDS:-0.3}
       REDIS_SOCKET_TIMEOUT_SECONDS: ${REDIS_SOCKET_TIMEOUT_SECONDS:-0.5}
@@ -90,6 +91,11 @@ services:
       OFFER_MONITOR_RETRY_MAX_SECONDS: ${OFFER_MONITOR_RETRY_MAX_SECONDS:-3600}
       OFFER_MONITOR_JITTER_SECONDS: ${OFFER_MONITOR_JITTER_SECONDS:-600}
       OFFER_PROMOTION_GRACE_SECONDS: ${OFFER_PROMOTION_GRACE_SECONDS:-60}
+      MATCH_RUN_WORKER_ENABLED: ${MATCH_RUN_WORKER_ENABLED:-true}
+      MATCH_RUN_SWEEP_INTERVAL_SECONDS: ${MATCH_RUN_SWEEP_INTERVAL_SECONDS:-2}
+      MATCH_RUN_BATCH_SIZE: ${MATCH_RUN_BATCH_SIZE:-1}
+      MATCH_RUN_LEASE_SECONDS: ${MATCH_RUN_LEASE_SECONDS:-600}
+      MATCH_RUN_MAX_ATTEMPTS: ${MATCH_RUN_MAX_ATTEMPTS:-3}
     depends_on:
       postgres:
         condition: service_healthy
@@ -162,6 +168,36 @@ services:
         condition: service_healthy
     volumes:
       - ./data/camoufox-profiles:/home/app/.cache/scout-api/camoufox-profiles
+    restart: unless-stopped
+  match-runner:
+    build:
+      context: .
+    command: ["python", "-m", "scout_api.modules.matching.match_run_worker"]
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://scout:scout@postgres:5432/scoutapi}
+      AUTO_MIGRATE: ${AUTO_MIGRATE:-true}
+      REDIS_URL: redis://redis:6379/0
+      MATCH_RUN_WORKER_ENABLED: ${MATCH_RUN_WORKER_ENABLED:-true}
+      MATCH_RUN_SWEEP_INTERVAL_SECONDS: ${MATCH_RUN_SWEEP_INTERVAL_SECONDS:-2}
+      MATCH_RUN_BATCH_SIZE: ${MATCH_RUN_BATCH_SIZE:-1}
+      MATCH_RUN_LEASE_SECONDS: ${MATCH_RUN_LEASE_SECONDS:-600}
+      MATCH_RUN_MAX_ATTEMPTS: ${MATCH_RUN_MAX_ATTEMPTS:-3}
+      CAMOUFOX_ENABLED: ${CAMOUFOX_ENABLED:-true}
+      CAMOUFOX_HEADLESS: ${CAMOUFOX_HEADLESS:-true}
+      CAMOUFOX_PROXY_URL: ${CAMOUFOX_PROXY_URL:-}
+      CAMOUFOX_USER_DATA_DIR: ${CAMOUFOX_USER_DATA_DIR:-/home/app/.cache/scout-api/camoufox-profiles/default}
+      SCRAPE_DISTRIBUTED_LOCK_ENABLED: ${SCRAPE_DISTRIBUTED_LOCK_ENABLED:-true}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./data/camoufox-profiles:/home/app/.cache/scout-api/camoufox-profiles
+    # Worker process (no HTTP server) — disable image HEALTHCHECK that probes /health.
+    healthcheck:
+      disable: true
     restart: unless-stopped
   redis:
     image: redis:7-alpine

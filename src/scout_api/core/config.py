@@ -50,6 +50,9 @@ class Settings(BaseSettings):
     rate_limit_default_per_minute: int = 120
     rate_limit_auth_per_minute: int = 20
     rate_limit_crawler_per_minute: int = 10
+    # Lightweight SPA polling (match status, notifications) — separate bucket
+    # so continuous polls do not starve CRUD or crawler start endpoints.
+    rate_limit_poll_per_minute: int = 300
     scraper_user_agent: str = "ScoutApiV2/0.1 (+price-monitoring)"
     scraper_log_level: str = "INFO"
     scraper_default_concurrency: int = 2
@@ -146,6 +149,12 @@ class Settings(BaseSettings):
     exchange_rate_ptax_agreement_pct: float = 0.5
     # Emergency / test override — never use in production for live rates.
     exchange_rate_manual_usd_brl_tourism_sell: str | None = None
+    # --- Durable Product Match runs (ADR 0036). ---
+    match_run_worker_enabled: bool = True
+    match_run_sweep_interval_seconds: float = 2.0
+    match_run_batch_size: int = 1
+    match_run_lease_seconds: int = 600
+    match_run_max_attempts: int = 3
 
     @field_validator("debug", mode="before")
     @classmethod

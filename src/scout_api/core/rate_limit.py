@@ -12,6 +12,23 @@ from scout_api.modules.crawler.core.redis_client import (
     build_redis_gateway,
 )
 
+# Atomic fixed window: EXPIRE only on first hit (count == 1).
+# Calling EXPIRE on every INCR resets the TTL under continuous traffic
+# (SPA polling) and turns the counter into an unbounded accumulator →
+# permanent 429 until the client idles for a full window.
+_FIXED_WINDOW_LUA = """
+local count = redis.call('INCR', KEYS[1])
+if count == 1 then
+  redis.call('EXPIRE', KEYS[1], ARGV[1])
+end
+local ttl = redis.call('TTL', KEYS[1])
+if ttl < 0 then
+  redis.call('EXPIRE', KEYS[1], ARGV[1])
+  ttl = tonumber(ARGV[1])
+end
+return {count, ttl}
+"""
+
 
 @dataclass(frozen=True, slots=True)
 class RateLimitResult:
@@ -88,25 +105,24 @@ class RateLimiter:
             client = self._redis.get_client()
             if client is not None:
                 try:
-                    pipe = client.pipeline()
-                    pipe.incr(key)
-                    pipe.expire(key, window_seconds)
-                    count, _ = pipe.execute()
-                    count_i = int(count)
-                    ttl = int(client.ttl(key) or window_seconds)
+                    raw = client.eval(
+                        _FIXED_WINDOW_LUA, 1, key, int(window_seconds)
+                    )
+                    count_i = int(raw[0])
+                    ttl = max(1, int(raw[1]))
                     if count_i > limit:
                         return RateLimitResult(
                             allowed=False,
                             limit=limit,
                             remaining=0,
-                            retry_after=max(1, ttl),
+                            retry_after=ttl,
                             scope=scope,
                         )
                     return RateLimitResult(
                         allowed=True,
                         limit=limit,
                         remaining=max(0, limit - count_i),
-                        retry_after=max(1, ttl),
+                        retry_after=ttl,
                         scope=scope,
                     )
                 except Exception:

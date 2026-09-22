@@ -11,7 +11,8 @@ Decisão: [ADR 0023](../adr/0023-api-auth-supabase-deny-by-default.md).
 Frontend
   → Google OAuth (Supabase Auth, PKCE iniciado em GET /auth/google)
   → access_token (Bearer)
-  → ScoutApiV2 valida JWT (JWKS / HS256 teste)
+  → ScoutApiV2 valida JWT (JWKS / HS256 teste; fallback `GET /auth/v1/user`
+    se a verificação local falhar com token ainda aceito pelo Auth)
   → AuthenticatedPrincipal (sub, role)
   → require_permission / ownership
   → serviço de domínio
@@ -61,7 +62,15 @@ desabilitados.
 | `POST /crawl` | `crawl` | crawler |
 | `POST /crawl/offer` | `crawl` | crawler |
 | `POST /match` | `match` | crawler |
-| `POST /match/stream` | `match` | crawler |
+| `POST /products/{id}/match-runs` | `match` | crawler |
+| `GET /products/{id}/match-runs` | `match` | default |
+| `GET /products/{id}/match-runs/active` | `match` | poll |
+| `GET /match-runs/{id}` | `match` | poll |
+| `GET /match-runs/{id}/details` | `match` | default |
+| `GET /notifications` | autenticado | poll |
+| `GET /notifications/unread-count` | autenticado | poll |
+| `POST /notifications/{id}/read` | autenticado | default |
+| `POST /notifications/read-all` | autenticado | default |
 | `POST /offers/refresh` | `offers:refresh` | crawler |
 | `POST /products` | `products:write` | default |
 | `GET /products` | `products:read` | default |
@@ -102,11 +111,21 @@ E-mail, telefone, metadata do provider e roles **não** saem em `/auth/me`.
 Config (`core/config.py`):
 
 - `RATE_LIMIT_ENABLED`
-- `RATE_LIMIT_DEFAULT_PER_MINUTE`
+- `RATE_LIMIT_DEFAULT_PER_MINUTE` (CRUD / leituras on-demand)
 - `RATE_LIMIT_AUTH_PER_MINUTE`
-- `RATE_LIMIT_CRAWLER_PER_MINUTE`
+- `RATE_LIMIT_CRAWLER_PER_MINUTE` (POST caros: crawl/match/refresh)
+- `RATE_LIMIT_POLL_PER_MINUTE` (polling leve SPA: status de Match Run,
+  notificações)
+
+Buckets são **mutuamente exclusivos por rota**: um POST `crawler` não consome
+o bucket `default`; polling contínuo não esgota o `default` nem bloqueia o
+início de novos crawls.
 
 Backend: Redis quando `REDIS_URL` está definido; senão memória do processo.
+Fixed-window atômico (Lua): `EXPIRE` só no primeiro hit da janela — **não**
+renovar TTL a cada request (isso acumulava contadores sob polling e gerava
+429 permanente até o cliente ficar ocioso).
+
 Identidade: hash do Bearer (usuário) ou IP (auth público). `X-Forwarded-For`
 só se o peer estiver em `TRUSTED_PROXY_IPS`.
 

@@ -68,6 +68,16 @@ __all__ = [
     "StoreListResponse",
     "ApprovedImageInput",
     "ProductImageView",
+    "MatchRunStatus",
+    "MatchStoreRunStatus",
+    "MatchRunStatusView",
+    "MatchRunListResponse",
+    "MatchCandidateLogView",
+    "MatchStoreRunView",
+    "MatchRunDetailView",
+    "NotificationView",
+    "NotificationListResponse",
+    "UnreadCountResponse",
 ]
 
 
@@ -152,7 +162,7 @@ class MatchResponse(BaseModel):
 
 
 class MatchProgressEvent(BaseModel):
-    """Evento SSE emitido durante ``POST /match/stream`` (execução única)."""
+    """Evento de progresso interno do Product Match (não é mais SSE público)."""
 
     type: str = Field(
         description=(
@@ -521,3 +531,100 @@ class StoreInfo(BaseModel):
 
 class StoreListResponse(BaseModel):
     stores: list[StoreInfo] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Persistent Match Run API (ADR 0036) — polling, not SSE.
+# ---------------------------------------------------------------------------
+
+MatchRunStatus = Literal["pending", "running", "completed", "failed", "cancelled"]
+MatchStoreRunStatus = Literal["pending", "running", "match", "no_match", "error"]
+
+
+class MatchRunStatusView(BaseModel):
+    """Compact payload for polling — no candidates/logs."""
+
+    id: UUID
+    product_id: UUID
+    status: MatchRunStatus
+    started_at: datetime
+    finished_at: datetime | None = None
+    last_activity_at: datetime
+    total_duration_ms: int | None = None
+    stores_total: int = 0
+    stores_completed: int = 0
+    matches_found: int = 0
+    no_matches: int = 0
+    errors: int = 0
+    failure_code: str | None = None
+    failure_message: str | None = None
+    already_active: bool = Field(
+        default=False,
+        description="True quando POST reutilizou uma Run ativa existente.",
+    )
+
+
+class MatchRunListResponse(BaseModel):
+    items: list[MatchRunStatusView] = Field(default_factory=list)
+
+
+class MatchCandidateLogView(BaseModel):
+    sequence: int = 0
+    title: str | None = None
+    url: str | None = None
+    store_product_id: str | None = None
+    decision: str | None = None
+    confidence: Decimal | None = None
+    reasons: list[str] = Field(default_factory=list)
+    duration_ms: int | None = None
+
+
+class MatchStoreRunView(BaseModel):
+    id: UUID
+    store: str
+    store_display_name: str | None = None
+    status: MatchStoreRunStatus
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+    duration_ms: int | None = None
+    queries: list[str] = Field(default_factory=list)
+    queries_count: int = 0
+    candidates_found: int = 0
+    candidates_evaluated: int = 0
+    matched_url: str | None = None
+    matched_title: str | None = None
+    matched_price: Decimal | None = None
+    matched_currency: str | None = None
+    matched_confidence: Decimal | None = None
+    matched_reasons: list[str] = Field(default_factory=list)
+    error_code: str | None = None
+    error_message: str | None = None
+    search_duration_ms: int | None = None
+    candidate_fetch_duration_ms: int | None = None
+    candidates: list[MatchCandidateLogView] = Field(default_factory=list)
+
+
+class MatchRunDetailView(BaseModel):
+    run: MatchRunStatusView
+    stores: list[MatchStoreRunView] = Field(default_factory=list)
+
+
+class NotificationView(BaseModel):
+    id: UUID
+    type: str
+    product_id: UUID | None = None
+    match_run_id: UUID | None = None
+    title: str
+    message: str
+    created_at: datetime
+    read_at: datetime | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class NotificationListResponse(BaseModel):
+    items: list[NotificationView] = Field(default_factory=list)
+    unread_count: int = 0
+
+
+class UnreadCountResponse(BaseModel):
+    unread_count: int = 0
