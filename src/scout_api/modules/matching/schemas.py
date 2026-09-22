@@ -194,7 +194,7 @@ class OfferRefreshRequest(BaseModel):
 class OfferSnapshotView(BaseModel):
     price: Decimal | None = Field(
         default=None,
-        description="Preço registrado no snapshot.",
+        description="Preço registrado no snapshot (moeda original da loja).",
         examples=["4799.00"],
     )
     currency: str | None = Field(default=None, description="Moeda ISO do snapshot.")
@@ -211,6 +211,30 @@ class OfferSnapshotView(BaseModel):
     fingerprint: str | None = Field(
         default=None, description="Fingerprint do estado comercial."
     )
+    # Pure FX conversion (ADR 0034) — never overwrites price/currency.
+    converted_price_brl: Decimal | None = Field(
+        default=None,
+        description=(
+            "Valor de referência em BRL = price × cotação. "
+            "Sem IOF/impostos/frete. Null se câmbio indisponível."
+        ),
+        examples=["5300.00"],
+    )
+    exchange_rate: Decimal | None = Field(
+        default=None,
+        description="Cotação usada na conversão.",
+        examples=["5.3034"],
+    )
+    exchange_rate_type: str | None = Field(
+        default=None,
+        description="Tipo da taxa (tourism_sell, official…).",
+    )
+    exchange_rate_status: str | None = Field(
+        default=None,
+        description="fresh | stale | unavailable.",
+    )
+    exchange_rate_source: str | None = None
+    exchange_rate_updated_at: datetime | None = None
 
 
 class OfferEventView(BaseModel):
@@ -373,6 +397,26 @@ class ProductListingView(BaseModel):
     promotion_price: Decimal | None = None
     promotion_conditions: dict[str, Any] = Field(default_factory=dict)
     promotion_commercially_active: bool = False
+    # Pure FX conversion (ADR 0034) — never overwrites price/currency.
+    converted_price_brl: Decimal | None = Field(
+        default=None,
+        description=(
+            "Valor de referência em BRL = price × cotação (sem impostos/tarifas)."
+        ),
+        examples=["5300.00"],
+    )
+    exchange_rate: Decimal | None = Field(
+        default=None,
+        description="Cotação usada (1 unidade da moeda original = N BRL).",
+        examples=["5.3034"],
+    )
+    exchange_rate_type: str | None = None
+    exchange_rate_status: str | None = Field(
+        default=None,
+        description="fresh | stale | unavailable.",
+    )
+    exchange_rate_source: str | None = None
+    exchange_rate_updated_at: datetime | None = None
 
 
 class ProductView(BaseModel):

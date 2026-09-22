@@ -119,7 +119,7 @@ class ProductRegistrationService:
                     created=False,
                     listing_created=False,
                     product=product_view,
-                    listing=_to_listing_view(listing),
+                    listing=_to_listing_view(listing, session=self._session),
                 )
 
         attrs = dict(request.attributes or {})
@@ -150,7 +150,7 @@ class ProductRegistrationService:
                     listing, listing_created = self._attach_listing(
                         repo, existing, request, gtin=gtin, country=country or "BR"
                     )
-                    listing_view = _to_listing_view(listing)
+                    listing_view = _to_listing_view(listing, session=self._session)
                 product_view = self.get_product(existing.id, viewer=owner)
                 assert product_view is not None
                 if request.images:
@@ -184,7 +184,7 @@ class ProductRegistrationService:
             listing, listing_created = self._attach_listing(
                 repo, canonical, request, gtin=gtin, country=country or "BR"
             )
-            listing_view = _to_listing_view(listing)
+            listing_view = _to_listing_view(listing, session=self._session)
         elif has_store_identity and not request.canonical_url:
             # Store identity without URL: still persist listing with synthetic URL.
             assert store and request.product_id
@@ -201,7 +201,7 @@ class ProductRegistrationService:
                 title=request.title,
             )
             self._seed_offer_snapshot(repo, listing, request)
-            listing_view = _to_listing_view(listing)
+            listing_view = _to_listing_view(listing, session=self._session)
         self._session.flush()
         if request.images:
             self._persist_images(canonical.id, request.images, owner=owner)
@@ -247,7 +247,9 @@ class ProductRegistrationService:
                 product_id
             )
         ]
-        return _to_product_view(canonical, listings, images=images)
+        return _to_product_view(
+            canonical, listings, images=images, session=self._session
+        )
 
     def list_products(
         self,
@@ -520,6 +522,7 @@ def _to_product_view(
     listings: list[StoreListing],
     *,
     images: list[ProductImageView] | None = None,
+    session: Session | None = None,
 ) -> ProductView:
     gtins = [
         ident.value_normalized
@@ -544,7 +547,7 @@ def _to_product_view(
         gtins=unique_gtins,
         created_at=product.created_at,
         updated_at=product.updated_at,
-        listings=[_to_listing_view(item) for item in listings],
+        listings=[_to_listing_view(item, session=session) for item in listings],
         images=list(images or []),
         primary_image_url=primary_display_url(list(images or [])),
     )
@@ -576,7 +579,11 @@ def _product_variant_keys(product: CanonicalProduct) -> set[str]:
     return keys
 
 
-def _to_listing_view(listing: StoreListing) -> ProductListingView:
+def _to_listing_view(
+    listing: StoreListing,
+    *,
+    session: Session | None = None,
+) -> ProductListingView:
     from decimal import Decimal
 
     from scout_api.modules.monitoring.promotion import is_promotion_commercially_active
@@ -591,6 +598,24 @@ def _to_listing_view(listing: StoreListing) -> ProductListingView:
     original_price = (
         Decimal(str(original_raw)) if original_raw not in (None, "") else None
     )
+    price = latest.price if latest is not None else None
+    currency = latest.currency if latest is not None else None
+    fx: dict[str, object] = {
+        "converted_price_brl": None,
+        "exchange_rate": None,
+        "exchange_rate_type": None,
+        "exchange_rate_status": None,
+        "exchange_rate_source": None,
+        "exchange_rate_updated_at": None,
+    }
+    if session is not None and price is not None and currency is not None:
+        try:
+            from scout_api.modules.exchange.enrich import attach_conversion
+
+            fx = attach_conversion(price, currency, session=session)
+        except Exception:  # noqa: BLE001
+            # Secondary feature: never break product serialization.
+            pass
     return ProductListingView(
         id=listing.id,
         store=listing.store,
@@ -611,8 +636,8 @@ def _to_listing_view(listing: StoreListing) -> ProductListingView:
         next_check_at=listing.next_check_at,
         last_successful_check_at=listing.last_successful_check_at,
         consecutive_failures=int(listing.consecutive_failures or 0),
-        price=latest.price if latest is not None else None,
-        currency=latest.currency if latest is not None else None,
+        price=price,
+        currency=currency,
         seller=latest.seller if latest is not None else None,
         availability=latest.availability if latest is not None else None,
         available=latest.available if latest is not None else None,
@@ -624,4 +649,10 @@ def _to_listing_view(listing: StoreListing) -> ProductListingView:
         promotion_price=listing.promotion_price,
         promotion_conditions=dict(listing.promotion_conditions or {}),
         promotion_commercially_active=is_promotion_commercially_active(listing),
+        converted_price_brl=fx.get("converted_price_brl"),  # type: ignore[arg-type]
+        exchange_rate=fx.get("exchange_rate"),  # type: ignore[arg-type]
+        exchange_rate_type=fx.get("exchange_rate_type"),  # type: ignore[arg-type]
+        exchange_rate_status=fx.get("exchange_rate_status"),  # type: ignore[arg-type]
+        exchange_rate_source=fx.get("exchange_rate_source"),  # type: ignore[arg-type]
+        exchange_rate_updated_at=fx.get("exchange_rate_updated_at"),  # type: ignore[arg-type]
     )

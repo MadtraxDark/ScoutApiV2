@@ -37,12 +37,18 @@ _openapi_url: str | None = None if _is_production else "/openapi.json"
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     # Engine stays lazy: do not connect to PostgreSQL on startup.
     # Image AVIF poller connects only on first sweep (ADR 0031).
+    from scout_api.modules.exchange.worker import (
+        start_scheduler as start_exchange_scheduler,
+        stop_scheduler as stop_exchange_scheduler,
+    )
     from scout_api.modules.images.worker import start_scheduler, stop_scheduler
 
     start_scheduler()
+    start_exchange_scheduler()
     try:
         yield
     finally:
+        stop_exchange_scheduler()
         stop_scheduler()
         dispose_database_engine()
 
@@ -82,6 +88,13 @@ app = FastAPI(
         {
             "name": "Ofertas",
             "description": "Atualização de preço e disponibilidade de ofertas.",
+        },
+        {
+            "name": "Câmbio",
+            "description": (
+                "Cotações FX e valor convertido em BRL "
+                "(preço × taxa; sem IOF/impostos/frete)."
+            ),
         },
     ],
 )

@@ -135,6 +135,17 @@ class Settings(BaseSettings):
     offer_monitor_jitter_seconds: int = 600
     offer_promotion_grace_seconds: int = 60
     offer_monitor_stale_heartbeat_seconds: int = 300
+    # --- Exchange-rate subsystem (ADR 0034). HTTP-only; no API keys. ---
+    exchange_rate_enabled: bool = True
+    exchange_rate_refresh_interval_seconds: int = 1800
+    exchange_rate_sweep_interval_seconds: int = 60
+    exchange_rate_http_timeout_seconds: float = 20.0
+    exchange_rate_stale_after_seconds: int = 21600
+    exchange_rate_outlier_max_change_pct: float = 15.0
+    exchange_rate_tourism_max_premium_pct: float = 12.0
+    exchange_rate_ptax_agreement_pct: float = 0.5
+    # Emergency / test override — never use in production for live rates.
+    exchange_rate_manual_usd_brl_tourism_sell: str | None = None
 
     @field_validator("debug", mode="before")
     @classmethod

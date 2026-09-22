@@ -35,6 +35,7 @@ class AuthenticatedPrincipal:
             "products:read",
             "products:write",
             "offers:refresh",
+            "exchange:read",
         }
 
 

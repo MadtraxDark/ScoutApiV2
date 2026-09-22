@@ -14,6 +14,7 @@ from scout_api.core.database import (
     resolve_engine_url,
 )
 from scout_api.modules.matching import models as matching_models  # noqa: F401
+from scout_api.modules.exchange import models as exchange_models  # noqa: F401
 
 config = context.config
 

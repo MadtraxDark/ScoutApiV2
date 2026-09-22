@@ -27,6 +27,7 @@ Política de quando criar/atualizar docs:
 | [0029](0029-google-drive-product-images.md) | Google Drive (conta dedicada OAuth) + imagens de produto | Accepted |
 | [0030](0030-persistent-offer-monitoring.md) | Monitoramento persistente de ofertas (PostgreSQL-driven) | Accepted |
 | [0031](0031-durable-image-optimization-queue.md) | Fila durável PostgreSQL para otimização AVIF | Accepted |
+| [0034](0034-secondary-exchange-rates.md) | Câmbio secundário sem API comercial (providers web + PostgreSQL) | Accepted |
 
 ## Índice — crawler
 

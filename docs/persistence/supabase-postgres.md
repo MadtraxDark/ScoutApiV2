@@ -91,6 +91,7 @@ persistido usa:
 | Identificadores | `product_identifiers` | GTIN/EAN/UPC normalizado (`type`+`value_normalized` único) |
 | Oferta/loja | `store_listings` | product_id/SKU/URL por loja (`store`+`canonical_url` único) |
 | Preço | `offer_snapshots` | Histórico append-only da oferta |
+| Câmbio | `exchange_rate_latest` / `exchange_rate_observations` / `exchange_rate_scheduler_state` | Cotação FX secundária (ADR 0034); last-known-good + histórico |
 | Eventos | `offer_events` | Diffs (price/seller/availability/…) |
 
 `ProductOffer` / `ProductDetails` / `ProductPriceItem` do crawler são DTOs de

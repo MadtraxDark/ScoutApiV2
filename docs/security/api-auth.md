@@ -73,6 +73,9 @@ desabilitados.
 | `POST /products/{id}/images/{image_id}/retry-optimization` | `products:write` | default |
 | `GET /products/{id}/images/{image_id}/content` | `products:read` | default |
 | `GET /stores` | `products:read` | default |
+| `GET /exchange-rates` | `products:read` | default |
+| `GET /exchange-rates/diagnostics` | admin | default |
+| `POST /exchange-rates/refresh` | admin | default |
 
 Roles: `user` (permissões de negócio) e `admin` (`AUTH_ADMIN_USER_IDS` ou
 `app_metadata.role=admin`).
