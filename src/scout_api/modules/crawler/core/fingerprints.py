@@ -1,5 +1,5 @@
 from hashlib import sha256
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, unquote, urlencode, urlsplit, urlunsplit
 
 TRACKING_KEYS = {
     "fbclid",
@@ -61,6 +61,36 @@ def canonicalize_url(url: str) -> str:
             "",
         )
     )
+
+
+def title_hint_from_url(url: str | None) -> str | None:
+    """Best-effort product title from a PDP URL slug when SERP omits title text.
+
+    Magalu-style paths ``/{slug}/p/{id}/`` expose a readable slug even when the
+    search card has no title in static HTML. Used for cheap prefilter/ranking —
+    not as a substitute for PDP extraction.
+    """
+    if not url:
+        return None
+    path = unquote(urlsplit(url).path or "").strip("/")
+    if not path:
+        return None
+    parts = [part for part in path.split("/") if part]
+    slug: str | None = None
+    if "p" in parts:
+        index = parts.index("p")
+        if index > 0:
+            slug = parts[index - 1]
+    if slug is None and parts:
+        leaf = parts[-1]
+        if leaf.lower() not in {"dp", "gp", "product"} and len(leaf) > 8:
+            slug = leaf
+    if not slug:
+        return None
+    text = slug.replace("-", " ").replace("_", " ").strip()
+    while "  " in text:
+        text = text.replace("  ", " ")
+    return text or None
 
 
 def request_fingerprint(

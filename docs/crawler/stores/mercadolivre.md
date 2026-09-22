@@ -15,10 +15,14 @@
 ## Live search (matching)
 
 - `supports_search=True`
+- **Product Match:** temporariamente `match_enabled=false`
+  (`match_disabled_reason="login instability"`) — omitida do Match automático
+  (não ERROR/NO_MATCH). Crawl manual permanece. Reativar:
+  `match_enabled=True` em `stores.py`.
 - SERP: `https://lista.mercadolivre.com.br/{query}`
 - Parser: prioriza `a.poly-component__title` / `a.ui-search-link` com
   título; ignora carrosséis `#intervention_type=` (Norton/M365 etc.)
-- Usado por `POST /match` (ADR 0019 / 0025)
+- Usado por `POST /match` quando reabilitada (ADR 0019 / 0025)
 - Soft-block na lista pode ser:
   1. **Snoopy PoW** (HTTP 200 fino com `snoopy-script`) — **resolver** com
      Camoufox (ADR 0017); validado live 2026-09-21 (direct, sem proxy)

@@ -20,17 +20,35 @@ class StoreConfig:
     # UX / cost hint for clients (PriceScout checkbox default). Never exposes
     # proxy URLs or bypass details.
     image_fetch_cost: ImageFetchCost = "low"
+    # Product Match auto-discovery. When False the store stays crawlable and
+    # listed, but is omitted from eligible match targets (not ERROR / NO_MATCH).
+    match_enabled: bool = True
+    match_disabled_reason: str | None = None
+    # User-facing label (never the catalog slug). Catalog dict key stays snake_case.
+    display_name: str = ""
 
     @property
     def default_include_images(self) -> bool:
         """True when gallery extraction is cheap enough to opt-in by default."""
         return self.supports_images and self.image_fetch_cost == "low"
 
+    @property
+    def label(self) -> str:
+        """Friendly store name for UI / SSE; falls back to ``key`` only if unset."""
+        return self.display_name or self.key
+
 
 STORE_CONFIGS = {
-    "kabum": StoreConfig("kabum", "BR", "BRL", ("kabum.com.br",), True),
+    "kabum": StoreConfig(
+        "kabum", "BR", "BRL", ("kabum.com.br",), True, display_name="KaBuM!"
+    ),
     "magazineluiza": StoreConfig(
-        "magazineluiza", "BR", "BRL", ("magazineluiza.com.br",), True
+        "magazineluiza",
+        "BR",
+        "BRL",
+        ("magazineluiza.com.br",),
+        True,
+        display_name="Magazine Luiza",
     ),
     "mercadolivre": StoreConfig(
         "mercadolivre",
@@ -39,10 +57,22 @@ STORE_CONFIGS = {
         ("mercadolivre.com.br", "produto.mercadolivre.com.br"),
         True,
         proxy_policy=ProxyPolicy.FALLBACK,
+        # Temporary: login / soft-auth instability on live SERP+PDP.
+        # Re-enable via match_enabled=True when auth wall is stable.
+        match_enabled=False,
+        match_disabled_reason="login instability",
+        display_name="Mercado Livre",
     ),
-    "pichau": StoreConfig("pichau", "BR", "BRL", ("pichau.com.br",), True),
+    "pichau": StoreConfig(
+        "pichau", "BR", "BRL", ("pichau.com.br",), True, display_name="Pichau"
+    ),
     "terabyteshop": StoreConfig(
-        "terabyteshop", "BR", "BRL", ("terabyteshop.com.br",), True
+        "terabyteshop",
+        "BR",
+        "BRL",
+        ("terabyteshop.com.br",),
+        True,
+        display_name="TerabyteShop",
     ),
     "shopee": StoreConfig(
         "shopee",
@@ -56,6 +86,11 @@ STORE_CONFIGS = {
         # browser-heavy and often proxied.
         supports_images=True,
         image_fetch_cost="high",
+        # Temporary: login / session-gate instability on live match.
+        # Re-enable via match_enabled=True when auth wall is stable.
+        match_enabled=False,
+        match_disabled_reason="login instability",
+        display_name="Shopee",
     ),
     "aliexpress": StoreConfig(
         "aliexpress",
@@ -65,6 +100,7 @@ STORE_CONFIGS = {
         True,
         proxy_policy=ProxyPolicy.FALLBACK,
         image_fetch_cost="high",
+        display_name="AliExpress",
     ),
     "amazon_br": StoreConfig(
         "amazon",
@@ -72,6 +108,7 @@ STORE_CONFIGS = {
         "BRL",
         ("amazon.com.br",),
         True,
+        display_name="Amazon Brasil",
     ),
     "amazon_us": StoreConfig(
         "amazon",
@@ -79,21 +116,45 @@ STORE_CONFIGS = {
         "USD",
         ("amazon.com",),
         True,
+        display_name="Amazon US",
     ),
-    "bestbuy": StoreConfig("bestbuy", "US", "USD", ("bestbuy.com",), True),
-    "ebay": StoreConfig("ebay", "US", "USD", ("ebay.com",)),
-    "gamestop": StoreConfig("gamestop", "US", "USD", ("gamestop.com",)),
-    "newegg": StoreConfig("newegg", "US", "USD", ("newegg.com",)),
-    "microcenter": StoreConfig("microcenter", "US", "USD", ("microcenter.com",)),
-    "nissei": StoreConfig("nissei", "PY", "PYG", ("nissei.com",), True),
-    "cellshop": StoreConfig("cellshop", "PY", "PYG", ("cellshop.com",)),
-    "stargames": StoreConfig("stargames", "PY", "PYG", ("stargames.com.py",)),
+    "bestbuy": StoreConfig(
+        "bestbuy", "US", "USD", ("bestbuy.com",), True, display_name="Best Buy"
+    ),
+    "ebay": StoreConfig("ebay", "US", "USD", ("ebay.com",), display_name="eBay"),
+    "gamestop": StoreConfig(
+        "gamestop", "US", "USD", ("gamestop.com",), display_name="GameStop"
+    ),
+    "newegg": StoreConfig(
+        "newegg", "US", "USD", ("newegg.com",), display_name="Newegg"
+    ),
+    "microcenter": StoreConfig(
+        "microcenter",
+        "US",
+        "USD",
+        ("microcenter.com",),
+        display_name="Micro Center",
+    ),
+    "nissei": StoreConfig(
+        "nissei", "PY", "PYG", ("nissei.com",), True, display_name="Nissei"
+    ),
+    "cellshop": StoreConfig(
+        "cellshop", "PY", "PYG", ("cellshop.com",), display_name="Cellshop"
+    ),
+    "stargames": StoreConfig(
+        "stargames",
+        "PY",
+        "PYG",
+        ("stargames.com.py",),
+        display_name="Star Games",
+    ),
     "shoppingchina": StoreConfig(
         "shoppingchina",
         "PY",
         "PYG",
         ("shoppingchina.com.py", "shoppingchina.com.br"),
         True,
+        display_name="Shopping China",
     ),
     "visaovip": StoreConfig(
         "visaovip",
@@ -101,6 +162,7 @@ STORE_CONFIGS = {
         "USD",
         ("visaovip.com",),
         True,
+        display_name="Visão VIP",
     ),
 }
 
@@ -108,6 +170,23 @@ STORE_CONFIGS = {
 def implemented_store_keys() -> tuple[str, ...]:
     """Catalog keys marked ``implemented=True`` (dynamic match / crawl targets)."""
     return tuple(key for key, config in STORE_CONFIGS.items() if config.implemented)
+
+
+def match_enabled_store_keys() -> tuple[str, ...]:
+    """Implemented catalog keys allowed to participate in Product Match."""
+    return tuple(
+        key
+        for key, config in STORE_CONFIGS.items()
+        if config.implemented and config.match_enabled
+    )
+
+
+def store_display_name(store_key: str) -> str:
+    """User-facing label for a catalog key (never invents from underscore replace)."""
+    config = STORE_CONFIGS.get(store_key)
+    if config is not None and config.display_name:
+        return config.display_name
+    return store_key
 
 
 def resolve_store_config_by_hostname(hostname: str) -> StoreConfig | None:

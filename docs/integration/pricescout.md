@@ -35,10 +35,10 @@ PriceScout (localhost:3000)
 | get/discard preview | preview TTL | — | OBSOLETE_FRONTEND_BEHAVIOR | estado local FE |
 | import | `POST …/import` | `POST /products` | FRONTEND_ADAPTER | `ProductRegisterRequest` |
 | other-store prices | `POST …/other-store-prices` | `POST /match` | FRONTEND_ADAPTER | URL de listing |
-| other-store stream | SSE variants | `POST /match/stream` | DIRECT_MAPPING | SSE real (1 execução) + refresh prévio |
-| other-store refresh | (fase stream legado) | `POST /offers/refresh` | DIRECT_MAPPING | antes do match no FE |
+| other-store stream | SSE variants | `POST /match/stream` | DIRECT_MAPPING | SSE real (1 execução) + refresh prévio (cache compartilhado) |
+| other-store refresh | (fase stream legado) | `POST /offers/refresh` | DIRECT_MAPPING | antes do match no FE; PDP cacheia ProductPriceItem |
 | offers refresh | — | `POST /offers/refresh` | DIRECT_MAPPING | integrar |
-| list stores | `GET …/catalog/stores` | `GET /stores` | BACKEND_ENDPOINT_REQUIRED | registry crawler |
+| list stores | `GET …/catalog/stores` | `GET /stores` | DIRECT_MAPPING | registry `STORE_CONFIGS` + `display_name` + `match_enabled` |
 | create/update store | POST/PATCH stores | — | OBSOLETE_FRONTEND_BEHAVIOR | somente leitura |
 | store markets | `GET …/store-markets` | derivado de `/stores` | FRONTEND_ADAPTER | countries do registry |
 | images CRUD | Drive/gallery APIs | `GET/POST/PATCH/DELETE /products/{id}/images` + `/content` | DIRECT_MAPPING | galeria pós-aprovação; `display_url` |
@@ -126,6 +126,9 @@ Regras:
   com preço, preferindo a loja de origem) — nunca `variants[0]` cego.
 - A loja de referência **não** entra na descoberta (“outras lojas”).
 - `SEARCH_UNSUPPORTED` → `errors[]` (nunca `unmatched_stores`).
+- Labels de loja: API envia `display_name` em `GET /stores` e
+  `store_display_name` / `display_name` nos eventos SSE e `MatchHit`.
+  O PriceScout **não** deve renderizar o slug (`amazon_br`) como label.
 - Import (`POST /products`) pode enviar `price` / `pix_price` /
   `original_price` do preview para seed do `OfferSnapshot` inicial.
 - `persist=true` e `include_review=true` no fluxo de busca do painel.

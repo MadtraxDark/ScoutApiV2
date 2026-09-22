@@ -83,19 +83,23 @@ def looks_like_amazon_pdp(response: HtmlResponse) -> bool:
 
 
 def looks_like_amazon_search(response: HtmlResponse) -> bool:
-    """True when HTML looks like a public SERP with parseable result cards."""
+    """True when HTML looks like a public SERP with parseable result cards.
+
+    Bare ``/s`` shells without ``data-asin`` cards are incomplete / soft-blocked
+    responses — do **not** treat them as successful HTTP SERPs (that produced
+    silent empty candidate lists and false NO_MATCH).
+    """
     text = response.text or ""
     if is_challenge_page(text) or is_amazon_robot_check(text):
         return False
     if is_auth_wall_page(text, url=str(response.url or "")):
         return False
-    if response.css(
-        "div[data-component-type='s-search-result'][data-asin], "
-        "div.s-result-item[data-asin]"
-    ).get():
-        return True
-    path = (urlparse(response.url or "").path or "").rstrip("/")
-    return path == "/s" or path.startswith("/s/")
+    return bool(
+        response.css(
+            "div[data-component-type='s-search-result'][data-asin], "
+            "div.s-result-item[data-asin]"
+        ).get()
+    )
 
 
 def has_buybox_price_signal(response: HtmlResponse) -> bool:

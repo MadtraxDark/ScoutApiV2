@@ -83,8 +83,12 @@ Itens resolvidos **não** ficam no índice ativo.
 | ID | Título | Status | Tipo | Prioridade | Área |
 |---|---|---|---|---|---|
 | [PENDING-016](PENDING-016-shopee-match-wall-time.md) | Shopee domina wall-time Product Match full-store | OPEN | PERFORMANCE | P1 | crawler/shopee |
+| [PENDING-017](PENDING-017-match-reenable-ml-shopee.md) | Reativar ML/Shopee no Product Match após login estável | OPEN | INCOMPLETE | P1 | matching |
 
-*(pendências ativas: 1)*
+*(pendências ativas: 2)*
+
+Nota 2026-09-22: Shopee/ML estão com `match_enabled=false` no Match automático
+(PENDING-017). PENDING-016 permanece relevante para quando forem reativadas.
 
 Resolvida em 2026-09-22:
 

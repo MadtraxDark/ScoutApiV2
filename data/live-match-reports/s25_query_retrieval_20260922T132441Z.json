@@ -1,0 +1,898 @@
+{
+  "generated_at": "2026-09-22T13:14:03.861813+00:00",
+  "title": "Celular Samsung Galaxy S25 Ultra 5G 256GB Galaxy AI Titânio Preto 6,9\" 12GB RAM Câm. Quádrupla 200+50+10+50MP Bateria 5000mAh Dual Chip",
+  "identity": {
+    "brand": "samsung",
+    "model": "galaxys25ultra",
+    "variant_attrs": {
+      "storage": "256gb",
+      "color": "titanio preto"
+    },
+    "series_phrase": "galaxy s25 ultra"
+  },
+  "queries": [
+    "samsung galaxy s25 ultra 256gb",
+    "galaxy s25 ultra 256gb",
+    "samsung galaxy s25 ultra 256gb titanio preto",
+    "samsung galaxy s25 ultra 256gb black",
+    "samsung galaxy s25 ultra 256gb preto",
+    "samsung galaxy s25 ultra 256gb negro",
+    "samsung galaxy s25 ultra",
+    "samsung galaxy s25 ultra 5g 256gb galaxy titanium"
+  ],
+  "legacy_broken_queries": [
+    "samsung 256gb",
+    "samsung 256gb titanio",
+    "samsung 256gb titanium"
+  ],
+  "stores": {
+    "kabum": {
+      "queries": [
+        {
+          "query": "samsung galaxy s25 ultra 256gb",
+          "ms": 1536.6,
+          "count": 5,
+          "target_hit": true,
+          "titles": [
+            "Smartphone Samsung Galaxy S25 Ultra 256gb 5g - Titânio Preto, Com Caneta S Pen, Galaxy Ai, Câmera Quadrupla 200mp + Self",
+            "Smartphone Samsung Galaxy S25 Ultra 256gb 5g - Titânio Prata, Com Caneta S Pen, Galaxy Ai, Câmera Quadrupla 200mp + Self",
+            "Smartphone Samsung Galaxy S25 Ultra 256gb 5g - Titânio Cinza, Com Caneta S Pen, Galaxy Ai, Câmera Quadrupla 200mp + Self",
+            "Smartphone Samsung Galaxy S25 Ultra 256gb 5g - Titânio Azul, Com Caneta S Pen, Galaxy Ai, Câmera Quadrupla 200mp + Selfi",
+            "Samsung Galaxy S25 Ultra 256gb Titânio Prata;Usado - Com Cuidado - Grade B"
+          ],
+          "error": null
+        },
+        {
+          "query": "galaxy s25 ultra 256gb",
+          "ms": 1393.4,
+          "count": 5,
+          "target_hit": true,
+          "titles": [
+            "Smartphone Samsung Galaxy S25 Ultra 256gb 5g - Titânio Preto, Com Caneta S Pen, Galaxy Ai, Câmera Quadrupla 200mp + Self",
+            "Smartphone Samsung Galaxy S25 Ultra 256gb 5g - Titânio Prata, Com Caneta S Pen, Galaxy Ai, Câmera Quadrupla 200mp + Self",
+            "Smartphone Samsung Galaxy S25 Ultra 256gb 5g - Titânio Cinza, Com Caneta S Pen, Galaxy Ai, Câmera Quadrupla 200mp + Self",
+            "Smartphone Samsung Galaxy S25 Ultra 256gb 5g - Titânio Azul, Com Caneta S Pen, Galaxy Ai, Câmera Quadrupla 200mp + Selfi",
+            "Samsung Galaxy S25 Ultra 256gb Titânio Prata;Usado - Com Cuidado - Grade B"
+          ],
+          "error": null
+        },
+        {
+          "query": "samsung galaxy s25 ultra 256gb titanio preto",
+          "ms": 933.6,
+          "count": 5,
+          "target_hit": true,
+          "titles": [
+            "Smartphone Samsung Galaxy S25 Ultra 256gb 5g - Titânio Preto, Com Caneta S Pen, Galaxy Ai, Câmera Quadrupla 200mp + Self",
+            "S25 Ultra (256gb) - Titânio Azul + Buds3 Fe - Preto",
+            "Smartphone Samsung Galaxy S25 Ultra 256gb 5g - Titânio Prata, Com Caneta S Pen, Galaxy Ai, Câmera Quadrupla 200mp + Self",
+            "Smartphone Samsung Galaxy S25 Ultra 256gb 5g - Titânio Cinza, Com Caneta S Pen, Galaxy Ai, Câmera Quadrupla 200mp + Self",
+            "Smartphone Samsung Galaxy S25 Ultra 256gb 5g - Titânio Azul, Com Caneta S Pen, Galaxy Ai, Câmera Quadrupla 200mp + Selfi"
+          ],
+          "error": null
+        },
+        {
+          "query": "samsung galaxy s25 ultra 256gb black",
+          "ms": 1533.2,
+          "count": 5,
+          "target_hit": true,
+          "titles": [
+            "Smartphone Samsung Galaxy S25 Ultra 256gb 5g - Titânio Preto, Com Caneta S Pen, Galaxy Ai, Câmera Quadrupla 200mp + Self",
+            "Smartphone Samsung Galaxy S25 Ultra 256gb 5g - Titânio Prata, Com Caneta S Pen, Galaxy Ai, Câmera Quadrupla 200mp + Self",
+            "Smartphone Samsung Galaxy S25 Ultra 256gb 5g - Titânio Azul, Com Caneta S Pen, Galaxy Ai, Câmera Quadrupla 200mp + Selfi",
+            "Samsung Galaxy S25 5G Dual Chip, 256GB, Galaxy AI, 6,2\", 12GB RAM, Câm. Tripla 50+12+10MP, Bateria 4000mAh, Azul",
+            "Samsung Galaxy S25 5G 256GB Galaxy AI Prata 6,2\" 12GB RAM Câm. Tripla 50+12+10MP Bateria 4000mAh Dual Chip"
+          ],
+          "error": null
+        }
+      ],
+      "legacy": [
+        {
+          "query": "samsung 256gb",
+          "ms": 943.0,
+          "count": 5,
+          "target_hit": false,
+          "titles": [
+            "Smartphone Samsung Galaxy S26, 256GB, 12GB RAM, Octa Core, Câmera Tripla de 50MP, Tela de 6.3\", Violeta - SM-S942BZVSZTO",
+            "Samsung Galaxy S25 5G 256GB Galaxy AI Prata 6,2\" 12GB RAM Câm. Tripla 50+12+10MP Bateria 4000mAh Dual Chip",
+            "Smartphone Samsung Galaxy S25 Fe 5g 256gb Jetblack, Ram 8GB, Câmera 50mp, Selfie De 12mp, Tela 6.7\"",
+            "Smartphone Samsung Galaxy A17 256gb - Cinza, Ram 8GB, Tela 6.7”, Câmera Tripla 50mp + Selfie 13mp",
+            "Smartphone Samsung Galaxy A07 Preto 6.7 256gb 8GB Câmera Dupla"
+          ],
+          "error": null
+        },
+        {
+          "query": "samsung 256gb titanio",
+          "ms": 1519.4,
+          "count": 5,
+          "target_hit": true,
+          "titles": [
+            "Smartphone Samsung Galaxy S25 Ultra 256gb 5g - Titânio Preto, Com Caneta S Pen, Galaxy Ai, Câmera Quadrupla 200mp + Self",
+            "Smartphone Samsung Galaxy S25 Ultra 256gb 5g - Titânio Prata, Com Caneta S Pen, Galaxy Ai, Câmera Quadrupla 200mp + Self",
+            "Smartphone Samsung Galaxy S25 Ultra 256gb 5g - Titânio Cinza, Com Caneta S Pen, Galaxy Ai, Câmera Quadrupla 200mp + Self",
+            "Samsung Galaxy S25 Ultra 256gb Titânio Prata;Usado - Com Cuidado - Grade B",
+            "Usado - Samsung Galaxy S24 Ultra 256gb - Titanio Preto - Bom"
+          ],
+          "error": null
+        }
+      ]
+    },
+    "magazineluiza": {
+      "queries": [
+        {
+          "query": "samsung galaxy s25 ultra 256gb",
+          "ms": 19494.2,
+          "count": 5,
+          "target_hit": false,
+          "titles": [
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          "error": null
+        },
+        {
+          "query": "galaxy s25 ultra 256gb",
+          "ms": 7376.5,
+          "count": 5,
+          "target_hit": false,
+          "titles": [
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          "error": null
+        },
+        {
+          "query": "samsung galaxy s25 ultra 256gb titanio preto",
+          "ms": 7115.5,
+          "count": 3,
+          "target_hit": false,
+          "titles": [
+            "",
+            "",
+            ""
+          ],
+          "error": null
+        },
+        {
+          "query": "samsung galaxy s25 ultra 256gb black",
+          "ms": 10209.3,
+          "count": 5,
+          "target_hit": false,
+          "titles": [
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          "error": null
+        }
+      ],
+      "legacy": [
+        {
+          "query": "samsung 256gb",
+          "ms": 10819.7,
+          "count": 5,
+          "target_hit": false,
+          "titles": [
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          "error": null
+        },
+        {
+          "query": "samsung 256gb titanio",
+          "ms": 8914.7,
+          "count": 5,
+          "target_hit": false,
+          "titles": [
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          "error": null
+        }
+      ]
+    },
+    "pichau": {
+      "queries": [
+        {
+          "query": "samsung galaxy s25 ultra 256gb",
+          "ms": 8895.7,
+          "count": 5,
+          "target_hit": false,
+          "titles": [
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          "error": null
+        },
+        {
+          "query": "galaxy s25 ultra 256gb",
+          "ms": 7678.0,
+          "count": 5,
+          "target_hit": false,
+          "titles": [
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          "error": null
+        },
+        {
+          "query": "samsung galaxy s25 ultra 256gb titanio preto",
+          "ms": 8293.7,
+          "count": 5,
+          "target_hit": false,
+          "titles": [
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          "error": null
+        },
+        {
+          "query": "samsung galaxy s25 ultra 256gb black",
+          "ms": 6522.9,
+          "count": 5,
+          "target_hit": false,
+          "titles": [
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          "error": null
+        }
+      ],
+      "legacy": [
+        {
+          "query": "samsung 256gb",
+          "ms": 7169.9,
+          "count": 5,
+          "target_hit": false,
+          "titles": [
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          "error": null
+        },
+        {
+          "query": "samsung 256gb titanio",
+          "ms": 25080.5,
+          "count": 5,
+          "target_hit": false,
+          "titles": [
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          "error": null
+        }
+      ]
+    },
+    "terabyteshop": {
+      "queries": [
+        {
+          "query": "samsung galaxy s25 ultra 256gb",
+          "ms": 8379.5,
+          "count": 5,
+          "target_hit": false,
+          "titles": [
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          "error": null
+        },
+        {
+          "query": "galaxy s25 ultra 256gb",
+          "ms": 8437.4,
+          "count": 5,
+          "target_hit": false,
+          "titles": [
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          "error": null
+        },
+        {
+          "query": "samsung galaxy s25 ultra 256gb titanio preto",
+          "ms": 7764.4,
+          "count": 5,
+          "target_hit": false,
+          "titles": [
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          "error": null
+        },
+        {
+          "query": "samsung galaxy s25 ultra 256gb black",
+          "ms": 7984.6,
+          "count": 5,
+          "target_hit": false,
+          "titles": [
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          "error": null
+        }
+      ],
+      "legacy": [
+        {
+          "query": "samsung 256gb",
+          "ms": 8083.4,
+          "count": 5,
+          "target_hit": false,
+          "titles": [
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          "error": null
+        },
+        {
+          "query": "samsung 256gb titanio",
+          "ms": 7828.7,
+          "count": 5,
+          "target_hit": false,
+          "titles": [
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          "error": null
+        }
+      ]
+    },
+    "aliexpress": {
+      "queries": [
+        {
+          "query": "samsung galaxy s25 ultra 256gb",
+          "ms": 33182.1,
+          "count": 5,
+          "target_hit": false,
+          "titles": [
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          "error": null
+        },
+        {
+          "query": "galaxy s25 ultra 256gb",
+          "ms": 33992.9,
+          "count": 5,
+          "target_hit": false,
+          "titles": [
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          "error": null
+        },
+        {
+          "query": "samsung galaxy s25 ultra 256gb titanio preto",
+          "ms": 34346.8,
+          "count": 5,
+          "target_hit": false,
+          "titles": [
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          "error": null
+        },
+        {
+          "query": "samsung galaxy s25 ultra 256gb black",
+          "ms": 33804.9,
+          "count": 5,
+          "target_hit": false,
+          "titles": [
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          "error": null
+        }
+      ],
+      "legacy": [
+        {
+          "query": "samsung 256gb",
+          "ms": 33203.5,
+          "count": 5,
+          "target_hit": false,
+          "titles": [
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          "error": null
+        },
+        {
+          "query": "samsung 256gb titanio",
+          "ms": 33493.2,
+          "count": 5,
+          "target_hit": false,
+          "titles": [
+            "",
+            "",
+            "",
+            "",
+            ""
+          ],
+          "error": null
+        }
+      ]
+    },
+    "amazon_br": {
+      "queries": [
+        {
+          "query": "samsung galaxy s25 ultra 256gb",
+          "ms": 2001.3,
+          "count": 5,
+          "target_hit": true,
+          "titles": [
+            "Celular Samsung Galaxy S25 Ultra 5G, 256GB, 12GB RAM, Câmera Quádrupla de 200+50+10+50, Tela Grande de 6.9\", Titânio Pre",
+            "Celular Samsung Galaxy S25 Ultra 5G, 256GB, 12GB RAM, Câmera Quádrupla de 200+50+10+50, Tela Grande de 6.9\", Titânio Pre",
+            "Celular Samsung Galaxy S25 Ultra 5G, 256GB, 12GB RAM, Câmera Quádrupla de 200+50+10+50, Tela Grande de 6.9\", Titânio Cin",
+            "Celular Samsung Galaxy S25 Ultra 5G, 256GB, 12GB RAM, Câmera Quádrupla de 200+50+10+50, Tela Grande de 6.9\", Titânio Pra",
+            "Celular Samsung Galaxy S25 Ultra 5G, 256GB, 12GB RAM, Câmera Quádrupla de 200+50+10+50, Tela Grande de 6.9\", Titânio Azu"
+          ],
+          "error": null
+        },
+        {
+          "query": "galaxy s25 ultra 256gb",
+          "ms": 1756.6,
+          "count": 5,
+          "target_hit": true,
+          "titles": [
+            "Celular Samsung Galaxy S25 Ultra 5G, 256GB, 12GB RAM, Câmera Quádrupla de 200+50+10+50, Tela Grande de 6.9\", Titânio Pre",
+            "Celular Samsung Galaxy S25 Ultra 5G, 256GB, 12GB RAM, Câmera Quádrupla de 200+50+10+50, Tela Grande de 6.9\", Titânio Pre",
+            "Celular Samsung Galaxy S25 Ultra 5G, 256GB, 12GB RAM, Câmera Quádrupla de 200+50+10+50, Tela Grande de 6.9\", Titânio Cin",
+            "Celular Samsung Galaxy S25 Ultra 5G, 256GB, 12GB RAM, Câmera Quádrupla de 200+50+10+50, Tela Grande de 6.9\", Titânio Pra",
+            "Celular Samsung Galaxy S25 Ultra 5G, 256GB, 12GB RAM, Câmera Quádrupla de 200+50+10+50, Tela Grande de 6.9\", Titânio Azu"
+          ],
+          "error": null
+        },
+        {
+          "query": "samsung galaxy s25 ultra 256gb titanio preto",
+          "ms": 1130.3,
+          "count": 5,
+          "target_hit": true,
+          "titles": [
+            "Celular Samsung Galaxy S25 Ultra 5G, 256GB, 12GB RAM, Câmera Quádrupla de 200+50+10+50, Tela Grande de 6.9\", Titânio Pre",
+            "Celular Samsung Galaxy S25 Ultra 5G, 256GB, 12GB RAM, Câmera Quádrupla de 200+50+10+50, Tela Grande de 6.9\", Titânio Pre",
+            "Celular Samsung Galaxy S25 Ultra 5G, 512GB, 12GB RAM, Câmera Quádrupla de 200+50+10+50, Tela Grande de 6.9\", Titânio Pre",
+            "Celular Samsung Galaxy S25 Ultra 5G, 256GB, 12GB RAM, Câmera Quádrupla de 200+50+10+50, Tela Grande de 6.9\", Titânio Pra",
+            "Celular Samsung Galaxy S25 Ultra 5G, 256GB, 12GB RAM, Câmera Quádrupla de 200+50+10+50, Tela Grande de 6.9\", Titânio Cin"
+          ],
+          "error": null
+        },
+        {
+          "query": "samsung galaxy s25 ultra 256gb black",
+          "ms": 1360.4,
+          "count": 5,
+          "target_hit": true,
+          "titles": [
+            "Celular Samsung Galaxy S25 Ultra 5G, 256GB, 12GB RAM, Câmera Quádrupla de 200+50+10+50, Tela Grande de 6.9\", Titânio Pre",
+            "Samsung Celular Galaxy S25 Ultra 5G, 256GB, 12GB RAM, Câmera Quádrupla de 200+50+10+50, Tela Grande de 6.9\" (Titânio Jet",
+            "Celular Samsung Galaxy S25 Ultra 5G, 256GB, 12GB RAM, Câmera Quádrupla de 200+50+10+50, Tela Grande de 6.9\", Titânio Pre",
+            "Celular Samsung Galaxy S25 Ultra 5G, 256GB, 12GB RAM, Câmera Quádrupla de 200+50+10+50, Tela Grande de 6.9\", Titânio Cin",
+            "Celular Samsung Galaxy S25 Ultra 5G, 256GB, 12GB RAM, Câmera Quádrupla de 200+50+10+50, Tela Grande de 6.9\", Titânio Pra"
+          ],
+          "error": null
+        }
+      ],
+      "legacy": [
+        {
+          "query": "samsung 256gb",
+          "ms": 1963.3,
+          "count": 5,
+          "target_hit": false,
+          "titles": [
+            "Celular Samsung Galaxy A57 5g 256GB, 8GB RAM, Câmera Tripla de até 50MP Ois, Selfie de 12MP Video Hdr, Ip68, Tela Super ",
+            "Celular Samsung Galaxy A57 5G 256GB, 8GB RAM, Câmera Tripla de até 50MP, Selfie de 12MP, Tela Super AMOLED 6.7\", NFC, Re",
+            "Celular Samsung Galaxy A17, 256GB, 8GB, 50MP Tela 6.7\", IP54 - Cinza",
+            "Celular Samsung Galaxy A17, 256GB, 8GB, 50MP Tela 6.7\", IP54 - Preto",
+            "Celular Samsung Galaxy A07 256GB, 8GB, Câm. 50MP, Tela 6.7\" - Preto"
+          ],
+          "error": null
+        },
+        {
+          "query": "samsung 256gb titanio",
+          "ms": 1510.1,
+          "count": 5,
+          "target_hit": true,
+          "titles": [
+            "Smartphone Samsung Galaxy S24 Ultra, Galaxy AI, Selfie de 12MP, Tela de 6.8\" 1-120Hz, 256GB, 12GB RAM - Titânio Cinza (S",
+            "Celular Samsung Galaxy S25 Ultra 5G, 256GB, 12GB RAM, Câmera Quádrupla de 200+50+10+50, Tela Grande de 6.9\", Titânio Pre",
+            "Celular Samsung Galaxy S25 Ultra 5G, 256GB, 12GB RAM, Câmera Quádrupla de 200+50+10+50, Tela Grande de 6.9\", Titânio Pra",
+            "Celular Samsung Galaxy S25 Ultra 5G, 256GB, 12GB RAM, Câmera Quádrupla de 200+50+10+50, Tela Grande de 6.9\", Titânio Cin",
+            "Celular Samsung Galaxy S25 Ultra 5G, 256GB, 12GB RAM, Câmera Quádrupla de 200+50+10+50, Tela Grande de 6.9\", Titânio Azu"
+          ],
+          "error": null
+        }
+      ]
+    },
+    "amazon_us": {
+      "queries": [
+        {
+          "query": "samsung galaxy s25 ultra 256gb",
+          "ms": 1934.7,
+          "count": 5,
+          "target_hit": true,
+          "titles": [
+            "Samsung Galaxy S25 Ultra, 256GB, Titanium SilverBlue - Locked to Verizon (Renewed)",
+            "Samsung Galaxy S25 Ultra, 256GB, Titanium Whitesilver - Unlocked (Renewed)",
+            "Samsung Galaxy S25 Ultra, 256GB, Titanium Silverblue - Unlocked (Renewed)",
+            "Samsung Galaxy S25 Ultra, 256GB, Titanium Black - Unlocked (Renewed)",
+            "Samsung Galaxy S25 Ultra 5G, 256GB, Titanium Jet Black, Unlocked, US Version (Renewed)"
+          ],
+          "error": null
+        },
+        {
+          "query": "galaxy s25 ultra 256gb",
+          "ms": 2068.0,
+          "count": 5,
+          "target_hit": true,
+          "titles": [
+            "Samsung Galaxy S25 Ultra, 256GB, Titanium SilverBlue - Locked to Verizon (Renewed)",
+            "Samsung Galaxy S25 Ultra, 256GB, Titanium Whitesilver - Unlocked (Renewed)",
+            "Samsung Galaxy S25 Ultra, 256GB, Titanium Silverblue - Unlocked (Renewed)",
+            "Samsung Galaxy S25 Ultra, 256GB, Titanium Black - Unlocked (Renewed)",
+            "26 Ultra Unlocked Phone 16+1TB,Built in Pen The Phone,Battery 7000mAh 7.0\" HD Screen,Android 15 Smartphone,Face ID/5G/Fi"
+          ],
+          "error": null
+        },
+        {
+          "query": "samsung galaxy s25 ultra 256gb titanio preto",
+          "ms": 2458.4,
+          "count": 5,
+          "target_hit": true,
+          "titles": [
+            "Samsung Galaxy S25 Ultra 5G, 256GB, Titanium Jet Black, Unlocked, US Version (Renewed)",
+            "Samsung Galaxy S25 Ultra, 256GB, Titanium SilverBlue - Locked to T-Mobile (Renewed)",
+            "Samsung Galaxy S25 Ultra, 256GB, Titanium SilverBlue - Locked to Verizon (Renewed)",
+            "Samsung Galaxy S25 Ultra: Unlocked, 256GB Storage, Titanium Black (Renewed)",
+            "Samsung Galaxy S25 Ultra, 256GB, Titanium Whitesilver - Unlocked (Renewed)"
+          ],
+          "error": null
+        },
+        {
+          "query": "samsung galaxy s25 ultra 256gb black",
+          "ms": 1821.9,
+          "count": 5,
+          "target_hit": true,
+          "titles": [
+            "Samsung Galaxy S25 Ultra 5G, 256GB, Titanium Jet Black, Unlocked, US Version (Renewed)",
+            "Samsung Galaxy S25 Ultra: Unlocked, 256GB Storage, Titanium Black (Renewed)",
+            "Samsung Galaxy S25 Ultra, 256GB, Titanium Black - Unlocked (Renewed)",
+            "Samsung Galaxy S25 Ultra, 256GB, Titanium Whitesilver - Unlocked (Renewed)",
+            "Samsung Galaxy S25 Ultra, 256GB, Titanium Silverblue - Unlocked (Renewed)"
+          ],
+          "error": null
+        }
+      ],
+      "legacy": [
+        {
+          "query": "samsung 256gb",
+          "ms": 1824.7,
+          "count": 5,
+          "target_hit": false,
+          "titles": [
+            "Samsung Galaxy S23+ Plus 5G, US Version, 256GB, Phantom Black - Unlocked (Renewed)",
+            "Samsung Galaxy S22 5G, 256GB, Phantom Black - Unlocked (Renewed)",
+            "Samsung",
+            "Motorola Moto Edge 5G UW, 256GB, Nebula Blue - Locked to Verizon (Renewed)",
+            "Samsung"
+          ],
+          "error": null
+        },
+        {
+          "query": "samsung 256gb titanio",
+          "ms": 2138.6,
+          "count": 5,
+          "target_hit": true,
+          "titles": [
+            "Samsung Galaxy S25 Ultra 5G, 256GB, Titanium Jet Black, Unlocked, US Version (Renewed)",
+            "Samsung Galaxy S24 Ultra 5G, US Version, 256GB, Titanium Black - Unlocked (Renewed)",
+            "Samsung Galaxy S25 Ultra, 256GB, Titanium Silverblue - Unlocked (Renewed)",
+            "Samsung Galaxy S24 5G, US Version, 256GB, Onyx Black - Unlocked (Renewed)",
+            "Samsung Galaxy S25 Ultra, 256GB, Titanium Jadegreen - Unlocked (Renewed)"
+          ],
+          "error": null
+        }
+      ]
+    },
+    "bestbuy": {
+      "queries": [
+        {
+          "query": "samsung galaxy s25 ultra 256gb",
+          "ms": 44994.6,
+          "count": 2,
+          "target_hit": true,
+          "titles": [
+            "samsung galaxy s25 ultra 256gb unlocked titanium black",
+            "samsung galaxy s25 ultra s938u fully unlocked 256gb titanium black"
+          ],
+          "error": null
+        },
+        {
+          "query": "galaxy s25 ultra 256gb",
+          "ms": 11383.7,
+          "count": 5,
+          "target_hit": true,
+          "titles": [
+            "samsung galaxy s25 ultra 256gb 6 9 5g fully unlocked titanium black",
+            "samsung galaxy s25 ultra 256gb unlocked titanium black",
+            "samsung galaxy s25 ultra 256gb unlocked titanium black",
+            "samsung galaxy s25 ultra s938u fully unlocked 256gb titanium whitesilver",
+            "samsung galaxy s25 ultra s938u fully unlocked 256gb titanium gray"
+          ],
+          "error": null
+        },
+        {
+          "query": "samsung galaxy s25 ultra 256gb titanio preto",
+          "ms": 27479.8,
+          "count": 4,
+          "target_hit": false,
+          "titles": [
+            "samsung galaxy s25 edge 256gb titanium jet black verizon",
+            "samsung galaxy s25 edge 256gb titanium jet black at t",
+            "samsung galaxy s24 ultra 512gb s928u unlocked titanium blue",
+            "samsung galaxy s24 ultra 512gb unlocked titanium violet"
+          ],
+          "error": null
+        },
+        {
+          "query": "samsung galaxy s25 ultra 256gb black",
+          "ms": 26810.8,
+          "count": 0,
+          "target_hit": false,
+          "titles": [],
+          "error": null
+        }
+      ],
+      "legacy": [
+        {
+          "query": "samsung 256gb",
+          "ms": 16422.8,
+          "count": 4,
+          "target_hit": false,
+          "titles": [
+            "samsung galaxy a37 5g 256gb unlocked awesome charcoal",
+            "samsung galaxy z fold7 256gb jet black verizon",
+            "samsung galaxy z fold8 ultra 256gb cream at t",
+            "samsung galaxy s26 fe 256gb unlocked graphite"
+          ],
+          "error": null
+        },
+        {
+          "query": "samsung 256gb titanio",
+          "ms": 13131.6,
+          "count": 4,
+          "target_hit": false,
+          "titles": [
+            "samsung galaxy s25 edge 256gb titanium jet black at t",
+            "samsung galaxy s26 ultra 256gb cobalt violet verizon",
+            "samsung galaxy s26 ultra 256gb unlocked black",
+            "samsung galaxy s26 ultra 256gb sky blue at t"
+          ],
+          "error": null
+        }
+      ]
+    },
+    "nissei": {
+      "queries": [
+        {
+          "query": "samsung galaxy s25 ultra 256gb",
+          "ms": 22481.5,
+          "count": 5,
+          "target_hit": false,
+          "titles": [
+            "Samsung Galaxy A56 SM-A566B/DS 5G Dual 256 GB - Grafito",
+            "Samsung Galaxy A56 SM-A566B/DS 5G Dual 256 GB - Oliva",
+            "Samsung Galaxy A57 SM-A576B 5G Dual 256 GB - Marino",
+            "Samsung Galaxy A57 SM-A576B 5G Dual 256 GB - Gris",
+            "Samsung Galaxy S26 SM-S942B/DS 5G Dual"
+          ],
+          "error": null
+        },
+        {
+          "query": "galaxy s25 ultra 256gb",
+          "ms": 12759.9,
+          "count": 5,
+          "target_hit": false,
+          "titles": [
+            "Memoria Micro SD SanDisk Ultra 150 MB/s C10 U1 256 GB con Adaptador (SDSQUAC-256G-GN6MA)",
+            "Memoria Micro SD SanDisk Ultra 150 MB/s C10 U1 con Adaptador (SDSQUAC)",
+            "Samsung Galaxy A56 SM-A566B/DS 5G Dual 256 GB - Grafito",
+            "Samsung Galaxy A57 SM-A576B 5G Dual 256 GB - Marino",
+            "Samsung Galaxy A57 SM-A576B 5G Dual 256 GB - Gris"
+          ],
+          "error": null
+        },
+        {
+          "query": "samsung galaxy s25 ultra 256gb titanio preto",
+          "ms": 12347.2,
+          "count": 5,
+          "target_hit": false,
+          "titles": [
+            "Samsung Galaxy Z Fold 7 SM-F966B/DS 5G Dual 512 GB - Negro Azabache",
+            "Samsung Galaxy A56 SM-A566B/DS 5G Dual 256 GB - Grafito",
+            "Samsung Galaxy A36 SM-A366E/DS 5G Dual 256 GB - Negro",
+            "Samsung Galaxy S26 SM-S942B/DS 5G Dual",
+            "Samsung Galaxy A56 SM-A566E/DS 5G Dual"
+          ],
+          "error": null
+        },
+        {
+          "query": "samsung galaxy s25 ultra 256gb black",
+          "ms": 17401.3,
+          "count": 5,
+          "target_hit": false,
+          "titles": [
+            "Samsung Galaxy Z Fold 7 SM-F966B/DS 5G Dual 512 GB - Negro Azabache",
+            "Samsung Galaxy A56 SM-A566B/DS 5G Dual 256 GB - Grafito",
+            "Samsung Galaxy A36 SM-A366E/DS 5G Dual 256 GB - Negro",
+            "Samsung Galaxy S26 SM-S942B/DS 5G Dual",
+            "Samsung Galaxy A36 SM-A366E/DS 5G Dual"
+          ],
+          "error": null
+        }
+      ],
+      "legacy": [
+        {
+          "query": "samsung 256gb",
+          "ms": 12958.1,
+          "count": 5,
+          "target_hit": false,
+          "titles": [
+            "Memoria Micro SD SanDisk Extreme Pro 200-90 MB/s U3 256GB con Adaptador (SDSQXCD-256G-GN6MA)",
+            "Samsung Galaxy A56 SM-A566B/DS 5G Dual 256 GB - Grafito",
+            "Samsung Galaxy A56 SM-A566E/DS 5G Dual",
+            "Samsung Galaxy S26 SM-S942B/DS 5G Dual",
+            "Samsung Galaxy A56 SM-A566B/DS 5G Dual"
+          ],
+          "error": null
+        },
+        {
+          "query": "samsung 256gb titanio",
+          "ms": 9924.2,
+          "count": 5,
+          "target_hit": false,
+          "titles": [
+            "Memoria Micro SD SanDisk Extreme Pro 200-90 MB/s U3 256GB con Adaptador (SDSQXCD-256G-GN6MA)",
+            "Memoria Micro SD SanDisk Ultra 100 MB/s C10 256GB (SDSQUNR-256G-GN6TA)",
+            "Samsung Galaxy A56 SM-A566E/DS 5G Dual",
+            "Memoria Micro SD SanDisk Ultra 150 MB/s C10 U1 256 GB con Adaptador (SDSQUAC-256G-GN6MA)",
+            "Memoria SD SanDisk Extreme 180-130 MB/s C10 U3 V30 256 GB (SDSDXVV-256G-GNCIN)"
+          ],
+          "error": null
+        }
+      ]
+    },
+    "shoppingchina": {
+      "queries": [
+        {
+          "query": "samsung galaxy s25 ultra 256gb",
+          "ms": 504.6,
+          "count": 4,
+          "target_hit": true,
+          "titles": [
+            "CELULAR SAMSUNG GALAXY S25 ULTRA 5G SM-S938B/DS 12GB 256GB TITANIUM WHITE SILVER UPO",
+            "CELULAR SAMSUNG GALAXY S25 ULTRA 5G SM-S938B/DS 12GB 256GB TITANIUM BLACK UPO",
+            "CELULAR SAMSUNG GALAXY S25 ULTRA 5G SM-S938B/DS 12GB 256GB TITANIUM GRAY",
+            "CELULAR SAMSUNG GALAXY S25 ULTRA S938B 12GB 256GB TITANIUM SILVER GRAY"
+          ],
+          "error": null
+        },
+        {
+          "query": "galaxy s25 ultra 256gb",
+          "ms": 326.8,
+          "count": 4,
+          "target_hit": true,
+          "titles": [
+            "CELULAR SAMSUNG GALAXY S25 ULTRA 5G SM-S938B/DS 12GB 256GB TITANIUM WHITE SILVER UPO",
+            "CELULAR SAMSUNG GALAXY S25 ULTRA 5G SM-S938B/DS 12GB 256GB TITANIUM BLACK UPO",
+            "CELULAR SAMSUNG GALAXY S25 ULTRA 5G SM-S938B/DS 12GB 256GB TITANIUM GRAY",
+            "CELULAR SAMSUNG GALAXY S25 ULTRA S938B 12GB 256GB TITANIUM SILVER GRAY"
+          ],
+          "error": null
+        },
+        {
+          "query": "samsung galaxy s25 ultra 256gb titanio preto",
+          "ms": 248.4,
+          "count": 0,
+          "target_hit": false,
+          "titles": [],
+          "error": null
+        },
+        {
+          "query": "samsung galaxy s25 ultra 256gb black",
+          "ms": 261.1,
+          "count": 1,
+          "target_hit": true,
+          "titles": [
+            "CELULAR SAMSUNG GALAXY S25 ULTRA 5G SM-S938B/DS 12GB 256GB TITANIUM BLACK UPO"
+          ],
+          "error": null
+        }
+      ],
+      "legacy": [
+        {
+          "query": "samsung 256gb",
+          "ms": 281.6,
+          "count": 5,
+          "target_hit": false,
+          "titles": [
+            "CELULAR SAMSUNG Z FLIP 8 12GB RAM 256GB GRAPHITE",
+            "CELULAR SAMSUNG S26 ULTRA 12GB 256GB BLACK UPO",
+            "CELULAR SAMSUNG S26+ S947B 12GB 256GB BLUE UPO",
+            "CELULAR SAMSUNG S26 ULTRA 12BG 256GB BLUE UPO",
+            "CELULAR SAMSUNG Z FLIP 8 12GB RAM 256GB PINK"
+          ],
+          "error": null
+        },
+        {
+          "query": "samsung 256gb titanio",
+          "ms": 255.8,
+          "count": 0,
+          "target_hit": false,
+          "titles": [],
+          "error": null
+        }
+      ]
+    }
+  }
+}

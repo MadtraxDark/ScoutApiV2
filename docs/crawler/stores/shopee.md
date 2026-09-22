@@ -15,6 +15,11 @@
 ## Live search (matching)
 
 - `supports_search=True`
+- **Product Match:** temporariamente `match_enabled=false`
+  (`match_disabled_reason="login instability"`) — a loja **não** entra no
+  conjunto elegível de `POST /match` / “Buscar preço em outras lojas”.
+  Crawl manual (`POST /crawl*`) e spiders permanecem. Reativar: só
+  `match_enabled=True` em `stores.py`.
 - SERP: `https://shopee.com.br/search?keyword={query}`
 - Camoufox intercepts `/api/v4/search/search_items` (same Mode A as PDP
   `get_pc` — signatures minted by Shopee JS, never forged)
@@ -31,7 +36,7 @@
 - Anti-bot/SERP fragility is higher than BR retail SERPs; failures surface as
   empty candidates / `AUTH_REQUIRED` / `UPSTREAM_BLOCKED`, never as fabricated
   matches
-- Used by `POST /match` (ADR 0019)
+- Used by `POST /match` when re-enabled (ADR 0019)
 
 ## Offer source
 

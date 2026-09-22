@@ -1,13 +1,15 @@
-"""Generic product-attribute resolution: structured data first, title last.
+"""Generic product-attribute resolution: selected variant first, URL last.
 
 Priority per attribute:
 
-1. explicit specifications
-2. structured product fields
-3. conservative, category-aware title inference
-4. null
+1. selected variant / selected SKU structured state
+2. explicit specifications
+3. structured product fields (JSON-LD, etc.)
+4. conservative, category-aware title inference
+5. URL/slug supporting evidence
+6. null
 
-Title fallback never overwrites a non-empty structured value. Identifiers
+Higher-priority sources never get overwritten by lower ones. Identifiers
 (GTIN/EAN/UPC/SKU/product_id) are never inferred from arbitrary title numbers.
 """
 
@@ -27,9 +29,11 @@ from .product_identity import (
     parse_title_identity,
 )
 
+SOURCE_SELECTED_VARIANT = "selected-variant"
 SOURCE_SPECIFICATIONS = "product-specifications"
 SOURCE_STRUCTURED = "structured-data"
 SOURCE_TITLE = "product-title-fallback"
+SOURCE_URL_SLUG = "url-slug-evidence"
 SOURCE_NOT_FOUND = "not-found"
 
 # Descriptive attributes safe for title fallback (never identifiers).
@@ -197,6 +201,9 @@ _SPEC_ALIASES: dict[str, frozenset[str]] = {
             "capacidad",
             "built-in storage",
             "internal storage",
+            "memoria interna",
+            "memória interna",
+            "internal memory",
             "ssd",
             "hdd",
             "disco",
@@ -601,14 +608,18 @@ def resolve_attribute(
     *,
     specifications: Mapping[str, Any] | None = None,
     structured: Mapping[str, Any] | None = None,
+    selected_variant: Mapping[str, Any] | None = None,
+    url_evidence: Mapping[str, Any] | None = None,
     title: str | None = None,
     category: str | None = None,
 ) -> ResolvedAttribute:
-    """Resolve one attribute with structured → title → null priority."""
+    """Resolve one attribute with selected-variant → … → URL → null priority."""
     return resolve_attributes(
         [attribute],
         specifications=specifications,
         structured=structured,
+        selected_variant=selected_variant,
+        url_evidence=url_evidence,
         title=title,
         category=category,
     ).get(attribute.strip().casefold())
@@ -619,15 +630,26 @@ def resolve_attributes(
     *,
     specifications: Mapping[str, Any] | None = None,
     structured: Mapping[str, Any] | None = None,
+    selected_variant: Mapping[str, Any] | None = None,
+    url_evidence: Mapping[str, Any] | None = None,
     title: str | None = None,
     category: str | None = None,
 ) -> ProductAttributeBundle:
-    """Resolve many attributes independently (structured always wins per field)."""
+    """Resolve many attributes independently (higher-priority source wins)."""
     detected = category or detect_product_category(title)
     title_map = _title_fallback_map(title, detected) if title else {}
+    url_map = (
+        {k: v for k, v in url_evidence.items() if v not in (None, "")}
+        if url_evidence
+        else {}
+    )
     values: dict[str, ResolvedAttribute] = {}
     for attribute in attributes:
         key = attribute.strip().casefold()
+        from_selected = _from_mapping(key, selected_variant)
+        if from_selected is not None:
+            values[key] = ResolvedAttribute(from_selected, SOURCE_SELECTED_VARIANT)
+            continue
         from_specs = _from_mapping(key, specifications)
         if from_specs is not None:
             values[key] = ResolvedAttribute(from_specs, SOURCE_SPECIFICATIONS)
@@ -640,9 +662,13 @@ def resolve_attributes(
             values[key] = ResolvedAttribute(None, SOURCE_NOT_FOUND)
             continue
         from_title = title_map.get(key)
+        if from_title:
+            values[key] = ResolvedAttribute(from_title, SOURCE_TITLE)
+            continue
+        from_url = _from_mapping(key, url_map) if url_map else None
         values[key] = (
-            ResolvedAttribute(from_title, SOURCE_TITLE)
-            if from_title
+            ResolvedAttribute(from_url, SOURCE_URL_SLUG)
+            if from_url
             else ResolvedAttribute(None, SOURCE_NOT_FOUND)
         )
     _apply_category_identity(values, title, detected)
@@ -653,6 +679,8 @@ def resolve_product_identity(
     *,
     specifications: Mapping[str, Any] | None = None,
     structured: Mapping[str, Any] | None = None,
+    selected_variant: Mapping[str, Any] | None = None,
+    url_evidence: Mapping[str, Any] | None = None,
     title: str | None = None,
     attributes: Sequence[str] | None = None,
     category: str | None = None,
@@ -662,6 +690,8 @@ def resolve_product_identity(
         attributes or DEFAULT_IDENTITY_ATTRIBUTES,
         specifications=specifications,
         structured=structured,
+        selected_variant=selected_variant,
+        url_evidence=url_evidence,
         title=title,
         category=category,
     )
@@ -1416,15 +1446,23 @@ def _looks_like_ram_label(label: str) -> bool:
 
 
 def _looks_like_storage_label(label: str) -> bool:
-    return bool(re.search(r"storage|armazen|almacen|ssd|hdd|disco|built-in", label))
+    return bool(
+        re.search(
+            r"storage|armazen|almacen|ssd|hdd|disco|built-in|memoria\s*interna|"
+            r"memória\s*interna|internal\s*memory",
+            label,
+        )
+    )
 
 
 __all__ = [
     "DEFAULT_IDENTITY_ATTRIBUTES",
     "SOURCE_NOT_FOUND",
+    "SOURCE_SELECTED_VARIANT",
     "SOURCE_SPECIFICATIONS",
     "SOURCE_STRUCTURED",
     "SOURCE_TITLE",
+    "SOURCE_URL_SLUG",
     "TITLE_SAFE_ATTRIBUTES",
     "ProductAttributeBundle",
     "ResolvedAttribute",

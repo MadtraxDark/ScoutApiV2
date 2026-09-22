@@ -753,11 +753,11 @@ def test_match_stops_after_two_empty_searches() -> None:
     resp = ProductMatchService(scrape_service=scrape, search_service=search).match(
         MatchRequest(
             reference_url="https://www.magazineluiza.com.br/p/238803400/",
-            stores=["shopee"],
+            stores=["kabum"],
             persist=False,
         )
     )
-    assert resp.unmatched_stores == ["shopee"]
+    assert resp.unmatched_stores == ["kabum"]
     assert search.search.call_count == 2
 
 
@@ -1612,3 +1612,189 @@ def test_match_forces_include_images_false_on_candidates() -> None:
         clear_reference_price=True,
     )
     assert scrape.scrape.call_args.kwargs.get("include_images") is False
+
+
+def test_long_smartphone_title_does_not_drive_raw_serp_query() -> None:
+    """Commercial PDP titles must not become SERP queries as-is.
+
+    Structured identity (brand + series + storage) drives progressive queries;
+    marketing noise (cameras, battery, AI slogans) stays out of the primary ladder.
+    """
+    title = (
+        'Celular Samsung Galaxy S25 Ultra 5G 256GB Galaxy AI Titânio Preto '
+        '6,9" 12GB RAM Câm. Quádrupla 200+50+10+50MP Bateria 5000mAh Dual Chip'
+    )
+    identity = identity_from_price_item(
+        _item(title=title, brand="Samsung", model=None, variant=None)
+    )
+    assert identity.model == "galaxys25ultra"
+    assert identity.variant_attrs.get("storage") == "256gb"
+    assert identity.variant_attrs.get("color") == "titanio preto"
+    queries = build_search_queries(identity)
+    # SEARCH stays broad (family) before capacity-colored refinements — Magento
+    # SERPs often bury S-series when ``256gb`` dominates the query token set.
+    assert queries[0] == "samsung galaxy s25 ultra"
+    assert "samsung galaxy s25 ultra 256gb" in queries
+    assert any(q == "samsung galaxy s25 ultra" for q in queries)
+    assert any("256gb" in q and "preto" in q for q in queries)
+    assert any("256gb" in q and "black" in q for q in queries)
+    # Brand+storage without the commercial series must never lead retrieval.
+    assert "samsung 256gb" not in queries
+    joined = " | ".join(queries)
+    assert "5000mah" not in joined
+    assert "quadrupla" not in joined
+    assert "dual chip" not in joined.casefold()
+
+
+def test_smartphone_marketing_noise_does_not_change_identity() -> None:
+    base = identity_from_price_item(
+        _item(
+            title="Samsung Galaxy S25 Ultra 256GB Titânio Preto",
+            brand="Samsung",
+        )
+    )
+    noisy = identity_from_price_item(
+        _item(
+            title=(
+                "Celular Samsung Galaxy S25 Ultra 5G 256GB Galaxy AI Titânio Preto "
+                "Câm. Quádrupla 200MP Bateria 5000mAh Dual Chip"
+            ),
+            brand="Samsung",
+        )
+    )
+    assert base.model == noisy.model == "galaxys25ultra"
+    assert base.variant_attrs.get("storage") == noisy.variant_attrs.get("storage")
+    assert normalize_title(base.title).split()[:4] != []  # smoke
+    assert build_search_queries(base)[0] == build_search_queries(noisy)[0]
+
+
+def test_galaxy_model_suffix_conflict_and_queries() -> None:
+    engine = MatchingEngine()
+    ultra = _identity(
+        brand="samsung",
+        model="galaxys25ultra",
+        title="Samsung Galaxy S25 Ultra 256GB",
+        variant_attrs={"storage": "256gb"},
+    )
+    plain = _identity(
+        brand="samsung",
+        model="galaxys25",
+        title="Samsung Galaxy S25 256GB",
+        variant_attrs={"storage": "256gb"},
+    )
+    score = engine.score(ultra, plain)
+    assert score.decision == "reject"
+    assert any(r.code == "critical_conflict" for r in score.reasons)
+    queries = build_search_queries(ultra)
+    assert all("s25+" not in q.casefold() for q in queries)
+    assert any("galaxy s25 ultra" in q for q in queries)
+
+
+def test_storage_conflict_not_relaxed_by_broad_retrieval() -> None:
+    """Search may surface 512GB siblings; matcher must still reject."""
+    score = MatchingEngine().score(
+        _identity(
+            brand="samsung",
+            model="galaxys25ultra",
+            title="Samsung Galaxy S25 Ultra 256GB",
+            variant_attrs={"storage": "256gb"},
+        ),
+        _identity(
+            brand="samsung",
+            model="galaxys25ultra",
+            title="Samsung Galaxy S25 Ultra 512GB",
+            variant_attrs={"storage": "512gb"},
+        ),
+    )
+    assert score.decision == "reject"
+    assert any(r.code == "variant_mismatch" for r in score.reasons)
+
+
+def test_missing_ram_battery_is_not_conflict() -> None:
+    score = MatchingEngine().score(
+        _identity(
+            brand="samsung",
+            model="galaxys25ultra",
+            title="Samsung Galaxy S25 Ultra 256GB 12GB RAM 5000mAh",
+            variant_attrs={"storage": "256gb", "ram": "12gb", "color": "black"},
+        ),
+        _identity(
+            brand="samsung",
+            model="galaxys25ultra",
+            title="Samsung Galaxy S25 Ultra 256GB Titanium Black",
+            variant_attrs={"storage": "256gb", "color": "black"},
+        ),
+    )
+    assert score.decision == "auto_match"
+
+
+def test_compact_phone_model_expands_for_serp() -> None:
+    from scout_api.modules.matching.identity import model_search_phrase
+
+    assert (
+        model_search_phrase(model="galaxys25ultra", title="Produto Samsung")
+        == "galaxy s25 ultra"
+    )
+    assert (
+        model_search_phrase(model="iphone16pro", title="Celular Apple")
+        == "iphone 16 pro"
+    )
+
+
+def test_phone_wearable_kit_is_bundle_reject() -> None:
+    engine = MatchingEngine()
+    score = engine.score(
+        _identity(
+            brand="samsung",
+            model="galaxys25ultra",
+            title="Samsung Galaxy S25 Ultra 256GB Titânio Preto",
+            variant_attrs={"storage": "256gb"},
+        ),
+        _identity(
+            brand="samsung",
+            model="galaxys25ultra",
+            title=(
+                "Celular Samsung Galaxy S25 Ultra 5G, 256GB, Titânio Preto "
+                "+ Samsung Galaxy Fit3 Display 1.6 Prata"
+            ),
+            variant_attrs={"storage": "256gb"},
+        ),
+    )
+    assert score.decision == "reject"
+    assert any(r.code == "bundle_reject" for r in score.reasons)
+    from scout_api.modules.crawler.core.fingerprints import title_hint_from_url
+    from scout_api.modules.crawler.models.search import SearchCandidate
+    from scout_api.modules.matching.identity import (
+        enrich_candidate_title,
+        rank_candidates_for_query,
+    )
+
+    url = (
+        "https://www.magazineluiza.com.br/"
+        "celular-samsung-galaxy-s25-ultra-5g-256gb-galaxy-ai-titanio-preto-69/"
+        "p/238922200/te/ssul/"
+    )
+    hint = title_hint_from_url(url)
+    assert hint is not None
+    assert "s25" in hint.casefold() and "ultra" in hint.casefold()
+    assert "titanio" in hint.casefold() or "preto" in hint.casefold()
+
+    bare = SearchCandidate(url=url, title=None, product_id="238922200")
+    enriched = enrich_candidate_title(bare)
+    assert enriched.title and "ultra" in enriched.title.casefold()
+
+    ranked = rank_candidates_for_query(
+        [
+            SearchCandidate(
+                url=(
+                    "https://www.magazineluiza.com.br/"
+                    "celular-samsung-galaxy-s25-5g-256gb-azul/p/wrong/te/x/"
+                ),
+                title=None,
+                product_id="wrong",
+            ),
+            bare,
+        ],
+        "samsung galaxy s25 ultra 256gb titanio preto",
+    )
+    assert ranked[0].product_id == "238922200"

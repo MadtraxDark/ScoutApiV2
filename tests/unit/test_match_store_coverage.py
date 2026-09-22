@@ -12,6 +12,7 @@ from scout_api.modules.crawler.core.exceptions import RequestError
 from scout_api.modules.crawler.core.fingerprints import canonicalize_url
 from scout_api.modules.crawler.models.product import ProductPriceItem
 from scout_api.modules.crawler.models.search import SearchCandidate
+from scout_api.modules.crawler.services.store_resolver import eligible_match_store_keys
 from scout_api.modules.crawler.stores import STORE_CONFIGS
 from scout_api.modules.matching.product_match_service import ProductMatchService
 from scout_api.modules.matching.schemas import MatchRequest
@@ -50,19 +51,27 @@ def test_canonicalize_strips_ml_google_shopping_tracking() -> None:
     assert "cq_src" not in canon
 
 
-def test_match_includes_all_implemented_stores_dynamically() -> None:
-    implemented = [k for k, cfg in STORE_CONFIGS.items() if cfg.implemented]
-    assert "mercadolivre" in implemented
-    assert "visaovip" in implemented
+def test_eligible_match_excludes_disabled_and_non_search() -> None:
+    eligible = set(eligible_match_store_keys())
+    assert "mercadolivre" not in eligible
+    assert "shopee" not in eligible
+    assert STORE_CONFIGS["mercadolivre"].match_enabled is False
+    assert STORE_CONFIGS["shopee"].match_enabled is False
+    # Implemented without search must not be auto-executed.
+    assert "visaovip" not in eligible
+    assert STORE_CONFIGS["visaovip"].implemented is True
+    # Search-capable + match_enabled stay in.
+    assert "kabum" in eligible
+    assert "magazineluiza" in eligible
+    assert "pichau" in eligible
+    assert "terabyteshop" in eligible
 
+
+def test_match_runs_only_eligible_stores() -> None:
     scrape = MagicMock()
     scrape.scrape.return_value = _item()
     search = MagicMock()
-
-    def _supported(store_key: str) -> bool:
-        return store_key not in {"visaovip"}
-
-    search.is_search_supported.side_effect = _supported
+    search.is_search_supported.return_value = True
     search.search.return_value = []
 
     resp = ProductMatchService(scrape_service=scrape, search_service=search).match(
@@ -76,15 +85,74 @@ def test_match_includes_all_implemented_stores_dynamically() -> None:
         | {m.store for m in resp.matches}
         | {e.store for e in resp.errors}
     )
-    # Every implemented catalog key except the reference store must appear.
-    expected = set(implemented) - {"mercadolivre"}
-    assert expected.issubset(covered)
+    expected = set(eligible_match_store_keys()) - {"mercadolivre"}
+    assert covered == expected
     assert "mercadolivre" not in covered
-    assert any(
-        e.code == "SEARCH_UNSUPPORTED" and e.store == "visaovip" for e in resp.errors
+    assert "shopee" not in covered
+    assert "visaovip" not in covered
+    assert not any(e.code == "SEARCH_UNSUPPORTED" for e in resp.errors)
+
+
+def test_match_ignores_explicit_disabled_store_request() -> None:
+    scrape = MagicMock()
+    scrape.scrape.return_value = _item(store="kabum")
+    search = MagicMock()
+    search.is_search_supported.return_value = True
+    search.search.return_value = []
+
+    resp = ProductMatchService(scrape_service=scrape, search_service=search).match(
+        MatchRequest(
+            reference_url="https://www.kabum.com.br/produto/1",
+            stores=["mercadolivre", "shopee", "magazineluiza"],
+            persist=False,
+        )
     )
-    # SEARCH_UNSUPPORTED is ERROR, never silent unmatched/NO_MATCH.
-    assert "visaovip" not in resp.unmatched_stores
+    searched = {call.args[0] for call in search.search.call_args_list}
+    assert searched == {"magazineluiza"}
+    assert "mercadolivre" not in resp.unmatched_stores
+    assert "shopee" not in resp.unmatched_stores
+    assert not any(e.store in {"mercadolivre", "shopee"} for e in resp.errors)
+
+
+def test_match_reenable_via_match_enabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from scout_api.modules.crawler import stores as stores_mod
+
+    original = stores_mod.STORE_CONFIGS["shopee"]
+    monkeypatch.setitem(
+        stores_mod.STORE_CONFIGS,
+        "shopee",
+        stores_mod.StoreConfig(
+            original.key,
+            original.country,
+            original.currency,
+            original.domains,
+            original.implemented,
+            proxy_policy=original.proxy_policy,
+            supports_images=original.supports_images,
+            image_fetch_cost=original.image_fetch_cost,
+            match_enabled=True,
+            match_disabled_reason=None,
+        ),
+    )
+    assert "shopee" in eligible_match_store_keys()
+
+    scrape = MagicMock()
+    scrape.scrape.return_value = _item(store="kabum")
+    search = MagicMock()
+    search.is_search_supported.return_value = True
+    search.search.return_value = []
+
+    ProductMatchService(scrape_service=scrape, search_service=search).match(
+        MatchRequest(
+            reference_url="https://www.kabum.com.br/produto/1",
+            stores=["shopee"],
+            persist=False,
+        )
+    )
+    searched = {call.args[0] for call in search.search.call_args_list}
+    assert searched == {"shopee"}
 
 
 def test_match_excludes_reference_store_even_when_requested() -> None:
@@ -110,8 +178,13 @@ def test_match_excludes_reference_store_even_when_requested() -> None:
 def test_scrape_upstream_error_is_not_silent_unmatched() -> None:
     scrape = MagicMock()
 
-    def _scrape(url: str, *, include_images: bool = False) -> ProductPriceItem:
-        del include_images
+    def _scrape(
+        url: str,
+        *,
+        include_images: bool = False,
+        purpose: object = None,
+    ) -> ProductPriceItem:
+        del include_images, purpose
         if "mercadolivre" in url:
             return _item()
         raise RequestError(
@@ -183,14 +256,14 @@ def test_match_wave2_stores_run_concurrently(
         MatchRequest(
             reference_url="https://www.mercadolivre.com.br/p/MLB1",
             # kabum = wave1; remaining three = wave2 (parallel).
-            stores=["kabum", "shopee", "magazineluiza", "aliexpress"],
+            stores=["kabum", "pichau", "magazineluiza", "aliexpress"],
             persist=False,
         )
     )
     elapsed = time.perf_counter() - t0
 
     covered = set(resp.unmatched_stores)
-    assert covered == {"kabum", "shopee", "magazineluiza", "aliexpress"}
+    assert covered == {"kabum", "pichau", "magazineluiza", "aliexpress"}
     # Three wave-2 stores overlap (each may run 2 SERP queries × sleep).
     assert peak >= 2
     # Serial wall ≈ 4 stores × 2 queries × 0.2s = 1.6s; parallel wave2 ≈ 0.8s.

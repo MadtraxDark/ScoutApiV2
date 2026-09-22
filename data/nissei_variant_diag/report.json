@@ -1,0 +1,78 @@
+[
+  {
+    "url": "https://nissei.com/br/samsung-galaxy-s25-ultra-sm-s938bz-ds-5g-dual",
+    "scrape": {
+      "secs": 16.5,
+      "error": "AttributeError",
+      "message": "'ProductPriceItem' object has no attribute 'specifications'"
+    },
+    "html": {
+      "secs": 3.6,
+      "len": 521747,
+      "final_url": "https://nissei.com/br/samsung-galaxy-s25-ultra-sm-s938bz-ds-5g-dual",
+      "path": "data\\nissei_variant_diag\\page_0.html",
+      "markers": {
+        "jsonConfig": false,
+        "spConfig": false,
+        "swatch-opt": true,
+        "data-role=\"swatch-options\"": true,
+        "option-selected": true,
+        "x-magento-init": false,
+        "Magento_Swatches": true,
+        "Magento_ConfigurableProduct": false,
+        "selectedProduct": true,
+        "hasVariant": false,
+        "ProductGroup": false,
+        "data-product-id": true,
+        "swatch-attribute": true
+      },
+      "spConfig_found": false,
+      "jsonConfig_samples": [],
+      "x_magento_snip": null,
+      "swatch_snip": " class=\"swatch-opt\" data-role=\"swatch-options\" data-rendered=\"true\"><div class=\"swatch-attribute color\" data-attribute-code=\"color\" data-attribute-id=\"93\"><span id=\"option-label-color-93-3b3ec05cab\" class=\"swatch-attribute-label\">Cor</span><span class=\"swatch-attribute-selected-option\"></span><div aria-activedescendant=\"\" tabindex=\"0\" aria-invalid=\"false\" aria-required=\"true\" role=\"listbox\" aria-labelledby=\"option-label-color-93-3b3ec05cab\" class=\"swatch-attribute-options clearfix\"><div class=\"swatch-option image\" id=\"option-label-color-93-3b3ec05cab-item-33354\" index=\"0\" aria-checked=\"false\" aria-describedby=\"option-label-color-93-3b3ec05cab\" tabindex=\"0\" data-option-typ",
+      "json_ld_snip": null
+    },
+    "current_parse": {
+      "error": "AttributeError",
+      "message": "'ProductPriceItem' object has no attribute 'specifications'"
+    }
+  },
+  {
+    "url": "https://nissei.com/br/samsung-galaxy-s25-ultra-sm-s938bz-ds-5g-dual-256-gb-black-titanium-1",
+    "scrape": {
+      "secs": 4.1,
+      "error": "AttributeError",
+      "message": "'ProductPriceItem' object has no attribute 'specifications'"
+    },
+    "html": {
+      "secs": 4.2,
+      "len": 514533,
+      "final_url": "https://nissei.com/br/samsung-galaxy-s25-ultra-sm-s938bz-ds-5g-dual-256-gb-black-titanium-1",
+      "path": "data\\nissei_variant_diag\\page_1.html",
+      "markers": {
+        "jsonConfig": false,
+        "spConfig": false,
+        "swatch-opt": true,
+        "data-role=\"swatch-options\"": false,
+        "option-selected": false,
+        "x-magento-init": false,
+        "Magento_Swatches": true,
+        "Magento_ConfigurableProduct": false,
+        "selectedProduct": false,
+        "hasVariant": false,
+        "ProductGroup": false,
+        "data-product-id": true,
+        "swatch-attribute": true
+      },
+      "spConfig_found": false,
+      "jsonConfig_samples": [],
+      "x_magento_snip": null,
+      "swatch_snip": "-option-aip_you_may_like_6ab2949b02a4a1673622\" data-rendered=\"true\"><div class=\"swatch-attribute color\" data-attribute-code=\"color\" data-attribute-id=\"93\"><div aria-activedescendant=\"\" tabindex=\"0\" aria-invalid=\"false\" aria-required=\"true\" role=\"listbox\" aria-label=\"Cor\" class=\"swatch-attribute-options clearfix\"><div class=\"swatch-option image\" id=\"option-label-color-93-5ed9ebc017-item-23593\" index=\"0\" aria-checked=\"false\" aria-describedby=\"option-label-color-93-5ed9ebc017\" tabindex=\"0\" data-option-type=\"2\" data-option-id=\"23593\" data-option-label=\"Sky Blue\" aria-label=\"Sky Blue\" role=\"option\" data-thumb-width=\"120\" data-thumb-height=\"120\" data-option-tooltip-thumb=\"https",
+      "json_ld_snip": null
+    },
+    "current_parse": {
+      "error": "AttributeError",
+      "message": "'ProductPriceItem' object has no attribute 'specifications'"
+    }
+  }
+]

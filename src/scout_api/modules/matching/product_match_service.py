@@ -24,6 +24,7 @@ from scout_api.core.performance import (
 )
 from scout_api.modules.crawler.core.exceptions import ParseError, RequestError
 from scout_api.modules.crawler.core.fingerprints import canonicalize_url
+from scout_api.modules.crawler.core.scrape_purpose import ScrapePurpose
 from scout_api.modules.crawler.models.product import (
     ProductPriceItem,
     product_offer_from_price_item,
@@ -32,8 +33,10 @@ from scout_api.modules.crawler.models.search import SearchCandidate
 from scout_api.modules.crawler.services.product_scrape_service import (
     ProductScrapeService,
 )
-from scout_api.modules.crawler.services.store_resolver import stores_supporting_search
-from scout_api.modules.crawler.stores import STORE_CONFIGS
+from scout_api.modules.crawler.services.store_resolver import (
+    eligible_match_store_keys,
+)
+from scout_api.modules.crawler.stores import STORE_CONFIGS, store_display_name
 from scout_api.modules.matching.engine import MatchingEngine
 from scout_api.modules.matching.gtin_learning import (
     TrustedGtin,
@@ -51,6 +54,7 @@ from scout_api.modules.matching.identity import (
     looks_like_bundle,
     normalize_brand,
     normalize_gtin,
+    serp_candidate_text,
 )
 from scout_api.modules.matching.repository import MatchingRepository
 from scout_api.modules.matching.schemas import (
@@ -70,8 +74,7 @@ logger = logging.getLogger(__name__)
 
 ProgressCallback = Callable[[MatchProgressEvent], None]
 
-# Fallback when the spider registry has no search-capable stores; order mirrors
-# GTIN exposure priority (kabum / bestbuy / … before magalu / shopee).
+# Fallback when the spider registry has no eligible match stores.
 MVP_SEARCH_STORES = (
     "kabum",
     "bestbuy",
@@ -80,9 +83,9 @@ MVP_SEARCH_STORES = (
     "amazon_br",
     "amazon_us",
     "magazineluiza",
-    "mercadolivre",
-    "shopee",
     "aliexpress",
+    "pichau",
+    "terabyteshop",
 )
 
 _MAX_RATE_LIMIT_WAIT_SECONDS = 20.0
@@ -128,6 +131,19 @@ def _is_identifier_only_query(query: str) -> bool:
     return False
 
 
+def _store_label(store_key: str) -> str:
+    return store_display_name(store_key)
+
+
+def _store_error(store_key: str, *, code: str, message: str) -> MatchStoreError:
+    return MatchStoreError(
+        store=store_key,
+        store_display_name=_store_label(store_key),
+        code=code,
+        message=message,
+    )
+
+
 def _serp_title_reject_reason(
     reference: ProductIdentity,
     *,
@@ -144,6 +160,11 @@ def _serp_title_reject_reason(
         return "accessory_reject"
     if looks_like_bundle(title_text, reference_title=reference.title):
         return "bundle_reject"
+    from scout_api.modules.matching.identity import condition_conflict
+
+    condition = condition_conflict(reference.title, title_text)
+    if condition:
+        return condition
     form = form_factor_conflict(reference.title, title_text)
     if form:
         return form
@@ -193,6 +214,7 @@ class ProductMatchService:
         reference = self._scrape.scrape(
             str(request.reference_url),
             include_images=request.include_images,
+            purpose=ScrapePurpose.MATCH_REFERENCE,
         )
         return self.match_from_item(
             reference,
@@ -294,7 +316,7 @@ class ProductMatchService:
 
         def process_one(store_key: str) -> None:
             nonlocal queries, ref_identity, learned
-            display_name = store_key
+            display_name = _store_label(store_key)
             with state_lock:
                 local_queries = list(queries)
                 local_identity = ref_identity
@@ -304,13 +326,13 @@ class ProductMatchService:
                 display_name=display_name,
                 stage="store_started",
                 status="running",
-                message=f"Iniciando busca em {store_key}",
+                message=f"Iniciando busca em {display_name}",
             )
             if not self._search.is_search_supported(store_key):
-                err = MatchStoreError(
-                    store=store_key,
+                err = _store_error(
+                    store_key,
                     code="SEARCH_UNSUPPORTED",
-                    message=f"Busca ao vivo não disponível para {store_key}",
+                    message=f"Busca ao vivo não disponível para {display_name}",
                 )
                 # SEARCH_UNSUPPORTED is ERROR, never silent NO_MATCH/unmatched.
                 with state_lock:
@@ -387,8 +409,8 @@ class ProductMatchService:
                         },
                     )
                 except RequestError as exc:
-                    last_error = MatchStoreError(
-                        store=store_key,
+                    last_error = _store_error(
+                        store_key,
                         code=exc.code,
                         message=str(exc),
                     )
@@ -396,8 +418,8 @@ class ProductMatchService:
                         break
                     continue
                 except ParseError as exc:
-                    last_error = MatchStoreError(
-                        store=store_key,
+                    last_error = _store_error(
+                        store_key,
                         code="PARSE_ERROR",
                         message=str(exc),
                     )
@@ -453,7 +475,7 @@ class ProductMatchService:
                         continue
                     candidates_seen += 1
                     reject = _serp_title_reject_reason(
-                        local_identity, title=candidate.title
+                        local_identity, title=serp_candidate_text(candidate)
                     )
                     if reject is not None:
                         title_rejects += 1
@@ -525,6 +547,7 @@ class ProductMatchService:
 
                     hit = MatchHit(
                         store=store_key,
+                        store_display_name=display_name,
                         country=product.country,
                         decision=score.decision,
                         confidence=score.confidence,
@@ -605,7 +628,7 @@ class ProductMatchService:
                     display_name=display_name,
                     stage="matched",
                     status="success",
-                    message=f"Match em {store_key}",
+                    message=f"Match em {display_name}",
                 )
             else:
                 with state_lock:
@@ -645,7 +668,7 @@ class ProductMatchService:
                         display_name=display_name,
                         stage="no_match",
                         status="no_result",
-                        message=f"Sem correspondência em {store_key}",
+                        message=f"Sem correspondência em {display_name}",
                     )
 
         def run_stores(store_list: list[str], *, parallel: bool) -> None:
@@ -807,14 +830,18 @@ class ProductMatchService:
     ) -> tuple[ProductPriceItem | None, MatchStoreError | None]:
         """Scrape a SERP candidate; wait once on domain RATE_LIMITED."""
         try:
-            return self._scrape.scrape(url, include_images=include_images), None
+            return self._scrape.scrape(
+                url,
+                include_images=include_images,
+                purpose=ScrapePurpose.MATCH_CANDIDATE,
+            ), None
         except ParseError as exc:
             logger.info(
                 "match_candidate_scrape_failed",
                 extra={"store": store_key, "url": url, "error": str(exc)},
             )
-            return None, MatchStoreError(
-                store=store_key,
+            return None, _store_error(
+                store_key,
                 code="PARSE_ERROR",
                 message=str(exc),
             )
@@ -829,8 +856,8 @@ class ProductMatchService:
                         "code": exc.code,
                     },
                 )
-                return None, MatchStoreError(
-                    store=store_key,
+                return None, _store_error(
+                    store_key,
                     code=exc.code,
                     message=str(exc),
                 )
@@ -842,7 +869,11 @@ class ProductMatchService:
             )
             time.sleep(wait)
             try:
-                return self._scrape.scrape(url, include_images=include_images), None
+                return self._scrape.scrape(
+                    url,
+                    include_images=include_images,
+                    purpose=ScrapePurpose.MATCH_CANDIDATE,
+                ), None
             except RequestError as retry_exc:
                 logger.info(
                     "match_candidate_scrape_failed",
@@ -852,8 +883,8 @@ class ProductMatchService:
                         "error": str(retry_exc),
                     },
                 )
-                return None, MatchStoreError(
-                    store=store_key,
+                return None, _store_error(
+                    store_key,
                     code=retry_exc.code,
                     message=str(retry_exc),
                 )
@@ -866,8 +897,8 @@ class ProductMatchService:
                         "error": str(retry_exc),
                     },
                 )
-                return None, MatchStoreError(
-                    store=store_key,
+                return None, _store_error(
+                    store_key,
                     code="PARSE_ERROR",
                     message=str(retry_exc),
                 )
@@ -979,21 +1010,34 @@ class ProductMatchService:
         *,
         reference_has_gtin: bool = False,
     ) -> list[str]:
-        # All implemented catalog keys — search-unsupported stores still appear
-        # as terminal ERROR (SEARCH_UNSUPPORTED), never silently omitted.
-        available = (
-            [key for key, config in STORE_CONFIGS.items() if config.implemented]
-            or list(stores_supporting_search())
-            or list(MVP_SEARCH_STORES)
-        )
+        # Eligible = registered ∩ implemented ∩ match_enabled ∩ supports_search.
+        # Temporarily disabled stores (match_enabled=False) are omitted entirely
+        # — never ERROR / NO_MATCH for that operation.
+        available = list(eligible_match_store_keys()) or list(MVP_SEARCH_STORES)
         if requested:
             selected = [s.strip().lower() for s in requested if s.strip()]
+            eligible = set(available)
+            selected = [s for s in selected if s in eligible]
         else:
             selected = list(available)
         # "Outras lojas": never re-search the reference store itself.
+        # Spiders may emit store="amazon" while catalog keys are amazon_br/us.
         ref_store = (reference.store or "").strip().lower()
+        ref_country = (reference.country or "").strip().upper()
         if ref_store:
-            selected = [s for s in selected if s != ref_store]
+            filtered: list[str] = []
+            for key in selected:
+                if key == ref_store:
+                    continue
+                cfg = STORE_CONFIGS.get(key)
+                if (
+                    cfg is not None
+                    and cfg.key == ref_store
+                    and (not ref_country or cfg.country.upper() == ref_country)
+                ):
+                    continue
+                filtered.append(key)
+            selected = filtered
         return order_stores_for_match(
             selected,
             reference_store=reference.store,

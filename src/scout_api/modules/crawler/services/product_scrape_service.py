@@ -9,6 +9,7 @@ from ..core.distributed_cooldown import DistributedCooldown
 from ..core.distributed_single_flight import DistributedSingleFlight
 from ..core.redis_client import build_redis_gateway
 from ..core.scrape_guard import ScrapeGuard
+from ..core.scrape_purpose import ScrapePurpose
 from ..models.product import (
     ProductPriceItem,
     candidates_from_urls,
@@ -172,7 +173,13 @@ class ProductScrapeService:
         self._fetcher = fetcher or get_shared_html_fetcher()
         self._guard = guard or get_shared_scrape_guard()
 
-    def scrape(self, url: str, *, include_images: bool = False) -> ProductPriceItem:
+    def scrape(
+        self,
+        url: str,
+        *,
+        include_images: bool = False,
+        purpose: ScrapePurpose = ScrapePurpose.MANUAL_CRAWL,
+    ) -> ProductPriceItem:
         cached = self._guard.get_cached(url)
         if cached is not None:
             if not include_images and cached.images:
@@ -214,7 +221,7 @@ class ProductScrapeService:
 
             spider = self._spider_for(url)
             fetch_url = spider.prepare_fetch_url(url)
-            self._guard.acquire_for_live_fetch(url)
+            self._guard.acquire_for_live_fetch(url, purpose=purpose)
             response = self._fetch(fetch_url)
             offer = spider.extract_offer(response)
             details = spider.extract_details(response)

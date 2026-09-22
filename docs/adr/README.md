@@ -51,6 +51,7 @@ Política de quando criar/atualizar docs:
 | [0027](0027-category-profile-product-identity.md) | CategoryProfile registry para identidade e filtros | Accepted |
 | [0030](0030-persistent-offer-monitoring.md) | Monitoramento persistente + promo expiry | Accepted |
 | [0032](0032-product-match-http-first-warm-camoufox.md) | Product Match HTTP-first + Camoufox warm reuse | Accepted |
+| [0033](0033-product-match-progressive-search-identity.md) | Progressive search a partir de ProductIdentity (não título bruto) | Accepted |
 
 ## Quando criar ADR
 

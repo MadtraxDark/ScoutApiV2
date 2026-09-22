@@ -22,6 +22,7 @@ from .distributed_single_flight import (
 from .exceptions import RequestError
 from .fingerprints import canonicalize_url
 from .redis_keys import scrape_cache_key
+from .scrape_purpose import ScrapePurpose
 from .single_flight import SingleFlight
 
 T = TypeVar("T")
@@ -115,8 +116,19 @@ class ScrapeGuard:
             )
         return None
 
-    def acquire_for_live_fetch(self, url: str) -> None:
-        """Reserve URL/domain for a live fetch or raise ``RequestError``."""
+    def acquire_for_live_fetch(
+        self,
+        url: str,
+        *,
+        purpose: ScrapePurpose = ScrapePurpose.UNSPECIFIED,
+    ) -> None:
+        """Reserve URL/domain for a live fetch or raise ``RequestError``.
+
+        ``purpose`` is recorded for observability; cooldown remains URL-scoped so
+        a successful PDP fetch (any purpose) populates the shared result cache and
+        subsequent callers must reuse that cache instead of bumping the network.
+        """
+        del purpose  # reserved for metrics / purpose-scoped policy later
         key = self._cache_key(url)
         host = (urlparse(url).hostname or "").lower()
 

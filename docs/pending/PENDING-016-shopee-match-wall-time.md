@@ -48,6 +48,8 @@ Sem Shopee, o restante das lojas caberia em poucos minutos.
 - Full 13-store completa (PENDING-015)
 - Challenge fail-fast evita hang infinito
 - Contrato: Shopee → `ERROR AUTH_REQUIRED` (não NO_MATCH falso)
+- **2026-09-22:** Match automático exclui Shopee via `match_enabled=false`
+  (PENDING-017). Esta pendência vale para quando a loja for reativada.
 
 ## Falta
 

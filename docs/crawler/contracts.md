@@ -48,18 +48,42 @@ ADR: [0011](../adr/0011-offer-vs-product-details.md), [0012](../adr/0012-optiona
 [0024](../adr/0024-product-match-evidence-cascade.md),
 [0026](../adr/0026-product-identity-brand-model-variant.md).
 
-### Product Matching (ADR 0019 / 0024)
+### Product Matching (ADR 0019 / 0024 / 0033)
 
-- Discovery: live SERP on all implemented stores with `supports_search`
-  (`kabum`, `bestbuy`, `nissei`, `shoppingchina`, `amazon_br`, `amazon_us`,
-  `magazineluiza`, `mercadolivre`, `shopee`, `aliexpress` — ordered by typical GTIN/EAN exposure) via
-  `build_search_url` / `parse_search_results`.
-  Lojas implementadas sem search (ex. `visaovip`) entram no `/match` como
-  `SEARCH_UNSUPPORTED` (ERROR terminal), nunca omitidas.
+- Discovery: live SERP on **eligible** stores only:
+
+  ```text
+  eligible = registered(STORE_CONFIGS)
+             ∩ implemented
+             ∩ match_enabled
+             ∩ supports_search
+  ```
+
+  Fonte cadastral: `STORE_CONFIGS` / `GET /stores` (não lista hardcoded no
+  frontend). Spiders sem search (ex. `visaovip`) e lojas com
+  `match_enabled=false` **não** entram no conjunto — omitidas, não
+  `ERROR`/`NO_MATCH`.
+
+  Temporariamente fora do Match (login/auth wall): `mercadolivre`, `shopee`
+  (`match_enabled=false`, `match_disabled_reason="login instability"`).
+  Reativar: `match_enabled=True` em `stores.py` (sem espalhar `if store ==`).
+
+  Lojas search-capable típicas quando habilitadas: `kabum`, `bestbuy`,
+  `nissei`, `shoppingchina`, `amazon_br`, `amazon_us`, `magazineluiza`,
+  `pichau`, `terabyteshop`, `aliexpress`, (+ ML/Shopee após reenable).
   Discovery may start from a **URL scrape** (`POST /match`) or from an
   **identity-only** reference (`match_from_item` / `identity_reference_item`)
   — brand/model(/variant) without known store URLs, product IDs, or prices
   fed into Search. Search and Match remain separate stages.
+  Queries are built from **structured ProductIdentity** (progressive ladder:
+  identifier → brand+series+critical variant → relax) — never the raw
+  commercial PDP title as the primary SERP query (ADR 0033).
+
+- Cooldown / reuse: `ScrapeGuard` still applies URL cooldown for manual
+  duplicate crawls. Offer refresh stores a full `ProductPriceItem` (details
+  from the same HTML) so Match reference of the same URL reuses cache instead
+  of raising `DUPLICATE_REQUEST`. Match also keeps an operation-scoped
+  candidate scrape cache + local/distributed single-flight.
 - Scoring cascade (precision-first): variant / **critical identity** blockers →
   accessory / **bundle** (kit+watch/AirPods) reject → **condition**
   (renewed/usado vs novo) → same store+`product_id`
@@ -128,8 +152,11 @@ ADR: [0011](../adr/0011-offer-vs-product-details.md), [0012](../adr/0012-optiona
 5. **Price and availability belong to the same selected variant/offer.**
 6. **Images only when requested**; never process gallery over paid proxy
    (Proxy Cost Mode).
-7. **Attribute priority:** specifications → structured fields → conservative
-   title fallback → `null`. Ambiguous title inference returns `null`.
+7. **Attribute priority:** selected variant / selected SKU state →
+   specifications → structured fields → conservative title fallback →
+   URL/slug supporting evidence → `null`. Ambiguous title inference returns
+   `null`. The URL slug is **never** the primary identity source when a more
+   reliable in-page source exists; conflicts are logged in metadata when useful.
    **Identity (`brand` / `model` / `variant`):** see below. Structured values
    that already look like a **base model** are only canonicalized — never
    replaced by a weaker title chip (`RTX 5070 Ti` structured wins over
@@ -185,10 +212,15 @@ Auth wall bypass: ADR 0018 + `.cursor/rules/auth-wall-resolution.mdc`.
 
 ## Variants
 
-- Resolve the **selected** variant/model (URL param, twister ASIN, `display_model_id`, …).
-- Never mix price/seller/images from different variants.
+- Resolve the **selected** variant/model (URL param, twister ASIN, Magento
+  swatch/`contentsWithIds`, `display_model_id`, …).
+- Missing attribute in the URL does **not** mean the product attribute is
+  missing — enrich from the PDP first.
+- Never mix price/seller/images/SKU from different variants.
 - Prefer the store’s selected/default sellable unit — **not** “cheapest across models”
   unless the store UI itself presents that as the selected offer.
+- Do **not** invent a selection by taking the first of many options; sole-option
+  attributes (only one choice) are deterministic and may be treated as selected.
 
 ## Brand / model / variant identity (ADR 0026 / 0027)
 

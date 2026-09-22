@@ -262,7 +262,7 @@ def test_build_search_urls() -> None:
     assert "s?k=" in AmazonBrazilSpider().build_search_url("rtx 4060")
     assert "amazon.com/s?k=" in AmazonUSSpider().build_search_url("rtx 4060")
     assert "searchpage.jsp" in BestBuySpider().build_search_url("rtx 4060")
-    assert "nissei.com/py/catalogsearch/result" in NisseiSpider().build_search_url(
+    assert "nissei.com/br/catalogsearch/result" in NisseiSpider().build_search_url(
         "rtx 4060"
     )
     assert "quick_search?search=" in ShoppingChinaSpider().build_search_url("rtx 4060")

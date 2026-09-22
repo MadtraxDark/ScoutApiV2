@@ -114,6 +114,10 @@ class MatchRequest(BaseModel):
 
 class MatchHit(BaseModel):
     store: str
+    store_display_name: str | None = Field(
+        default=None,
+        description="Nome amigável da loja para UI (ex.: Amazon Brasil).",
+    )
     country: str
     listing_id: UUID | None = None
     decision: MatchDecision
@@ -128,6 +132,10 @@ class MatchHit(BaseModel):
 
 class MatchStoreError(BaseModel):
     store: str
+    store_display_name: str | None = Field(
+        default=None,
+        description="Nome amigável da loja para UI.",
+    )
     code: str
     message: str
 
@@ -428,12 +436,29 @@ class ProductListResponse(BaseModel):
 
 class StoreInfo(BaseModel):
     key: str
+    display_name: str = Field(
+        description="Nome amigável para UI (ex.: Amazon Brasil). Não usar key na UI."
+    )
     country: str
     currency: str
     domains: list[str]
     implemented: bool
     supports_search: bool
     supports_images: bool
+    match_enabled: bool = Field(
+        default=True,
+        description=(
+            "Quando false, a loja fica fora do Product Match automático "
+            "(ainda pode aparecer em GET /stores e no crawl manual)."
+        ),
+    )
+    match_disabled_reason: str | None = Field(
+        default=None,
+        description=(
+            "Motivo legível quando match_enabled=false "
+            "(ex.: login instability)."
+        ),
+    )
     image_fetch_cost: Literal["low", "high", "unsupported"] = Field(
         default="low",
         description=(

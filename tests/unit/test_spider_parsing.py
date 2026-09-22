@@ -220,8 +220,8 @@ def test_nissei_extracts_structured_identity_and_rendered_installment() -> None:
     assert item.installment_count == 18
     assert item.original_price is None
     assert item.discount_percentage is None
-    assert item.model is None
-    assert item.variant is None
+    assert item.model is not None
+    assert "X870" in (item.model or "")
     assert item.seller is None
     assert item.shipping_price is None
     assert item.available is True

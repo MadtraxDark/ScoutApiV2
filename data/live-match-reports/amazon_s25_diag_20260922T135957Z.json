@@ -1,0 +1,480 @@
+{
+  "generated_at": "2026-09-22T13:58:51.825025+00:00",
+  "title": "Celular Samsung Galaxy S25 Ultra 5G 256GB Galaxy AI Titânio Preto 6,9\" 12GB RAM Câm. Quádrupla 200+50+10+50MP Bateria 5000mAh Dual Chip",
+  "gt_asin_br": "B0DSYJCY45",
+  "identity": {
+    "brand": "samsung",
+    "model": "galaxys25ultra",
+    "variant_attrs": {
+      "storage": "256gb",
+      "color": "titanio preto"
+    }
+  },
+  "queries": [
+    "samsung galaxy s25 ultra 256gb",
+    "galaxy s25 ultra 256gb",
+    "samsung galaxy s25 ultra 256gb titanio preto",
+    "samsung galaxy s25 ultra 256gb black",
+    "samsung galaxy s25 ultra 256gb preto",
+    "samsung galaxy s25 ultra 256gb negro",
+    "samsung galaxy s25 ultra",
+    "samsung galaxy s25 ultra 5g 256gb galaxy titanium"
+  ],
+  "stores": {
+    "amazon_br": {
+      "store": "amazon_br",
+      "queries": [
+        {
+          "query": "samsung galaxy s25 ultra 256gb",
+          "ms": 216.1,
+          "count": 0,
+          "gt_in_serp": false,
+          "error": null,
+          "candidates": []
+        },
+        {
+          "query": "galaxy s25 ultra 256gb",
+          "ms": 165.8,
+          "count": 0,
+          "gt_in_serp": false,
+          "error": null,
+          "candidates": []
+        },
+        {
+          "query": "samsung galaxy s25 ultra 256gb titanio preto",
+          "ms": 151.2,
+          "count": 0,
+          "gt_in_serp": false,
+          "error": null,
+          "candidates": []
+        },
+        {
+          "query": "samsung galaxy s25 ultra 256gb black",
+          "ms": 184.9,
+          "count": 0,
+          "gt_in_serp": false,
+          "error": null,
+          "candidates": []
+        },
+        {
+          "query": "samsung galaxy s25 ultra 256gb preto",
+          "ms": 142.7,
+          "count": 0,
+          "gt_in_serp": false,
+          "error": null,
+          "candidates": []
+        }
+      ],
+      "gt_scrape": {
+        "url": "https://www.amazon.com.br/dp/B0DSYJCY45",
+        "ms": 2696.3,
+        "error": null,
+        "score": {
+          "decision": "review",
+          "confidence": "0.8800",
+          "reasons": [
+            {
+              "code": "brand_match",
+              "detail": "samsung",
+              "score": 1.0
+            },
+            {
+              "code": "brand_model_exact",
+              "detail": "samsung:galaxys25ultra~galaxys25ultra",
+              "score": 1.0
+            },
+            {
+              "code": "title_similarity",
+              "detail": "token_set_ratio=0.708",
+              "score": 0.7083333333333334
+            },
+            {
+              "code": "price_deviation",
+              "detail": "extreme_price_ratio",
+              "score": 0.0
+            }
+          ],
+          "title": "Celular Samsung Galaxy S25 Ultra 5G, 256GB, 12GB RAM, Câmera Quádrupla de 200+50+10+50, Tela Grande de 6.9\", Titânio Preto",
+          "variant": "cor: Titânio Preto; tamanho: 256GB",
+          "product_id": "B0DSYJCY45",
+          "cand_model": "galaxys25ultra",
+          "cand_attrs": {
+            "color": "titanio preto",
+            "storage": "256gb",
+            "ram": "12gb"
+          }
+        }
+      },
+      "match": {
+        "ms": 15359.8,
+        "hits": [
+          {
+            "decision": "auto_match",
+            "confidence": "0.92",
+            "query": "samsung galaxy s25 ultra 256gb",
+            "asin": "B0DSYJCY45",
+            "title": "Celular Samsung Galaxy S25 Ultra 5G, 256GB, 12GB RAM, Câmera Quádrupla de 200+50+10+50, Tela Grande de 6.9\", Titânio Preto",
+            "url": "https://www.amazon.com.br/dp/B0DSYJCY45",
+            "reasons": [
+              {
+                "code": "brand_match",
+                "detail": "samsung",
+                "score": 1.0
+              },
+              {
+                "code": "brand_model_exact",
+                "detail": "samsung:galaxys25ultra~galaxys25ultra",
+                "score": 1.0
+              },
+              {
+                "code": "title_similarity",
+                "detail": "token_set_ratio=0.708",
+                "score": 0.7083333333333334
+              }
+            ]
+          }
+        ],
+        "unmatched": [],
+        "errors": []
+      }
+    },
+    "amazon_us": {
+      "store": "amazon_us",
+      "queries": [
+        {
+          "query": "samsung galaxy s25 ultra 256gb",
+          "ms": 2226.8,
+          "count": 8,
+          "gt_in_serp": false,
+          "error": null,
+          "candidates": [
+            {
+              "asin": "B0F38X8HJC",
+              "title": "Samsung Galaxy S25 Ultra, 256GB + 12GB RAM, Titanium Gray - Unlocked (International Version) (Renewed)",
+              "url": "https://www.amazon.com/SAMSUNG-Galaxy-Smartphone-Factory-Unlocked/dp/B0F38X8HJC/ref=sr_1_6?dib=eyJ2IjoiMSJ9.8BWkL0Pd2UpDJKeL6BlM9x6h9L4IwtYR3Z-IPj2QHwxq8ouRyRezrxvoaCJ2PlosHLHB8a_uswpGc-UQMvTLVnvxPZcczZbP2iJWqjUib4gbdHLkCFraRnXPNgyrEpDrL82MyUXBjzFpgr7ds6pkbY3KFzKigUT401G3MjSbB2HxRVx9uuSM08garmSjfRN-QtRdDeDBtRY65eBeqmP19quIjOqCHxmWpcrLD-_l78A.a58sIj9szLN4vNHHgCr685gx04WGJh9MAAd7etmaX_E&dib_tag=se&keywords=samsung+galaxy+s25+ultra+256gb&qid=1790085550&sbo=GW1QB%2BmqAsHTPf1jTZRSDA%3D%3D&sr=8-6",
+              "prefilter": "pass",
+              "is_gt": false
+            },
+            {
+              "asin": "B0F39K86M9",
+              "title": "Samsung Galaxy S25 Ultra, 256GB, Titanium Whitesilver - Unlocked (Renewed)",
+              "url": "https://www.amazon.com/SAMSUNG-Smartphone-Unlocked-Processor-Whitesilver/dp/B0F39K86M9/ref=sr_1_4?dib=eyJ2IjoiMSJ9.8BWkL0Pd2UpDJKeL6BlM9x6h9L4IwtYR3Z-IPj2QHwxq8ouRyRezrxvoaCJ2PlosHLHB8a_uswpGc-UQMvTLVnvxPZcczZbP2iJWqjUib4gbdHLkCFraRnXPNgyrEpDrL82MyUXBjzFpgr7ds6pkbY3KFzKigUT401G3MjSbB2HxRVx9uuSM08garmSjfRN-QtRdDeDBtRY65eBeqmP19quIjOqCHxmWpcrLD-_l78A.a58sIj9szLN4vNHHgCr685gx04WGJh9MAAd7etmaX_E&dib_tag=se&keywords=samsung+galaxy+s25+ultra+256gb&qid=1790085550&sbo=GW1QB%2BmqAsHTPf1jTZRSDA%3D%3D&sr=8-4",
+              "prefilter": "pass",
+              "is_gt": false
+            },
+            {
+              "asin": "B0F38VY33B",
+              "title": "Samsung Galaxy S25 Ultra, 256GB, Titanium Silverblue - Unlocked (Renewed)",
+              "url": "https://www.amazon.com/SAMSUNG-Smartphone-Unlocked-Processor-Silverblue/dp/B0F38VY33B/ref=sr_1_1?dib=eyJ2IjoiMSJ9.8BWkL0Pd2UpDJKeL6BlM9x6h9L4IwtYR3Z-IPj2QHwxq8ouRyRezrxvoaCJ2PlosHLHB8a_uswpGc-UQMvTLVnvxPZcczZbP2iJWqjUib4gbdHLkCFraRnXPNgyrEpDrL82MyUXBjzFpgr7ds6pkbY3KFzKigUT401G3MjSbB2HxRVx9uuSM08garmSjfRN-QtRdDeDBtRY65eBeqmP19quIjOqCHxmWpcrLD-_l78A.a58sIj9szLN4vNHHgCr685gx04WGJh9MAAd7etmaX_E&dib_tag=se&keywords=samsung+galaxy+s25+ultra+256gb&qid=1790085550&sbo=GW1QB%2BmqAsHTPf1jTZRSDA%3D%3D&sr=8-1",
+              "prefilter": "pass",
+              "is_gt": false
+            },
+            {
+              "asin": "B0F39CGPQV",
+              "title": "Samsung Galaxy S25 Ultra, 256GB, Titanium Black - Unlocked (Renewed)",
+              "url": "https://www.amazon.com/SAMSUNG-S25-Ultra-Smartphone-Processor/dp/B0F39CGPQV/ref=sr_1_3?dib=eyJ2IjoiMSJ9.8BWkL0Pd2UpDJKeL6BlM9x6h9L4IwtYR3Z-IPj2QHwxq8ouRyRezrxvoaCJ2PlosHLHB8a_uswpGc-UQMvTLVnvxPZcczZbP2iJWqjUib4gbdHLkCFraRnXPNgyrEpDrL82MyUXBjzFpgr7ds6pkbY3KFzKigUT401G3MjSbB2HxRVx9uuSM08garmSjfRN-QtRdDeDBtRY65eBeqmP19quIjOqCHxmWpcrLD-_l78A.a58sIj9szLN4vNHHgCr685gx04WGJh9MAAd7etmaX_E&dib_tag=se&keywords=samsung+galaxy+s25+ultra+256gb&qid=1790085550&sbo=GW1QB%2BmqAsHTPf1jTZRSDA%3D%3D&sr=8-3",
+              "prefilter": "pass",
+              "is_gt": false
+            },
+            {
+              "asin": "B0G4SWDH8P",
+              "title": "Samsung",
+              "url": "https://www.amazon.com/sspa/click?ie=UTF8&spc=MTozMjI1MDI2MDkyOTQ0NTkyOjE3OTAwODU1NTA6c3BfYXRmOjMwMTMzOTg1Njk2NTcwMjo6MDo6&url=%2FSamsung-Unlocked-Smartphone-Charging-Warranty%2Fdp%2FB0G4SWDH8P%2Fref%3Dsr_1_2_sspa%3Fdib%3DeyJ2IjoiMSJ9.8BWkL0Pd2UpDJKeL6BlM9x6h9L4IwtYR3Z-IPj2QHwxq8ouRyRezrxvoaCJ2PlosHLHB8a_uswpGc-UQMvTLVnvxPZcczZbP2iJWqjUib4gbdHLkCFraRnXPNgyrEpDrL82MyUXBjzFpgr7ds6pkbY3KFzKigUT401G3MjSbB2HxRVx9uuSM08garmSjfRN-QtRdDeDBtRY65eBeqmP19quIjOqCHxmWpcrLD-_l78A.a58sIj9szLN4vNHHgCr685gx04WGJh9MAAd7etmaX_E%26dib_tag%3Dse%26keywords%3Dsamsung%2Bgalaxy%2Bs25%2Bultra%2B256gb%26qid%3D1790085550%26sr%3D8-2-spons%26sp_csd%3Dd2lkZ2V0TmFtZT1zcF9hdGY%26psc%3D1",
+              "prefilter": "pass",
+              "is_gt": false
+            },
+            {
+              "asin": "B0FLF25HLT",
+              "title": "Samsung",
+              "url": "https://www.amazon.com/Samsung-SM-S938B-Smartphone-Unlocked-International/dp/B0FLF25HLT/ref=sr_1_5?dib=eyJ2IjoiMSJ9.8BWkL0Pd2UpDJKeL6BlM9x6h9L4IwtYR3Z-IPj2QHwxq8ouRyRezrxvoaCJ2PlosHLHB8a_uswpGc-UQMvTLVnvxPZcczZbP2iJWqjUib4gbdHLkCFraRnXPNgyrEpDrL82MyUXBjzFpgr7ds6pkbY3KFzKigUT401G3MjSbB2HxRVx9uuSM08garmSjfRN-QtRdDeDBtRY65eBeqmP19quIjOqCHxmWpcrLD-_l78A.a58sIj9szLN4vNHHgCr685gx04WGJh9MAAd7etmaX_E&dib_tag=se&keywords=samsung+galaxy+s25+ultra+256gb&qid=1790085550&sr=8-5",
+              "prefilter": "pass",
+              "is_gt": false
+            },
+            {
+              "asin": "B0G4SX79VJ",
+              "title": "Samsung",
+              "url": "https://www.amazon.com/Samsung-Unlocked-Smartphone-Charging-Warranty/dp/B0G4SX79VJ/ref=sr_1_8?dib=eyJ2IjoiMSJ9.8BWkL0Pd2UpDJKeL6BlM9x6h9L4IwtYR3Z-IPj2QHwxq8ouRyRezrxvoaCJ2PlosHLHB8a_uswpGc-UQMvTLVnvxPZcczZbP2iJWqjUib4gbdHLkCFraRnXPNgyrEpDrL82MyUXBjzFpgr7ds6pkbY3KFzKigUT401G3MjSbB2HxRVx9uuSM08garmSjfRN-QtRdDeDBtRY65eBeqmP19quIjOqCHxmWpcrLD-_l78A.a58sIj9szLN4vNHHgCr685gx04WGJh9MAAd7etmaX_E&dib_tag=se&keywords=samsung+galaxy+s25+ultra+256gb&qid=1790085550&sr=8-8",
+              "prefilter": "pass",
+              "is_gt": false
+            },
+            {
+              "asin": "B0DSLTZFXN",
+              "title": "Samsung",
+              "url": "https://www.amazon.com/Samsung-SM-S931B-Factory-Unlocked-Smartphone/dp/B0DSLTZFXN/ref=sr_1_9?dib=eyJ2IjoiMSJ9.8BWkL0Pd2UpDJKeL6BlM9x6h9L4IwtYR3Z-IPj2QHwxq8ouRyRezrxvoaCJ2PlosHLHB8a_uswpGc-UQMvTLVnvxPZcczZbP2iJWqjUib4gbdHLkCFraRnXPNgyrEpDrL82MyUXBjzFpgr7ds6pkbY3KFzKigUT401G3MjSbB2HxRVx9uuSM08garmSjfRN-QtRdDeDBtRY65eBeqmP19quIjOqCHxmWpcrLD-_l78A.a58sIj9szLN4vNHHgCr685gx04WGJh9MAAd7etmaX_E&dib_tag=se&keywords=samsung+galaxy+s25+ultra+256gb&qid=1790085550&sr=8-9",
+              "prefilter": "pass",
+              "is_gt": false
+            }
+          ]
+        },
+        {
+          "query": "galaxy s25 ultra 256gb",
+          "ms": 2004.6,
+          "count": 8,
+          "gt_in_serp": false,
+          "error": null,
+          "candidates": [
+            {
+              "asin": "B0F38X8HJC",
+              "title": "Samsung Galaxy S25 Ultra, 256GB + 12GB RAM, Titanium Gray - Unlocked (International Version) (Renewed)",
+              "url": "https://www.amazon.com/SAMSUNG-Galaxy-Smartphone-Factory-Unlocked/dp/B0F38X8HJC/ref=sr_1_5?dib=eyJ2IjoiMSJ9.8BWkL0Pd2UpDJKeL6BlM9x6h9L4IwtYR3Z-IPj2QHwykOUa9UUf3O3FA1fmRROdTQSz-EXjoHmpSkuxbqIkiV_put7hgQW1ADukOZ4nP01XxnfDg1Jw1DQ2BEWQHF2mTJc8QU7e69ruLzjInE9ihX39SXWPmq69AAVMfM7p1PpO4Pk_8TVEFUs7LZPn7cMUMoQyeoUZYfUugoUW5530b6EVRSbOvjR8qoR6To_yaxhA.P1boQhv_Mq8apuLfdS1Y_PVq6wRlPcaGWOAduAGJFOw&dib_tag=se&keywords=galaxy+s25+ultra+256gb&qid=1790085553&sbo=GW1QB%2BmqAsHTPf1jTZRSDA%3D%3D&sr=8-5",
+              "prefilter": "pass",
+              "is_gt": false
+            },
+            {
+              "asin": "B0F39K86M9",
+              "title": "Samsung Galaxy S25 Ultra, 256GB, Titanium Whitesilver - Unlocked (Renewed)",
+              "url": "https://www.amazon.com/SAMSUNG-Smartphone-Unlocked-Processor-Whitesilver/dp/B0F39K86M9/ref=sr_1_4?dib=eyJ2IjoiMSJ9.8BWkL0Pd2UpDJKeL6BlM9x6h9L4IwtYR3Z-IPj2QHwykOUa9UUf3O3FA1fmRROdTQSz-EXjoHmpSkuxbqIkiV_put7hgQW1ADukOZ4nP01XxnfDg1Jw1DQ2BEWQHF2mTJc8QU7e69ruLzjInE9ihX39SXWPmq69AAVMfM7p1PpO4Pk_8TVEFUs7LZPn7cMUMoQyeoUZYfUugoUW5530b6EVRSbOvjR8qoR6To_yaxhA.P1boQhv_Mq8apuLfdS1Y_PVq6wRlPcaGWOAduAGJFOw&dib_tag=se&keywords=galaxy+s25+ultra+256gb&qid=1790085553&sbo=GW1QB%2BmqAsHTPf1jTZRSDA%3D%3D&sr=8-4",
+              "prefilter": "pass",
+              "is_gt": false
+            },
+            {
+              "asin": "B0F38VY33B",
+              "title": "Samsung Galaxy S25 Ultra, 256GB, Titanium Silverblue - Unlocked (Renewed)",
+              "url": "https://www.amazon.com/SAMSUNG-Smartphone-Unlocked-Processor-Silverblue/dp/B0F38VY33B/ref=sr_1_1?dib=eyJ2IjoiMSJ9.8BWkL0Pd2UpDJKeL6BlM9x6h9L4IwtYR3Z-IPj2QHwykOUa9UUf3O3FA1fmRROdTQSz-EXjoHmpSkuxbqIkiV_put7hgQW1ADukOZ4nP01XxnfDg1Jw1DQ2BEWQHF2mTJc8QU7e69ruLzjInE9ihX39SXWPmq69AAVMfM7p1PpO4Pk_8TVEFUs7LZPn7cMUMoQyeoUZYfUugoUW5530b6EVRSbOvjR8qoR6To_yaxhA.P1boQhv_Mq8apuLfdS1Y_PVq6wRlPcaGWOAduAGJFOw&dib_tag=se&keywords=galaxy+s25+ultra+256gb&qid=1790085553&sbo=GW1QB%2BmqAsHTPf1jTZRSDA%3D%3D&sr=8-1",
+              "prefilter": "pass",
+              "is_gt": false
+            },
+            {
+              "asin": "B0GNTJLH97",
+              "title": "Samsung Galaxy S25 Ultra, 256GB, Titanium Jadegreen - Unlocked (Renewed)",
+              "url": "https://www.amazon.com/Samsung-S25-Ultra-Titanium-Jadegreen/dp/B0GNTJLH97/ref=sr_1_8?dib=eyJ2IjoiMSJ9.8BWkL0Pd2UpDJKeL6BlM9x6h9L4IwtYR3Z-IPj2QHwykOUa9UUf3O3FA1fmRROdTQSz-EXjoHmpSkuxbqIkiV_put7hgQW1ADukOZ4nP01XxnfDg1Jw1DQ2BEWQHF2mTJc8QU7e69ruLzjInE9ihX39SXWPmq69AAVMfM7p1PpO4Pk_8TVEFUs7LZPn7cMUMoQyeoUZYfUugoUW5530b6EVRSbOvjR8qoR6To_yaxhA.P1boQhv_Mq8apuLfdS1Y_PVq6wRlPcaGWOAduAGJFOw&dib_tag=se&keywords=galaxy+s25+ultra+256gb&qid=1790085553&sbo=GW1QB%2BmqAsHTPf1jTZRSDA%3D%3D&sr=8-8",
+              "prefilter": "pass",
+              "is_gt": false
+            },
+            {
+              "asin": "B0F39CGPQV",
+              "title": "Samsung Galaxy S25 Ultra, 256GB, Titanium Black - Unlocked (Renewed)",
+              "url": "https://www.amazon.com/SAMSUNG-S25-Ultra-Smartphone-Processor/dp/B0F39CGPQV/ref=sr_1_3?dib=eyJ2IjoiMSJ9.8BWkL0Pd2UpDJKeL6BlM9x6h9L4IwtYR3Z-IPj2QHwykOUa9UUf3O3FA1fmRROdTQSz-EXjoHmpSkuxbqIkiV_put7hgQW1ADukOZ4nP01XxnfDg1Jw1DQ2BEWQHF2mTJc8QU7e69ruLzjInE9ihX39SXWPmq69AAVMfM7p1PpO4Pk_8TVEFUs7LZPn7cMUMoQyeoUZYfUugoUW5530b6EVRSbOvjR8qoR6To_yaxhA.P1boQhv_Mq8apuLfdS1Y_PVq6wRlPcaGWOAduAGJFOw&dib_tag=se&keywords=galaxy+s25+ultra+256gb&qid=1790085553&sbo=GW1QB%2BmqAsHTPf1jTZRSDA%3D%3D&sr=8-3",
+              "prefilter": "pass",
+              "is_gt": false
+            },
+            {
+              "asin": "B0GCVDCS8N",
+              "title": "26 Ultra Unlocked Phone 16+1TB,Built in Pen The Phone,Battery 7000mAh 7.0\" HD Screen,Android 15 Smartphone,Face ID/5G/Fingerprint Lock/Dual ",
+              "url": "https://www.amazon.com/sspa/click?ie=UTF8&spc=MTozMTQ1NDk2NTY0MzMyMzIwOjE3OTAwODU1NTM6c3BfbXRmOjMwMTMwNzYyNDg2NzEwMjo6MDo6&url=%2FBVNA-Cell-Phone-1228-White%2Fdp%2FB0GCVDCS8N%2Fref%3Dsr_1_7_sspa%3Fdib%3DeyJ2IjoiMSJ9.8BWkL0Pd2UpDJKeL6BlM9x6h9L4IwtYR3Z-IPj2QHwykOUa9UUf3O3FA1fmRROdTQSz-EXjoHmpSkuxbqIkiV_put7hgQW1ADukOZ4nP01XxnfDg1Jw1DQ2BEWQHF2mTJc8QU7e69ruLzjInE9ihX39SXWPmq69AAVMfM7p1PpO4Pk_8TVEFUs7LZPn7cMUMoQyeoUZYfUugoUW5530b6EVRSbOvjR8qoR6To_yaxhA.P1boQhv_Mq8apuLfdS1Y_PVq6wRlPcaGWOAduAGJFOw%26dib_tag%3Dse%26keywords%3Dgalaxy%2Bs25%2Bultra%2B256gb%26qid%3D1790085553%26sr%3D8-7-spons%26sp_csd%3Dd2lkZ2V0TmFtZT1zcF9tdGY%26psc%3D1",
+              "prefilter": "storage_mismatch:256gb!=1tb",
+              "is_gt": false
+            },
+            {
+              "asin": "B0G4SX6C1G",
+              "title": "Samsung",
+              "url": "https://www.amazon.com/sspa/click?ie=UTF8&spc=MTozMTQ1NDk2NTY0MzMyMzIwOjE3OTAwODU1NTM6c3BfYXRmOjMwMTMzOTg1Njk2NTEwMjo6MDo6&url=%2FSamsung-Unlocked-Smartphone-Charging-Warranty%2Fdp%2FB0G4SX6C1G%2Fref%3Dsr_1_2_sspa%3Fdib%3DeyJ2IjoiMSJ9.8BWkL0Pd2UpDJKeL6BlM9x6h9L4IwtYR3Z-IPj2QHwykOUa9UUf3O3FA1fmRROdTQSz-EXjoHmpSkuxbqIkiV_put7hgQW1ADukOZ4nP01XxnfDg1Jw1DQ2BEWQHF2mTJc8QU7e69ruLzjInE9ihX39SXWPmq69AAVMfM7p1PpO4Pk_8TVEFUs7LZPn7cMUMoQyeoUZYfUugoUW5530b6EVRSbOvjR8qoR6To_yaxhA.P1boQhv_Mq8apuLfdS1Y_PVq6wRlPcaGWOAduAGJFOw%26dib_tag%3Dse%26keywords%3Dgalaxy%2Bs25%2Bultra%2B256gb%26qid%3D1790085553%26sr%3D8-2-spons%26sp_csd%3Dd2lkZ2V0TmFtZT1zcF9hdGY%26psc%3D1",
+              "prefilter": "pass",
+              "is_gt": false
+            },
+            {
+              "asin": "B0FLF25HLT",
+              "title": "Samsung",
+              "url": "https://www.amazon.com/Samsung-SM-S938B-Smartphone-Unlocked-International/dp/B0FLF25HLT/ref=sr_1_6?dib=eyJ2IjoiMSJ9.8BWkL0Pd2UpDJKeL6BlM9x6h9L4IwtYR3Z-IPj2QHwykOUa9UUf3O3FA1fmRROdTQSz-EXjoHmpSkuxbqIkiV_put7hgQW1ADukOZ4nP01XxnfDg1Jw1DQ2BEWQHF2mTJc8QU7e69ruLzjInE9ihX39SXWPmq69AAVMfM7p1PpO4Pk_8TVEFUs7LZPn7cMUMoQyeoUZYfUugoUW5530b6EVRSbOvjR8qoR6To_yaxhA.P1boQhv_Mq8apuLfdS1Y_PVq6wRlPcaGWOAduAGJFOw&dib_tag=se&keywords=galaxy+s25+ultra+256gb&qid=1790085553&sr=8-6",
+              "prefilter": "pass",
+              "is_gt": false
+            }
+          ]
+        },
+        {
+          "query": "samsung galaxy s25 ultra 256gb titanio preto",
+          "ms": 1844.5,
+          "count": 8,
+          "gt_in_serp": false,
+          "error": null,
+          "candidates": [
+            {
+              "asin": "B0F39K86M9",
+              "title": "Samsung Galaxy S25 Ultra, 256GB, Titanium Whitesilver - Unlocked (Renewed)",
+              "url": "https://www.amazon.com/SAMSUNG-Smartphone-Unlocked-Processor-Whitesilver/dp/B0F39K86M9/ref=sr_1_5?dib=eyJ2IjoiMSJ9.Zh7XrGEzQUMazQ2QEt2P5z0Q_1JBHbAxIPpUUxwswM2Mvx08OdWHLFwNM3JijA-PgbDJC534sN0el9W2NFbUHMth3TyXaBbwkuiyTV8LO029wzhzhn0AljjDLvhOROdkppWqIpO-IlYaJOuBibLrdlxXQU70OTbqoQWSdysQC02SEx4Fed5Jzag4N40RleX3nvmcUgUNSzje-_MAop5gE5-AaN53bd3k67ADpZHk08E.eYGa3j9Eix5k0azaNp6LJUH9BTQnVP1v7fHnc0V-uKk&dib_tag=se&keywords=samsung+galaxy+s25+ultra+256gb+titanio+preto&qid=1790085555&sbo=GW1QB%2BmqAsHTPf1jTZRSDA%3D%3D&sr=8-5",
+              "prefilter": "pass",
+              "is_gt": false
+            },
+            {
+              "asin": "B0F38VY33B",
+              "title": "Samsung Galaxy S25 Ultra, 256GB, Titanium Silverblue - Unlocked (Renewed)",
+              "url": "https://www.amazon.com/SAMSUNG-Smartphone-Unlocked-Processor-Silverblue/dp/B0F38VY33B/ref=sr_1_3?dib=eyJ2IjoiMSJ9.Zh7XrGEzQUMazQ2QEt2P5z0Q_1JBHbAxIPpUUxwswM2Mvx08OdWHLFwNM3JijA-PgbDJC534sN0el9W2NFbUHMth3TyXaBbwkuiyTV8LO029wzhzhn0AljjDLvhOROdkppWqIpO-IlYaJOuBibLrdlxXQU70OTbqoQWSdysQC02SEx4Fed5Jzag4N40RleX3nvmcUgUNSzje-_MAop5gE5-AaN53bd3k67ADpZHk08E.eYGa3j9Eix5k0azaNp6LJUH9BTQnVP1v7fHnc0V-uKk&dib_tag=se&keywords=samsung+galaxy+s25+ultra+256gb+titanio+preto&qid=1790085555&sbo=GW1QB%2BmqAsHTPf1jTZRSDA%3D%3D&sr=8-3",
+              "prefilter": "pass",
+              "is_gt": false
+            },
+            {
+              "asin": "B0F39Z696P",
+              "title": "Samsung Galaxy S25+, 256GB, Navy - Unlocked (Renewed)",
+              "url": "https://www.amazon.com/SAMSUNG-S25-Smartphone-Processor-ProScaler/dp/B0F39Z696P/ref=sr_1_4?dib=eyJ2IjoiMSJ9.Zh7XrGEzQUMazQ2QEt2P5z0Q_1JBHbAxIPpUUxwswM2Mvx08OdWHLFwNM3JijA-PgbDJC534sN0el9W2NFbUHMth3TyXaBbwkuiyTV8LO029wzhzhn0AljjDLvhOROdkppWqIpO-IlYaJOuBibLrdlxXQU70OTbqoQWSdysQC02SEx4Fed5Jzag4N40RleX3nvmcUgUNSzje-_MAop5gE5-AaN53bd3k67ADpZHk08E.eYGa3j9Eix5k0azaNp6LJUH9BTQnVP1v7fHnc0V-uKk&dib_tag=se&keywords=samsung+galaxy+s25+ultra+256gb+titanio+preto&qid=1790085555&sbo=GW1QB%2BmqAsHTPf1jTZRSDA%3D%3D&sr=8-4",
+              "prefilter": "phone_mismatch:galaxys25ultra!=galaxys25",
+              "is_gt": false
+            },
+            {
+              "asin": "B0DP3GQ4QY",
+              "title": "Samsung",
+              "url": "https://www.amazon.com/Samsung-Smartphone-Unlocked-Processor-Manufacturer/dp/B0DP3GQ4QY/ref=sr_1_1?dib=eyJ2IjoiMSJ9.Zh7XrGEzQUMazQ2QEt2P5z0Q_1JBHbAxIPpUUxwswM2Mvx08OdWHLFwNM3JijA-PgbDJC534sN0el9W2NFbUHMth3TyXaBbwkuiyTV8LO029wzhzhn0AljjDLvhOROdkppWqIpO-IlYaJOuBibLrdlxXQU70OTbqoQWSdysQC02SEx4Fed5Jzag4N40RleX3nvmcUgUNSzje-_MAop5gE5-AaN53bd3k67ADpZHk08E.eYGa3j9Eix5k0azaNp6LJUH9BTQnVP1v7fHnc0V-uKk&dib_tag=se&keywords=samsung+galaxy+s25+ultra+256gb+titanio+preto&qid=1790085555&sr=8-1",
+              "prefilter": "pass",
+              "is_gt": false
+            },
+            {
+              "asin": "B0G4SWDH8P",
+              "title": "Samsung",
+              "url": "https://www.amazon.com/sspa/click?ie=UTF8&spc=MTo3NjUxNjM3NjQ3MDQzODE5OjE3OTAwODU1NTU6c3BfYXRmOjMwMTMzOTg1Njk2NTcwMjo6MDo6&url=%2FSamsung-Unlocked-Smartphone-Charging-Warranty%2Fdp%2FB0G4SWDH8P%2Fref%3Dsr_1_2_sspa%3Fdib%3DeyJ2IjoiMSJ9.Zh7XrGEzQUMazQ2QEt2P5z0Q_1JBHbAxIPpUUxwswM2Mvx08OdWHLFwNM3JijA-PgbDJC534sN0el9W2NFbUHMth3TyXaBbwkuiyTV8LO029wzhzhn0AljjDLvhOROdkppWqIpO-IlYaJOuBibLrdlxXQU70OTbqoQWSdysQC02SEx4Fed5Jzag4N40RleX3nvmcUgUNSzje-_MAop5gE5-AaN53bd3k67ADpZHk08E.eYGa3j9Eix5k0azaNp6LJUH9BTQnVP1v7fHnc0V-uKk%26dib_tag%3Dse%26keywords%3Dsamsung%2Bgalaxy%2Bs25%2Bultra%2B256gb%2Btitanio%2Bpreto%26qid%3D1790085555%26sr%3D8-2-spons%26sp_csd%3Dd2lkZ2V0TmFtZT1zcF9hdGY%26psc%3D1",
+              "prefilter": "pass",
+              "is_gt": false
+            },
+            {
+              "asin": "B0DV45CFNP",
+              "title": "Samsung",
+              "url": "https://www.amazon.com/SAMSUNG-SM-S938B-Smartphone-Factory-Unlocked/dp/B0DV45CFNP/ref=sr_1_6?dib=eyJ2IjoiMSJ9.Zh7XrGEzQUMazQ2QEt2P5z0Q_1JBHbAxIPpUUxwswM2Mvx08OdWHLFwNM3JijA-PgbDJC534sN0el9W2NFbUHMth3TyXaBbwkuiyTV8LO029wzhzhn0AljjDLvhOROdkppWqIpO-IlYaJOuBibLrdlxXQU70OTbqoQWSdysQC02SEx4Fed5Jzag4N40RleX3nvmcUgUNSzje-_MAop5gE5-AaN53bd3k67ADpZHk08E.eYGa3j9Eix5k0azaNp6LJUH9BTQnVP1v7fHnc0V-uKk&dib_tag=se&keywords=samsung+galaxy+s25+ultra+256gb+titanio+preto&qid=1790085555&sr=8-6",
+              "prefilter": "pass",
+              "is_gt": false
+            },
+            {
+              "asin": "B0DV44RF98",
+              "title": "Samsung",
+              "url": "https://www.amazon.com/SAMSUNG-SM-S938B-Smartphone-Factory-Unlocked/dp/B0DV44RF98/ref=sr_1_8?dib=eyJ2IjoiMSJ9.Zh7XrGEzQUMazQ2QEt2P5z0Q_1JBHbAxIPpUUxwswM2Mvx08OdWHLFwNM3JijA-PgbDJC534sN0el9W2NFbUHMth3TyXaBbwkuiyTV8LO029wzhzhn0AljjDLvhOROdkppWqIpO-IlYaJOuBibLrdlxXQU70OTbqoQWSdysQC02SEx4Fed5Jzag4N40RleX3nvmcUgUNSzje-_MAop5gE5-AaN53bd3k67ADpZHk08E.eYGa3j9Eix5k0azaNp6LJUH9BTQnVP1v7fHnc0V-uKk&dib_tag=se&keywords=samsung+galaxy+s25+ultra+256gb+titanio+preto&qid=1790085555&sr=8-8",
+              "prefilter": "pass",
+              "is_gt": false
+            },
+            {
+              "asin": "B0BV5SV5HL",
+              "title": "Samsung",
+              "url": "https://www.amazon.com/SAMSUNG-SM-S918B-DS-Unlocked-International/dp/B0BV5SV5HL/ref=sr_1_9?dib=eyJ2IjoiMSJ9.Zh7XrGEzQUMazQ2QEt2P5z0Q_1JBHbAxIPpUUxwswM2Mvx08OdWHLFwNM3JijA-PgbDJC534sN0el9W2NFbUHMth3TyXaBbwkuiyTV8LO029wzhzhn0AljjDLvhOROdkppWqIpO-IlYaJOuBibLrdlxXQU70OTbqoQWSdysQC02SEx4Fed5Jzag4N40RleX3nvmcUgUNSzje-_MAop5gE5-AaN53bd3k67ADpZHk08E.eYGa3j9Eix5k0azaNp6LJUH9BTQnVP1v7fHnc0V-uKk&dib_tag=se&keywords=samsung+galaxy+s25+ultra+256gb+titanio+preto&qid=1790085555&sr=8-9",
+              "prefilter": "pass",
+              "is_gt": false
+            }
+          ]
+        },
+        {
+          "query": "samsung galaxy s25 ultra 256gb black",
+          "ms": 1892.5,
+          "count": 8,
+          "gt_in_serp": false,
+          "error": null,
+          "candidates": [
+            {
+              "asin": "B0F39CGPQV",
+              "title": "Samsung Galaxy S25 Ultra, 256GB, Titanium Black - Unlocked (Renewed)",
+              "url": "https://www.amazon.com/SAMSUNG-S25-Ultra-Smartphone-Processor/dp/B0F39CGPQV/ref=sr_1_1?dib=eyJ2IjoiMSJ9._Kr81qud_6sxkb5f6JUNTMavjp8g_H-dXYaQEPWvF8koWNMGruEW7Gx7oktzsBK8mxSk8z_pK1qalD-YC6psLyq9bqVX-Icj6AYC9KnbxcyitMO-wmdZCk21vhVXIyeQeYIyl4hfGJcpctVtxxCVP-mKiHBTI0e8-P0pQbuj50O4Pk_8TVEFUs7LZPn7cMUMpTsulOfx2GT37YDc91RurG_NerHYnMDGrvwm4Ggi2pg.X3KrByZEH3aX_0CpietgxfFIZyVWDGw4_dY2JT6nNGA&dib_tag=se&keywords=samsung+galaxy+s25+ultra+256gb+black&qid=1790085556&sbo=GW1QB%2BmqAsHTPf1jTZRSDA%3D%3D&sr=8-1",
+              "prefilter": "pass",
+              "is_gt": false
+            },
+            {
+              "asin": "B0F39K86M9",
+              "title": "Samsung Galaxy S25 Ultra, 256GB, Titanium Whitesilver - Unlocked (Renewed)",
+              "url": "https://www.amazon.com/SAMSUNG-Smartphone-Unlocked-Processor-Whitesilver/dp/B0F39K86M9/ref=sr_1_10?dib=eyJ2IjoiMSJ9._Kr81qud_6sxkb5f6JUNTMavjp8g_H-dXYaQEPWvF8koWNMGruEW7Gx7oktzsBK8mxSk8z_pK1qalD-YC6psLyq9bqVX-Icj6AYC9KnbxcyitMO-wmdZCk21vhVXIyeQeYIyl4hfGJcpctVtxxCVP-mKiHBTI0e8-P0pQbuj50O4Pk_8TVEFUs7LZPn7cMUMpTsulOfx2GT37YDc91RurG_NerHYnMDGrvwm4Ggi2pg.X3KrByZEH3aX_0CpietgxfFIZyVWDGw4_dY2JT6nNGA&dib_tag=se&keywords=samsung+galaxy+s25+ultra+256gb+black&qid=1790085556&sbo=GW1QB%2BmqAsHTPf1jTZRSDA%3D%3D&sr=8-10",
+              "prefilter": "pass",
+              "is_gt": false
+            },
+            {
+              "asin": "B0F38VY33B",
+              "title": "Samsung Galaxy S25 Ultra, 256GB, Titanium Silverblue - Unlocked (Renewed)",
+              "url": "https://www.amazon.com/SAMSUNG-Smartphone-Unlocked-Processor-Silverblue/dp/B0F38VY33B/ref=sr_1_6?dib=eyJ2IjoiMSJ9._Kr81qud_6sxkb5f6JUNTMavjp8g_H-dXYaQEPWvF8koWNMGruEW7Gx7oktzsBK8mxSk8z_pK1qalD-YC6psLyq9bqVX-Icj6AYC9KnbxcyitMO-wmdZCk21vhVXIyeQeYIyl4hfGJcpctVtxxCVP-mKiHBTI0e8-P0pQbuj50O4Pk_8TVEFUs7LZPn7cMUMpTsulOfx2GT37YDc91RurG_NerHYnMDGrvwm4Ggi2pg.X3KrByZEH3aX_0CpietgxfFIZyVWDGw4_dY2JT6nNGA&dib_tag=se&keywords=samsung+galaxy+s25+ultra+256gb+black&qid=1790085556&sbo=GW1QB%2BmqAsHTPf1jTZRSDA%3D%3D&sr=8-6",
+              "prefilter": "pass",
+              "is_gt": false
+            },
+            {
+              "asin": "B0GD2S171V",
+              "title": "S26 Ultra 5G Unlocked Smartphone,16GB+512GB Cell Phone for Android 15, 6.99\" Unlocked Cell Phone, 7000mAh, 68MP+108MP Dual Camera/Dual SIM/F",
+              "url": "https://www.amazon.com/sspa/click?ie=UTF8&spc=MTo0NDA4MzAyNTg4NDExNjQxOjE3OTAwODU1NTc6c3BfbXRmOjMwMTUyNjEzMDExMDEwMjo6MDo6&url=%2FOfinsut-Cell-Phone-1230-White%2Fdp%2FB0GD2S171V%2Fref%3Dsr_1_7_sspa%3Fdib%3DeyJ2IjoiMSJ9._Kr81qud_6sxkb5f6JUNTMavjp8g_H-dXYaQEPWvF8koWNMGruEW7Gx7oktzsBK8mxSk8z_pK1qalD-YC6psLyq9bqVX-Icj6AYC9KnbxcyitMO-wmdZCk21vhVXIyeQeYIyl4hfGJcpctVtxxCVP-mKiHBTI0e8-P0pQbuj50O4Pk_8TVEFUs7LZPn7cMUMpTsulOfx2GT37YDc91RurG_NerHYnMDGrvwm4Ggi2pg.X3KrByZEH3aX_0CpietgxfFIZyVWDGw4_dY2JT6nNGA%26dib_tag%3Dse%26keywords%3Dsamsung%2Bgalaxy%2Bs25%2Bultra%2B256gb%2Bblack%26qid%3D1790085556%26sr%3D8-7-spons%26sp_csd%3Dd2lkZ2V0TmFtZT1zcF9tdGY%26psc%3D1",
+              "prefilter": "storage_mismatch:256gb!=512gb",
+              "is_gt": false
+            },
+            {
+              "asin": "B0G4SW3XXP",
+              "title": "Samsung",
+              "url": "https://www.amazon.com/sspa/click?ie=UTF8&spc=MTo0NDA4MzAyNTg4NDExNjQxOjE3OTAwODU1NTc6c3BfYXRmOjMwMTMzOTg1Njk2ODEwMjo6MDo6&url=%2FSamsung-Unlocked-Smartphone-Charging-Warranty%2Fdp%2FB0G4SW3XXP%2Fref%3Dsr_1_2_sspa%3Fdib%3DeyJ2IjoiMSJ9._Kr81qud_6sxkb5f6JUNTMavjp8g_H-dXYaQEPWvF8koWNMGruEW7Gx7oktzsBK8mxSk8z_pK1qalD-YC6psLyq9bqVX-Icj6AYC9KnbxcyitMO-wmdZCk21vhVXIyeQeYIyl4hfGJcpctVtxxCVP-mKiHBTI0e8-P0pQbuj50O4Pk_8TVEFUs7LZPn7cMUMpTsulOfx2GT37YDc91RurG_NerHYnMDGrvwm4Ggi2pg.X3KrByZEH3aX_0CpietgxfFIZyVWDGw4_dY2JT6nNGA%26dib_tag%3Dse%26keywords%3Dsamsung%2Bgalaxy%2Bs25%2Bultra%2B256gb%2Bblack%26qid%3D1790085556%26sr%3D8-2-spons%26sp_csd%3Dd2lkZ2V0TmFtZT1zcF9hdGY%26psc%3D1",
+              "prefilter": "pass",
+              "is_gt": false
+            },
+            {
+              "asin": "B0DP3GQ4QY",
+              "title": "Samsung",
+              "url": "https://www.amazon.com/Samsung-Smartphone-Unlocked-Processor-Manufacturer/dp/B0DP3GQ4QY/ref=sr_1_3?dib=eyJ2IjoiMSJ9._Kr81qud_6sxkb5f6JUNTMavjp8g_H-dXYaQEPWvF8koWNMGruEW7Gx7oktzsBK8mxSk8z_pK1qalD-YC6psLyq9bqVX-Icj6AYC9KnbxcyitMO-wmdZCk21vhVXIyeQeYIyl4hfGJcpctVtxxCVP-mKiHBTI0e8-P0pQbuj50O4Pk_8TVEFUs7LZPn7cMUMpTsulOfx2GT37YDc91RurG_NerHYnMDGrvwm4Ggi2pg.X3KrByZEH3aX_0CpietgxfFIZyVWDGw4_dY2JT6nNGA&dib_tag=se&keywords=samsung+galaxy+s25+ultra+256gb+black&qid=1790085556&sr=8-3",
+              "prefilter": "pass",
+              "is_gt": false
+            },
+            {
+              "asin": "B0D427Z9CC",
+              "title": "Samsung",
+              "url": "https://www.amazon.com/SAMSUNG-Smartphone-Unlocked-Android-Cameras/dp/B0D427Z9CC/ref=sr_1_4?dib=eyJ2IjoiMSJ9._Kr81qud_6sxkb5f6JUNTMavjp8g_H-dXYaQEPWvF8koWNMGruEW7Gx7oktzsBK8mxSk8z_pK1qalD-YC6psLyq9bqVX-Icj6AYC9KnbxcyitMO-wmdZCk21vhVXIyeQeYIyl4hfGJcpctVtxxCVP-mKiHBTI0e8-P0pQbuj50O4Pk_8TVEFUs7LZPn7cMUMpTsulOfx2GT37YDc91RurG_NerHYnMDGrvwm4Ggi2pg.X3KrByZEH3aX_0CpietgxfFIZyVWDGw4_dY2JT6nNGA&dib_tag=se&keywords=samsung+galaxy+s25+ultra+256gb+black&qid=1790085556&sr=8-4",
+              "prefilter": "pass",
+              "is_gt": false
+            },
+            {
+              "asin": "B0F2GZW9BL",
+              "title": "Samsung",
+              "url": "https://www.amazon.com/Samsung-SM-S938B-DS-Unlocked-Smartphone/dp/B0F2GZW9BL/ref=sr_1_5?dib=eyJ2IjoiMSJ9._Kr81qud_6sxkb5f6JUNTMavjp8g_H-dXYaQEPWvF8koWNMGruEW7Gx7oktzsBK8mxSk8z_pK1qalD-YC6psLyq9bqVX-Icj6AYC9KnbxcyitMO-wmdZCk21vhVXIyeQeYIyl4hfGJcpctVtxxCVP-mKiHBTI0e8-P0pQbuj50O4Pk_8TVEFUs7LZPn7cMUMpTsulOfx2GT37YDc91RurG_NerHYnMDGrvwm4Ggi2pg.X3KrByZEH3aX_0CpietgxfFIZyVWDGw4_dY2JT6nNGA&dib_tag=se&keywords=samsung+galaxy+s25+ultra+256gb+black&qid=1790085556&sr=8-5",
+              "prefilter": "pass",
+              "is_gt": false
+            }
+          ]
+        },
+        {
+          "query": "samsung galaxy s25 ultra 256gb preto",
+          "ms": 1738.2,
+          "count": 8,
+          "gt_in_serp": false,
+          "error": null,
+          "candidates": [
+            {
+              "asin": "B0F39K86M9",
+              "title": "Samsung Galaxy S25 Ultra, 256GB, Titanium Whitesilver - Unlocked (Renewed)",
+              "url": "https://www.amazon.com/SAMSUNG-Smartphone-Unlocked-Processor-Whitesilver/dp/B0F39K86M9/ref=sr_1_5?dib=eyJ2IjoiMSJ9.Zh7XrGEzQUMazQ2QEt2P51CmhY9d_m-ejmT7S5X1RfXg_6FhqS1Y_uCUfJG8zGpiI5xEsvObMRQYjviLUOsJekoEZWQ5lwAPd02WWenDW-OZmCYIw9ZdjK2I5c5jec-k5Fq-Tb54NfwTAZD5iHox86CxkehiGgZwcgRj3Cv0BFLU14m8eYetSUUczhp1XnHBoO9OWWf75dbOVYx8u2Waztuuf2GgaKfTPNCffIz7DeI.uJrsCb8k8RGHZXDFa2cns9m-yT_zJ4hQ9oSZABXgYuM&dib_tag=se&keywords=samsung+galaxy+s25+ultra+256gb+preto&qid=1790085558&sbo=GW1QB%2BmqAsHTPf1jTZRSDA%3D%3D&sr=8-5",
+              "prefilter": "pass",
+              "is_gt": false
+            },
+            {
+              "asin": "B0F38VY33B",
+              "title": "Samsung Galaxy S25 Ultra, 256GB, Titanium Silverblue - Unlocked (Renewed)",
+              "url": "https://www.amazon.com/SAMSUNG-Smartphone-Unlocked-Processor-Silverblue/dp/B0F38VY33B/ref=sr_1_3?dib=eyJ2IjoiMSJ9.Zh7XrGEzQUMazQ2QEt2P51CmhY9d_m-ejmT7S5X1RfXg_6FhqS1Y_uCUfJG8zGpiI5xEsvObMRQYjviLUOsJekoEZWQ5lwAPd02WWenDW-OZmCYIw9ZdjK2I5c5jec-k5Fq-Tb54NfwTAZD5iHox86CxkehiGgZwcgRj3Cv0BFLU14m8eYetSUUczhp1XnHBoO9OWWf75dbOVYx8u2Waztuuf2GgaKfTPNCffIz7DeI.uJrsCb8k8RGHZXDFa2cns9m-yT_zJ4hQ9oSZABXgYuM&dib_tag=se&keywords=samsung+galaxy+s25+ultra+256gb+preto&qid=1790085558&sbo=GW1QB%2BmqAsHTPf1jTZRSDA%3D%3D&sr=8-3",
+              "prefilter": "pass",
+              "is_gt": false
+            },
+            {
+              "asin": "B0GNTJLH97",
+              "title": "Samsung Galaxy S25 Ultra, 256GB, Titanium Jadegreen - Unlocked (Renewed)",
+              "url": "https://www.amazon.com/Samsung-S25-Ultra-Titanium-Jadegreen/dp/B0GNTJLH97/ref=sr_1_10?dib=eyJ2IjoiMSJ9.Zh7XrGEzQUMazQ2QEt2P51CmhY9d_m-ejmT7S5X1RfXg_6FhqS1Y_uCUfJG8zGpiI5xEsvObMRQYjviLUOsJekoEZWQ5lwAPd02WWenDW-OZmCYIw9ZdjK2I5c5jec-k5Fq-Tb54NfwTAZD5iHox86CxkehiGgZwcgRj3Cv0BFLU14m8eYetSUUczhp1XnHBoO9OWWf75dbOVYx8u2Waztuuf2GgaKfTPNCffIz7DeI.uJrsCb8k8RGHZXDFa2cns9m-yT_zJ4hQ9oSZABXgYuM&dib_tag=se&keywords=samsung+galaxy+s25+ultra+256gb+preto&qid=1790085558&sbo=GW1QB%2BmqAsHTPf1jTZRSDA%3D%3D&sr=8-10",
+              "prefilter": "pass",
+              "is_gt": false
+            },
+            {
+              "asin": "B0DP3GQ4QY",
+              "title": "Samsung",
+              "url": "https://www.amazon.com/Samsung-Smartphone-Unlocked-Processor-Manufacturer/dp/B0DP3GQ4QY/ref=sr_1_1?dib=eyJ2IjoiMSJ9.Zh7XrGEzQUMazQ2QEt2P51CmhY9d_m-ejmT7S5X1RfXg_6FhqS1Y_uCUfJG8zGpiI5xEsvObMRQYjviLUOsJekoEZWQ5lwAPd02WWenDW-OZmCYIw9ZdjK2I5c5jec-k5Fq-Tb54NfwTAZD5iHox86CxkehiGgZwcgRj3Cv0BFLU14m8eYetSUUczhp1XnHBoO9OWWf75dbOVYx8u2Waztuuf2GgaKfTPNCffIz7DeI.uJrsCb8k8RGHZXDFa2cns9m-yT_zJ4hQ9oSZABXgYuM&dib_tag=se&keywords=samsung+galaxy+s25+ultra+256gb+preto&qid=1790085558&sr=8-1",
+              "prefilter": "pass",
+              "is_gt": false
+            },
+            {
+              "asin": "B0GH33YP71",
+              "title": "Samsung",
+              "url": "https://www.amazon.com/sspa/click?ie=UTF8&spc=MTo4MTg2Mjk2ODMzMDQwODI6MTc5MDA4NTU1ODpzcF9hdGY6MzAxMzM5ODU2OTcyNjAyOjowOjo&url=%2FSamsung-Unlocked-Smartphone-Processor-Immersive%2Fdp%2FB0GH33YP71%2Fref%3Dsr_1_2_sspa%3Fdib%3DeyJ2IjoiMSJ9.Zh7XrGEzQUMazQ2QEt2P51CmhY9d_m-ejmT7S5X1RfXg_6FhqS1Y_uCUfJG8zGpiI5xEsvObMRQYjviLUOsJekoEZWQ5lwAPd02WWenDW-OZmCYIw9ZdjK2I5c5jec-k5Fq-Tb54NfwTAZD5iHox86CxkehiGgZwcgRj3Cv0BFLU14m8eYetSUUczhp1XnHBoO9OWWf75dbOVYx8u2Waztuuf2GgaKfTPNCffIz7DeI.uJrsCb8k8RGHZXDFa2cns9m-yT_zJ4hQ9oSZABXgYuM%26dib_tag%3Dse%26keywords%3Dsamsung%2Bgalaxy%2Bs25%2Bultra%2B256gb%2Bpreto%26qid%3D1790085558%26sr%3D8-2-spons%26sp_csd%3Dd2lkZ2V0TmFtZT1zcF9hdGY%26psc%3D1",
+              "prefilter": "pass",
+              "is_gt": false
+            },
+            {
+              "asin": "B0BV5SV5HL",
+              "title": "Samsung",
+              "url": "https://www.amazon.com/SAMSUNG-SM-S918B-DS-Unlocked-International/dp/B0BV5SV5HL/ref=sr_1_4?dib=eyJ2IjoiMSJ9.Zh7XrGEzQUMazQ2QEt2P51CmhY9d_m-ejmT7S5X1RfXg_6FhqS1Y_uCUfJG8zGpiI5xEsvObMRQYjviLUOsJekoEZWQ5lwAPd02WWenDW-OZmCYIw9ZdjK2I5c5jec-k5Fq-Tb54NfwTAZD5iHox86CxkehiGgZwcgRj3Cv0BFLU14m8eYetSUUczhp1XnHBoO9OWWf75dbOVYx8u2Waztuuf2GgaKfTPNCffIz7DeI.uJrsCb8k8RGHZXDFa2cns9m-yT_zJ4hQ9oSZABXgYuM&dib_tag=se&keywords=samsung+galaxy+s25+ultra+256gb+preto&qid=1790085558&sr=8-4",
+              "prefilter": "pass",
+              "is_gt": false
+            },
+            {
+              "asin": "B0F2GZW9BL",
+              "title": "Samsung",
+              "url": "https://www.amazon.com/Samsung-SM-S938B-DS-Unlocked-Smartphone/dp/B0F2GZW9BL/ref=sr_1_6?dib=eyJ2IjoiMSJ9.Zh7XrGEzQUMazQ2QEt2P51CmhY9d_m-ejmT7S5X1RfXg_6FhqS1Y_uCUfJG8zGpiI5xEsvObMRQYjviLUOsJekoEZWQ5lwAPd02WWenDW-OZmCYIw9ZdjK2I5c5jec-k5Fq-Tb54NfwTAZD5iHox86CxkehiGgZwcgRj3Cv0BFLU14m8eYetSUUczhp1XnHBoO9OWWf75dbOVYx8u2Waztuuf2GgaKfTPNCffIz7DeI.uJrsCb8k8RGHZXDFa2cns9m-yT_zJ4hQ9oSZABXgYuM&dib_tag=se&keywords=samsung+galaxy+s25+ultra+256gb+preto&qid=1790085558&sr=8-6",
+              "prefilter": "pass",
+              "is_gt": false
+            },
+            {
+              "asin": "B0BSLBMCB2",
+              "title": "Samsung",
+              "url": "https://www.amazon.com/SAMSUNG-SM-S918B-Unlocked-Wireless-Included/dp/B0BSLBMCB2/ref=sr_1_8?dib=eyJ2IjoiMSJ9.Zh7XrGEzQUMazQ2QEt2P51CmhY9d_m-ejmT7S5X1RfXg_6FhqS1Y_uCUfJG8zGpiI5xEsvObMRQYjviLUOsJekoEZWQ5lwAPd02WWenDW-OZmCYIw9ZdjK2I5c5jec-k5Fq-Tb54NfwTAZD5iHox86CxkehiGgZwcgRj3Cv0BFLU14m8eYetSUUczhp1XnHBoO9OWWf75dbOVYx8u2Waztuuf2GgaKfTPNCffIz7DeI.uJrsCb8k8RGHZXDFa2cns9m-yT_zJ4hQ9oSZABXgYuM&dib_tag=se&keywords=samsung+galaxy+s25+ultra+256gb+preto&qid=1790085558&sr=8-8",
+              "prefilter": "pass",
+              "is_gt": false
+            }
+          ]
+        }
+      ],
+      "match": {
+        "ms": 37437.5,
+        "hits": [],
+        "unmatched": [
+          "amazon_us"
+        ],
+        "errors": []
+      }
+    }
+  }
+}

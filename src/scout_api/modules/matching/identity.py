@@ -23,6 +23,18 @@ COLOR_CANONICAL: dict[str, str] = {
     "black": "black",
     "negro": "black",
     "noir": "black",
+    # Finish + base hue (marketing labels) → base hue for gates/search.
+    "titanio preto": "black",
+    "titanium black": "black",
+    "black titanium": "black",
+    "titanio branco": "white",
+    "titanium white": "white",
+    "white titanium": "white",
+    "titanio cinza": "gray",
+    "titanium gray": "gray",
+    "titanium grey": "gray",
+    "gray titanium": "gray",
+    "grey titanium": "gray",
     "branco": "white",
     "white": "white",
     "blanco": "white",
@@ -70,6 +82,7 @@ COLOR_CANONICAL: dict[str, str] = {
     "purple": "purple",
     "lavanda": "lavender",
     "lavender": "lavender",
+    # Bare finish token — only when no base hue is present in the title.
     "titanio": "titanium",
     "titanium": "titanium",
 }
@@ -97,8 +110,8 @@ _VARIANT_KEY_ALIASES: dict[str, str] = {
 
 # Preferred cross-locale color labels for progressive SERP queries.
 _COLOR_SEARCH_SYNONYMS: dict[str, tuple[str, ...]] = {
-    "black": ("black", "preto", "negro"),
-    "white": ("white", "branco", "blanco"),
+    "black": ("black", "preto", "negro", "titanium black", "black titanium"),
+    "white": ("white", "branco", "blanco", "titanium white", "white titanium"),
     "blue": ("blue", "azul"),
     "red": ("red", "vermelho", "rojo"),
     "green": ("green", "verde"),
@@ -106,7 +119,7 @@ _COLOR_SEARCH_SYNONYMS: dict[str, tuple[str, ...]] = {
     "ultramarine": ("ultramarine", "ultramarino"),
     "pink": ("pink", "rosa"),
     "purple": ("purple", "roxo"),
-    "gray": ("gray", "cinza", "grey"),
+    "gray": ("gray", "cinza", "grey", "titanium gray", "titanium grey"),
     "gold": ("gold", "dourado"),
     "silver": ("silver", "prata", "prateado"),
 }
@@ -166,6 +179,7 @@ _MODEL_FAMILY_MARKERS: tuple[str, ...] = (
 # Manufacturer part-number shapes frequently published in titles / model fields.
 _MPN_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"\bmz[-\s]?[a-z]\d[a-z0-9]{4,}(?:/[a-z]{2})?\b"),  # Samsung SSD
+    re.compile(r"\bsm-?[a-z]?\d{3}[a-z0-9]*(?:/[a-z]{2})?\b"),  # Samsung mobile
     re.compile(r"\bcfi[-\s]?\d{4}[a-z]?\b"),  # PlayStation SKU
     re.compile(r"\bhx\d{3}[a-z0-9]{4,}\b"),  # Kingston HyperX
     # MSI / board-style PNs (e.g. 912-V532-232) and GPU marketing codes
@@ -205,6 +219,13 @@ ACCESSORY_TOKENS = frozenset(
 _BUNDLE_MARKERS: tuple[str, ...] = (
     "smartwatch",
     "apple watch",
+    "galaxy watch",
+    "galaxy fit",
+    "galaxy buds",
+    "buds3",
+    "buds 3",
+    "fit3",
+    "fit 3",
     "airpods",
     "bundle",
     "kit ",
@@ -433,8 +454,22 @@ def _format_cfi_mpn_display(normalized: str) -> str | None:
     return f"CFI-{match.group(1)}{match.group(2).upper()}"
 
 
+def _format_samsung_mobile_mpn_display(normalized: str) -> str | None:
+    """Rebuild ``SM-S938BZ/DS`` style from a compacted token for SERP queries."""
+    if not normalized.startswith("sm") or len(normalized) < 8:
+        return None
+    body = normalized[2:]
+    if len(body) >= 2 and body[-2:] in {"ds", "de", "du", "bds"}:
+        # Keep common dual-SIM suffix after slash when present in source titles.
+        if body.endswith("ds") and len(body) > 2:
+            return f"SM-{body[:-2].upper()}/DS"
+    return f"SM-{body.upper()}"
+
+
 def _format_samsung_mpn_display(normalized: str) -> str | None:
     """Rebuild ``MZ-V9S1T0B/AM`` style from a compacted token for SERP queries."""
+    if normalized.startswith("sm"):
+        return _format_samsung_mobile_mpn_display(normalized)
     if not normalized.startswith("mz") or len(normalized) < 10:
         return None
     body = normalized[2:]
@@ -471,6 +506,7 @@ def extract_all_mpn_forms(*texts: str | None) -> list[tuple[str, str]]:
     seen: set[str] = set()
     raw_patterns = (
         re.compile(r"\bMZ[-\s]?[A-Za-z]\d[A-Za-z0-9]{4,}(?:/[A-Za-z]{2})?\b"),
+        re.compile(r"\bSM[-\s]?[A-Za-z]?\d{3}[A-Za-z0-9]*(?:/[A-Za-z]{2})?\b"),
         re.compile(r"\bCFI[-\s]?\d{4}[A-Za-z]?\b"),
         re.compile(r"\bHX\d{3}[A-Za-z0-9]{4,}\b"),
         re.compile(r"\b\d{3}-V\d{3}-\d{3}\b", re.IGNORECASE),
@@ -511,34 +547,79 @@ def extract_mpn(*texts: str | None) -> str | None:
     return normalized
 
 
-def model_search_phrase(*, model: str | None, title: str | None) -> str | None:
-    """Human-spaced commercial model for SERP (not the compacted identity token)."""
-    folded = fold_text(title or "")
-    match = re.search(
-        r"\b([89]\d0)\s*(evo\s*plus|evo\s*pro|pro|evo)\b",
-        folded,
+def _expand_compact_phone_model(compact: str | None) -> str | None:
+    """Expand compacted phone tokens (``galaxys25ultra``) into SERP phrases."""
+    token = re.sub(r"[^a-z0-9]+", "", fold_text(compact or ""))
+    if not token:
+        return None
+    match = re.fullmatch(r"galaxys(\d{1,2})(ultra|plus|fe)?", token)
+    if match:
+        suffix = match.group(2) or ""
+        return f"galaxy s{match.group(1)}" + (f" {suffix}" if suffix else "")
+    match = re.fullmatch(
+        r"iphone(1[0-9]e|[6-9]e|1[0-9]|[6-9])(promax|pro|plus)?",
+        token,
     )
     if match:
-        return f"{match.group(1)} {match.group(2)}"
-    match = re.search(r"\b(rtx|gtx)\s*(\d{4})\s*(ti|super)?\b", folded)
+        base = match.group(1)
+        suffix = match.group(2) or ""
+        if suffix == "promax":
+            suffix = "pro max"
+        return f"iphone {base}" + (f" {suffix}" if suffix else "")
+    return None
+
+
+def model_search_phrase(*, model: str | None, title: str | None) -> str | None:
+    """Human-spaced commercial model for SERP (not the compacted identity token).
+
+    Compacted identity tokens (``galaxys25ultra``, ``990evoplus``) are weak on
+    retailer SERPs. Prefer spaced commercial phrases derived from title/model.
+    """
+    folded = fold_text(title or "")
+    model_fold = fold_text(model or "")
+    blob = f"{model_fold} {folded}".strip()
+    match = re.search(
+        r"\b([89]\d0)\s*(evo\s*plus|evo\s*pro|pro|evo)\b",
+        blob,
+    )
+    if match:
+        edition = re.sub(r"\s+", " ", match.group(2)).strip()
+        # Compact identity tokens yield "evoplus"; SERP needs "evo plus".
+        edition = re.sub(r"\bevo(plus|pro)\b", r"evo \1", edition)
+        return f"{match.group(1)} {edition}"
+    match = re.search(r"\b(rtx|gtx)\s*(\d{4})\s*(ti|super)?\b", blob)
     if match:
         return " ".join(part for part in match.groups() if part)
-    match = _IPHONE_MODEL_RE.search(folded)
+    match = _IPHONE_MODEL_RE.search(blob)
     if match:
         base = match.group(1)
         suffix = (match.group(2) or "").strip()
         return f"iphone {base}" + (f" {suffix}" if suffix else "")
-    match = re.search(r"\bideapad\s*slim\s*(\d+i?)\b", folded)
+    # Galaxy S-series: never emit brand+storage alone without the series.
+    match = re.search(
+        r"\bgalaxy\s*s(\d{1,2})(?:\s*(ultra|plus|\+|fe))?\b",
+        blob,
+    )
+    if match:
+        suffix = (match.group(2) or "").replace("+", "plus").strip()
+        phrase = f"galaxy s{match.group(1)}"
+        if suffix:
+            phrase = f"{phrase} {suffix}"
+        return phrase
+    expanded_phone = _expand_compact_phone_model(model) or _expand_compact_phone_model(
+        model_fold
+    )
+    if expanded_phone:
+        return expanded_phone
+    match = re.search(r"\bideapad\s*slim\s*(\d+i?)\b", blob)
     if match:
         return f"ideapad slim {match.group(1)}"
     # Consoles: expand compacted identity (playstation5digital) for SERP.
     # Omit "slim" from the primary phrase — Shopping China (and similar) treat
     # "slim" as a hard token and return [] / wrong Pro SKUs when combined with
     # brand+storage. Slim remains optional evidence, not a SERP requirement.
-    model_fold = fold_text(model or "")
     if "playstation5" in model_fold or re.search(r"\b(?:playstation|ps)\s*5\b", folded):
         parts = ["playstation 5"]
-        blob = f"{model_fold} {folded}"
         edition = _console_edition_signature(blob) or _console_edition_signature(folded)
         if edition:
             parts.append(edition)
@@ -547,6 +628,36 @@ def model_search_phrase(*, model: str | None, title: str | None) -> str | None:
         # Last resort: avoid emitting compacted tokens like ``990evoplus``.
         return None
     return None
+
+
+def title_hint_from_url(url: str | None) -> str | None:
+    """Re-export: SERP title hint from PDP URL slug (crawler fingerprints)."""
+    from scout_api.modules.crawler.core.fingerprints import (
+        title_hint_from_url as _title_hint_from_url,
+    )
+
+    return _title_hint_from_url(url)
+
+
+def serp_candidate_text(candidate: Any) -> str:
+    """Title preferred; URL slug fallback for prefilter/ranking."""
+    title = getattr(candidate, "title", None)
+    if isinstance(title, str) and title.strip():
+        return title.strip()
+    return title_hint_from_url(getattr(candidate, "url", None)) or ""
+
+
+def enrich_candidate_title(candidate: Any) -> Any:
+    """Fill empty SERP titles from the URL slug without inventing product facts."""
+    title = getattr(candidate, "title", None)
+    if isinstance(title, str) and title.strip():
+        return candidate
+    hint = title_hint_from_url(getattr(candidate, "url", None))
+    if not hint:
+        return candidate
+    if hasattr(candidate, "model_copy"):
+        return candidate.model_copy(update={"title": hint})
+    return candidate
 
 
 def rank_candidates_for_query(
@@ -578,7 +689,7 @@ def rank_candidates_for_query(
     }
 
     def sort_key(candidate: Any) -> tuple[int, int, int, int]:
-        title = fold_text(getattr(candidate, "title", None) or "")
+        title = fold_text(serp_candidate_text(candidate))
         raw_url = getattr(candidate, "url", None) or ""
         path = urlsplit(raw_url).path or ""
         path_fold = fold_text(path)
@@ -673,13 +784,19 @@ def _phone_signature(text: str | None) -> str | None:
     if match:
         suffix = (match.group(2) or "").replace(" ", "")
         return normalize_model(f"iphone {match.group(1)}{suffix}")
+    # Galaxy Z Fold / Flip before bare digit series.
+    match = re.search(r"\bgalaxy\s*z\s*(fold|flip)\s*(\d{1,2})\b", folded)
+    if match:
+        return normalize_model(f"galaxyz{match.group(1)}{match.group(2)}")
+    # Galaxy S / A / M / F / Note generations (S25 Ultra ≠ A56).
     match = re.search(
-        r"\bgalaxy\s*s(\d{1,2})(?:\s*(ultra|plus|\+|fe))?\b",
+        r"\bgalaxy\s*([samf]|note)\s*(\d{1,2})(?:\s*(ultra|plus|\+|fe))?\b",
         folded,
     )
     if match:
-        suffix = (match.group(2) or "").replace("+", "plus")
-        return normalize_model(f"galaxys{match.group(1)}{suffix}")
+        line = match.group(1)
+        suffix = (match.group(3) or "").replace("+", "plus")
+        return normalize_model(f"galaxy{line}{match.group(2)}{suffix}")
     return None
 
 
@@ -1161,17 +1278,68 @@ def refine_storage_attrs(attrs: dict[str, str], title: str | None) -> None:
 
 
 def _color_label_from_title(title: str | None) -> str | None:
-    """Pick the longest known color label mentioned in the title."""
+    """Pick the longest known color label mentioned in the title.
+
+    Prefers multi-word marketing compounds (``titânio preto``) over bare finish
+    tokens (``titânio``) so search/gates use the base hue when available.
+    """
     folded = re.sub(r"[-_]+", " ", fold_text(title or ""))
     folded = re.sub(r"\s+", " ", folded).strip()
     if not folded:
         return None
-    best: str | None = None
-    for label in COLOR_CANONICAL:
+    # Longest label first so "titanio preto" wins over "titanio" / "preto".
+    for label in sorted(COLOR_CANONICAL, key=len, reverse=True):
         if re.search(rf"\b{re.escape(label)}\b", folded):
-            if best is None or len(label) > len(best):
-                best = label
-    return best
+            return label
+    return None
+
+
+# Marketing / SEO tokens safe to drop from last-resort title-window SERP queries.
+# Never drop brand/model/capacity tokens — those belong in structured ladders.
+_SEARCH_TITLE_NOISE: frozenset[str] = frozenset(
+    {
+        "placa",
+        "video",
+        "geforce",
+        "nvidia",
+        "amd",
+        "radeon",
+        "ray",
+        "tracing",
+        "dlss",
+        "fp4",
+        "mhz",
+        "bit",
+        "bits",
+        "pcie",
+        "pci",
+        "express",
+        # Smartphone PDP noise (cameras, battery, connectivity slogans).
+        # Do NOT drop model family tokens (galaxy/iphone) — they are identity.
+        "celular",
+        "smartphone",
+        "telefone",
+        "ai",
+        "cam",
+        "camera",
+        "cameras",
+        "quadrupla",
+        "tripla",
+        "bateria",
+        "battery",
+        "mah",
+        "dual",
+        "chip",
+        "mp",
+        "ios",
+        "android",
+        "tela",
+        "display",
+        "polegadas",
+        "inch",
+        "inches",
+    }
+)
 
 
 def canonicalize_variant_key(key: str, value: str) -> str:
@@ -1686,6 +1854,14 @@ def build_search_queries(identity: ProductIdentity) -> list[str]:
 
     # Colorless series+storage first: locale color tokens (branco/black) often
     # miss on foreign SERPs (Shopping China) even when the SKU is present.
+    # Magento (Nissei) often ranks family tokens better *without* capacity —
+    # emit brand+series early so SEARCH stays broad before MATCH confirms
+    # storage on the PDP.
+    if identity.brand and series:
+        add(f"{identity.brand} {series}")
+    if series:
+        add(series)
+
     series_parts = [part for part in (identity.brand, series) if part]
     capacity = storage or vram
     if capacity:
@@ -1737,25 +1913,7 @@ def build_search_queries(identity: ProductIdentity) -> list[str]:
     tokens = identity.title_normalized.split()
     if tokens:
         # Drop marketing/noise tokens before taking a title window.
-        noise = {
-            "placa",
-            "video",
-            "geforce",
-            "nvidia",
-            "amd",
-            "radeon",
-            "ray",
-            "tracing",
-            "dlss",
-            "fp4",
-            "mhz",
-            "bit",
-            "bits",
-            "pcie",
-            "pci",
-            "express",
-        }
-        filtered = [tok for tok in tokens if tok not in noise]
+        filtered = [tok for tok in tokens if tok not in _SEARCH_TITLE_NOISE]
         window = filtered[:8] if filtered else tokens[:8]
         add(" ".join(window))
     return queries

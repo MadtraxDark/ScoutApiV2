@@ -208,6 +208,27 @@ def test_http_oos_accepted_without_browser() -> None:
     assert response.meta["fetch_metrics"]["fetch_strategy"] == "http-direct"
 
 
+def test_http_search_empty_shell_falls_back_to_browser() -> None:
+    """Bare /s without data-asin cards must not short-circuit as HTTP success."""
+    from scout_api.modules.crawler.services.amazon_http_first_fetcher import (
+        looks_like_amazon_search,
+    )
+
+    url = "https://www.amazon.com.br/s?k=rtx+5060"
+    empty_shell = _html_response(url, "<html><body><div id='search'>shell</div></body></html>")
+    assert not looks_like_amazon_search(empty_shell)
+    browser_serp = _html_response(
+        url,
+        '<div data-component-type="s-search-result" data-asin="B0TESTASIN">'
+        "<h2><a href='/dp/B0TESTASIN'><span>GPU</span></a></h2></div>",
+    )
+    http = _RecordingFetcher(empty_shell)
+    browser = _RecordingFetcher(browser_serp)
+    response = AmazonHttpFirstHtmlFetcher(http=http, browser=browser).fetch(url)
+    assert browser.calls == [url]
+    assert response is browser_serp
+
+
 def test_http_search_accepted_without_browser() -> None:
     from scout_api.modules.crawler.services.amazon_http_first_fetcher import (
         looks_like_amazon_search,

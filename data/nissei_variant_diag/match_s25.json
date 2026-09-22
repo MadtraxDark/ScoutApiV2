@@ -1,0 +1,90 @@
+{
+  "ref_build_ms": 31230,
+  "match_ms": 12266,
+  "queries": [
+    "samsung galaxy s25 ultra",
+    "galaxy s25 ultra",
+    "samsung galaxy s25 ultra 256gb",
+    "galaxy s25 ultra 256gb",
+    "samsung galaxy s25 ultra 256gb black titanium",
+    "samsung galaxy s25 ultra 256gb black",
+    "samsung galaxy s25 ultra 256gb preto",
+    "samsung galaxy s25 ultra 256gb negro"
+  ],
+  "search_report": [
+    {
+      "query": "samsung galaxy s25 ultra",
+      "ms": 18951,
+      "hits": [
+        {
+          "title": "Samsung Galaxy S25 Ultra SM-S938B/DS 5G Dual 256 GB - Prata Branco Titânio",
+          "url": "https://nissei.com/br/samsung-galaxy-s25-ultra-sm-s938b-ds-5g-dual-256-gb-titanium-white-silver"
+        },
+        {
+          "title": "Samsung Galaxy S25 Ultra SM-S938BZ/DS 5G Dual 512 GB - Silver Titanium",
+          "url": "https://nissei.com/br/samsung-galaxy-s25-ultra-sm-s938bz-ds-5g-dual-512-gb-silver-titanium-3-meses"
+        },
+        {
+          "title": "Samsung Galaxy S25 Ultra SM-S938BZ/DS 5G Dual 256 GB - Black Titanium",
+          "url": "https://nissei.com/br/samsung-galaxy-s25-ultra-sm-s938bz-ds-5g-dual-256-gb-black-titanium-1"
+        },
+        {
+          "title": "Samsung Galaxy S25 Ultra SM-S938BZ/DS 5G Dual 512 GB - Black Titanium",
+          "url": "https://nissei.com/br/samsung-galaxy-s25-ultra-sm-s938bz-ds-5g-dual-512-gb-black-titanium-3-meses"
+        },
+        {
+          "title": "Samsung Galaxy S25 Ultra SM-S938BZ/DS 5G Dual 512 GB - Gray Titanium",
+          "url": "https://nissei.com/br/samsung-galaxy-s25-ultra-sm-s938bz-ds-5g-dual-512-gb-gray-titanium-3-meses"
+        }
+      ]
+    }
+  ],
+  "matches": [
+    {
+      "store": "nissei",
+      "decision": "auto_match",
+      "confidence": "0.92",
+      "url": "https://nissei.com/br/samsung-galaxy-s25-ultra-sm-s938bz-ds-5g-dual-256-gb-black-titanium-1",
+      "title": "Samsung Galaxy S25 Ultra SM-S938BZ/DS 5G Dual 256 GB - Black Titanium",
+      "product_id": "136695",
+      "sku": "136695",
+      "variant": "color: Black Titanium; storage: 256 GB",
+      "search_query": "samsung galaxy s25 ultra",
+      "reasons": [
+        {
+          "code": "brand_match",
+          "detail": "samsung",
+          "score": 1.0
+        },
+        {
+          "code": "brand_model_exact",
+          "detail": "samsung:galaxys25ultra~galaxys25ultra",
+          "score": 1.0
+        },
+        {
+          "code": "title_similarity",
+          "detail": "token_set_ratio=0.700",
+          "score": 0.7
+        }
+      ],
+      "meta_variant": {
+        "color": "Black Titanium",
+        "storage": "256 GB",
+        "ram": "12 GB"
+      }
+    }
+  ],
+  "unmatched_stores": [],
+  "errors": [],
+  "parent_probe": {
+    "sku": "136659",
+    "variant": "color: Titanium White Silver; storage: 256 GB",
+    "attrs": {
+      "color": "titanium white silver",
+      "storage": "256gb",
+      "ram": "12gb",
+      "size": "6.9\""
+    },
+    "decision_vs_ref": null
+  }
+}

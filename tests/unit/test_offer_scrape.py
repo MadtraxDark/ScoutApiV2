@@ -62,12 +62,15 @@ def test_magalu_extract_offer_does_not_require_details_fields() -> None:
     assert offer.available is True
 
 
-def test_offer_scrape_service_skips_extract_details(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+def test_offer_scrape_service_populates_product_cache(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """Offer refresh must fill ProductPriceItem cache so Match reuses the URL."""
     url = "https://www.magazineluiza.com.br/p/240590700"
     html = _response_from_fixture("product_structured_offer.html")
+    fetches: list[str] = []
 
     class FakeFetcher:
         def fetch(self, fetch_url: str) -> HtmlResponse:
+            fetches.append(fetch_url)
             return html
 
     spider = MagazineLuizaSpider()
@@ -77,19 +80,26 @@ def test_offer_scrape_service_skips_extract_details(monkeypatch) -> None:  # typ
         "scout_api.modules.crawler.services.offer_scrape_service.resolve_store_spider",
         lambda _url: spider,
     )
+    monkeypatch.setattr(
+        "scout_api.modules.crawler.services.product_scrape_service.resolve_store_spider",
+        lambda _url: spider,
+    )
 
-    offer = OfferScrapeService(
-        fetcher=FakeFetcher(),
-        guard=ScrapeGuard(
-            url_cooldown_seconds=1,
-            domain_min_interval_seconds=0,
-            result_cache_ttl_seconds=1,
-        ),
-    ).scrape_offer(url)
-
+    guard = ScrapeGuard(
+        url_cooldown_seconds=60,
+        domain_min_interval_seconds=0,
+        result_cache_ttl_seconds=60,
+    )
+    fetcher = FakeFetcher()
+    offer = OfferScrapeService(fetcher=fetcher, guard=guard).scrape_offer(url)
     assert offer.price == Decimal("5058.85")
-    assert offer.seller == "kabum"
-    details_mock.assert_not_called()
+    details_mock.assert_called_once()
+
+    item = ProductScrapeService(fetcher=fetcher, guard=guard).scrape(url)
+    assert item.price == Decimal("5058.85")
+    assert item.title
+    assert item.metadata.get("cache_hit") is True
+    assert len(fetches) == 1
 
 
 def test_product_scrape_service_composes_offer_and_details(monkeypatch) -> None:  # type: ignore[no-untyped-def]

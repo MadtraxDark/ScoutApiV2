@@ -8,7 +8,7 @@ from urllib.parse import parse_qs, quote_plus, urljoin, urlparse
 from scrapy.http import Response
 
 from ...core.exceptions import ParseError
-from ...core.fingerprints import canonicalize_url
+from ...core.fingerprints import canonicalize_url, title_hint_from_url
 from ...models.product import (
     ProductDetails,
     ProductOffer,
@@ -61,7 +61,8 @@ class MagazineLuizaSpider(BaseStoreSpider):
             match = re.search(r"/p/([^/?]+)", path)
             if match:
                 product_id = match.group(1)
-            title = None
+            # SERP cards often omit visible titles in static HTML; slug is reliable.
+            title = title_hint_from_url(absolute)
             candidates.append(
                 SearchCandidate(
                     url=absolute,

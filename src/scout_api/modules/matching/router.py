@@ -190,8 +190,8 @@ def list_products(
     dependencies=[Depends(require_permission("products:read"))],
     summary="Listar lojas do crawler",
     description=(
-        "Retorna o registry estático de lojas suportadas pelo crawler "
-        "(não é cadastro dinâmico)."
+        "Retorna o registry estático de lojas do crawler "
+        "(fonte de verdade cadastral; não é cadastro dinâmico no banco)."
     ),
 )
 def list_stores(
@@ -203,12 +203,15 @@ def list_stores(
     stores = [
         StoreInfo(
             key=key,
+            display_name=config.label,
             country=config.country,
             currency=config.currency,
             domains=list(config.domains),
             implemented=config.implemented,
             supports_search=key in search_keys,
             supports_images=config.supports_images,
+            match_enabled=config.match_enabled,
+            match_disabled_reason=config.match_disabled_reason,
             image_fetch_cost=config.image_fetch_cost,
             default_include_images=config.default_include_images,
         )

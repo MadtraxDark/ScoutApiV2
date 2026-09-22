@@ -1,0 +1,202 @@
+{
+  "scrapes": [
+    {
+      "ok": true,
+      "nissei_candidate_fetch_ms": 36508,
+      "url": "https://nissei.com/br/samsung-galaxy-s25-ultra-sm-s938bz-ds-5g-dual",
+      "canonical_url": "https://nissei.com/br/samsung-galaxy-s25-ultra-sm-s938bz-ds-5g-dual",
+      "title": "Samsung Galaxy S25 Ultra SM-S938BZ/DS 5G Dual",
+      "product_id": "136659",
+      "sku": "136659",
+      "brand": "SAMSUNG",
+      "model": "Galaxy S25 Ultra",
+      "variant": "color: Titanium White Silver; storage: 256 GB",
+      "price": "789",
+      "currency": "USD",
+      "availability": "available",
+      "gtin": null,
+      "metadata_variant": {
+        "color": "Titanium White Silver",
+        "storage": "256 GB",
+        "ram": "12 GB"
+      },
+      "metadata_source": {
+        "price": "contentsWithIds",
+        "sku": "selected-variant-sku",
+        "availability": "json-ld-or-page",
+        "title": "json-ld-or-h1",
+        "specifications": "product-attribute-specs-table",
+        "selected_variant": "sole-option-selected-variant",
+        "brand": "structured-data",
+        "model": "product-title-fallback",
+        "color": "selected-variant",
+        "storage": "selected-variant",
+        "ram": "selected-variant",
+        "size": "product-specifications"
+      },
+      "selected_variant": {
+        "color": "Titanium White Silver",
+        "storage": "256 GB",
+        "ram": "12 GB"
+      },
+      "parent_product_id": "1609955",
+      "variant_product_id": "1613992",
+      "identity_attrs": {
+        "color": "titanium white silver",
+        "storage": "256gb",
+        "ram": "12gb",
+        "size": "6.9\""
+      },
+      "mpn": "SM-S938BZ/DS",
+      "queries": [
+        "SM-S938BZ/DS",
+        "samsung SM-S938BZ/DS",
+        "samsung galaxy s25 ultra 256gb",
+        "galaxy s25 ultra 256gb",
+        "samsung galaxy s25 ultra 256gb titanium white silver",
+        "samsung galaxy s25 ultra 256gb silver"
+      ]
+    },
+    {
+      "ok": true,
+      "nissei_candidate_fetch_ms": 4100,
+      "url": "https://nissei.com/br/samsung-galaxy-s25-ultra-sm-s938bz-ds-5g-dual-256-gb-black-titanium-1",
+      "canonical_url": "https://nissei.com/br/samsung-galaxy-s25-ultra-sm-s938bz-ds-5g-dual-256-gb-black-titanium-1",
+      "title": "Samsung Galaxy S25 Ultra SM-S938BZ/DS 5G Dual 256 GB - Black Titanium",
+      "product_id": "136695",
+      "sku": "136695",
+      "brand": "SAMSUNG",
+      "model": "Galaxy S25 Ultra",
+      "variant": "color: Black Titanium; storage: 256 GB",
+      "price": "789",
+      "currency": "USD",
+      "availability": "available",
+      "gtin": null,
+      "metadata_variant": {
+        "color": "Black Titanium",
+        "storage": "256 GB",
+        "ram": "12 GB"
+      },
+      "metadata_source": {
+        "price": "json-ld-or-magento",
+        "sku": "json-ld-or-magento",
+        "availability": "json-ld-or-page",
+        "title": "json-ld-or-h1",
+        "specifications": "product-attribute-specs-table",
+        "selected_variant": "not-found",
+        "brand": "structured-data",
+        "model": "product-title-fallback",
+        "color": "product-specifications",
+        "storage": "product-specifications",
+        "ram": "product-specifications",
+        "size": "product-specifications"
+      },
+      "selected_variant": {},
+      "parent_product_id": "1617295",
+      "variant_product_id": null,
+      "identity_attrs": {
+        "color": "black titanium",
+        "storage": "256gb",
+        "ram": "12gb",
+        "size": "6.9\""
+      },
+      "mpn": "SM-S938BZ/DS",
+      "queries": [
+        "SM-S938BZ/DS",
+        "samsung SM-S938BZ/DS",
+        "samsung galaxy s25 ultra 256gb",
+        "galaxy s25 ultra 256gb",
+        "samsung galaxy s25 ultra 256gb black titanium",
+        "samsung galaxy s25 ultra 256gb black"
+      ]
+    },
+    {
+      "ok": true,
+      "nissei_candidate_fetch_ms": 5573,
+      "url": "https://nissei.com/br/apple-iphone-16-a3287-128-gb-black",
+      "canonical_url": "https://nissei.com/br/apple-iphone-16-a3287-128-gb-black",
+      "title": "Apple iPhone 16 A3287 128 GB - Black",
+      "product_id": "134002",
+      "sku": "134002",
+      "brand": "APPLE",
+      "model": "iPhone 16",
+      "variant": "color: Preto; storage: 256 GB",
+      "price": "799",
+      "currency": "USD",
+      "availability": "available",
+      "gtin": null,
+      "metadata_variant": {
+        "color": "Preto",
+        "storage": "256 GB"
+      },
+      "metadata_source": {
+        "price": "json-ld-or-magento",
+        "sku": "json-ld-or-magento",
+        "availability": "json-ld-or-page",
+        "title": "json-ld-or-h1",
+        "specifications": "product-attribute-specs-table",
+        "selected_variant": "not-found",
+        "brand": "structured-data",
+        "model": "product-title-fallback",
+        "color": "product-specifications",
+        "storage": "product-specifications",
+        "size": "product-specifications"
+      },
+      "selected_variant": {},
+      "parent_product_id": "1609204",
+      "variant_product_id": null,
+      "identity_attrs": {
+        "color": "preto",
+        "storage": "256gb",
+        "size": "6.1\""
+      },
+      "mpn": null,
+      "queries": [
+        "apple iphone 16 256gb",
+        "iphone 16 256gb",
+        "apple iphone 16 256gb preto",
+        "apple iphone 16 256gb black",
+        "apple iphone 16 256gb negro",
+        "apple iphone 16 256gb titanium black"
+      ]
+    }
+  ],
+  "search": {
+    "ok": true,
+    "nissei_search_ms": 14477,
+    "count": 5,
+    "hits": [
+      {
+        "title": "Samsung Galaxy A56 SM-A566B/DS 5G Dual 256 GB - Grafito",
+        "url": "https://nissei.com/py/samsung-galaxy-a56-sm-a566b-ds-5g-dual-256-gb-awesome-graphite",
+        "id": null
+      },
+      {
+        "title": "Samsung Galaxy A56 SM-A566B/DS 5G Dual 256 GB - Oliva",
+        "url": "https://nissei.com/py/samsung-galaxy-a56-sm-a566b-ds-5g-dual-256-gb-awesome-olive",
+        "id": null
+      },
+      {
+        "title": "Samsung Galaxy A57 SM-A576B 5G Dual 256 GB - Marino",
+        "url": "https://nissei.com/py/samsung-galaxy-a57-sm-a576b-5g-dual-256-gb-awesome-navy",
+        "id": null
+      },
+      {
+        "title": "Samsung Galaxy A57 SM-A576B 5G Dual 256 GB - Gris",
+        "url": "https://nissei.com/py/samsung-galaxy-a57-sm-a576b-5g-dual-256-gb-awesome-grey",
+        "id": null
+      },
+      {
+        "title": "Samsung Galaxy S26 SM-S942B/DS 5G Dual",
+        "url": "https://nissei.com/py/samsung-galaxy-s26-sm-s942-5g-dual",
+        "id": null
+      }
+    ]
+  },
+  "match": {
+    "ok": false,
+    "nissei_total_ms": 23545,
+    "error": "AttributeError",
+    "message": "'MatchResponse' object has no attribute 'offers'"
+  }
+}
