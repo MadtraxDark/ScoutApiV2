@@ -206,3 +206,22 @@ def test_http_oos_accepted_without_browser() -> None:
     response = AmazonHttpFirstHtmlFetcher(http=http, browser=browser).fetch(url)
     assert browser.calls == []
     assert response.meta["fetch_metrics"]["fetch_strategy"] == "http-direct"
+
+
+def test_http_search_accepted_without_browser() -> None:
+    from scout_api.modules.crawler.services.amazon_http_first_fetcher import (
+        looks_like_amazon_search,
+    )
+
+    url = "https://www.amazon.com.br/s?k=rtx+5060"
+    serp = _html_response(
+        url,
+        '<div data-component-type="s-search-result" data-asin="B0TESTASIN">'
+        "<h2><a href='/dp/B0TESTASIN'><span>GPU</span></a></h2></div>",
+    )
+    assert looks_like_amazon_search(serp)
+    http = _RecordingFetcher(serp)
+    browser = _RecordingFetcher(_html_response(url, "browser"))
+    response = AmazonHttpFirstHtmlFetcher(http=http, browser=browser).fetch(url)
+    assert browser.calls == []
+    assert response.meta["fetch_metrics"]["browser_used"] is False

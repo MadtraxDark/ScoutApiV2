@@ -6,6 +6,8 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from unittest.mock import MagicMock
 
+import pytest
+
 from scout_api.modules.crawler.core.exceptions import RequestError
 from scout_api.modules.crawler.core.fingerprints import canonicalize_url
 from scout_api.modules.crawler.models.product import ProductPriceItem
@@ -140,3 +142,58 @@ def test_scrape_upstream_error_is_not_silent_unmatched() -> None:
     assert "kabum" in resp.unmatched_stores
     assert any(e.store == "kabum" and e.code == "UPSTREAM_BLOCKED" for e in resp.errors)
     assert resp.matches == []
+
+
+def test_match_wave2_stores_run_concurrently(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Wave-2 (non-GTIN-priority) stores overlap when MATCH_STORE_CONCURRENCY > 1."""
+    import threading
+    import time
+
+    from scout_api.core.config import get_settings
+
+    monkeypatch.setenv("MATCH_STORE_CONCURRENCY", "3")
+    get_settings.cache_clear()
+
+    scrape = MagicMock()
+    scrape.scrape.return_value = _item()
+    search = MagicMock()
+    search.is_search_supported.return_value = True
+
+    active = 0
+    peak = 0
+    lock = threading.Lock()
+
+    def _search(store_key: str, query: str, *, limit: int = 5) -> list[SearchCandidate]:
+        del query, limit
+        nonlocal active, peak
+        with lock:
+            active += 1
+            peak = max(peak, active)
+        time.sleep(0.2)
+        with lock:
+            active -= 1
+        return []
+
+    search.search.side_effect = _search
+
+    t0 = time.perf_counter()
+    resp = ProductMatchService(scrape_service=scrape, search_service=search).match(
+        MatchRequest(
+            reference_url="https://www.mercadolivre.com.br/p/MLB1",
+            # kabum = wave1; remaining three = wave2 (parallel).
+            stores=["kabum", "shopee", "magazineluiza", "aliexpress"],
+            persist=False,
+        )
+    )
+    elapsed = time.perf_counter() - t0
+
+    covered = set(resp.unmatched_stores)
+    assert covered == {"kabum", "shopee", "magazineluiza", "aliexpress"}
+    # Three wave-2 stores overlap (each may run 2 SERP queries × sleep).
+    assert peak >= 2
+    # Serial wall ≈ 4 stores × 2 queries × 0.2s = 1.6s; parallel wave2 ≈ 0.8s.
+    assert elapsed < 1.2
+
+    get_settings.cache_clear()

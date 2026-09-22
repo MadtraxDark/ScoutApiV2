@@ -17,8 +17,11 @@
 
 - `supports_search=True`
 - SERP: `https://www.kabum.com.br/busca/{query}`
-- Parser: product card links `/produto/{id}`
-- Used by `POST /match` (ADR 0019)
+- Parser: prefer `__NEXT_DATA__` → `catalogServer.data`; fallback anchors
+  `/produto/{id}`
+- **Fetch:** urllib HTTP-first when `__NEXT_DATA__` (or PDP signals) are present;
+  challenge/insufficient HTML → Camoufox (ADR 0032). Used by `POST /match`
+  (ADR 0019).
 
 ## Offer source
 

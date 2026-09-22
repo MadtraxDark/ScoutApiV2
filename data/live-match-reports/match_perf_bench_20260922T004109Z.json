@@ -1,0 +1,113 @@
+{
+  "stamp": "20260922T004109Z",
+  "stores": [
+    "kabum",
+    "shoppingchina",
+    "amazon_br",
+    "mercadolivre",
+    "pichau",
+    "terabyteshop",
+    "nissei",
+    "amazon_us"
+  ],
+  "results": [
+    {
+      "label": "cold:gpu_gigabyte_rtx5060",
+      "title": "Placa de Vídeo Gigabyte GeForce RTX 5060 Windforce OC 8GB",
+      "category": "gpu",
+      "elapsed_s": 277.6,
+      "match_count": 3,
+      "unmatched": [
+        "shoppingchina",
+        "pichau",
+        "terabyteshop",
+        "nissei",
+        "amazon_us"
+      ],
+      "error_count": 0,
+      "matches": [
+        {
+          "store": "kabum",
+          "decision": "auto_match",
+          "confidence": "0.92",
+          "title": "Placa De Vídeo RTX 5060 Windforce Oc Nvidia Gigabyte, 8GB, GDDR7, 128 Bits - 9vn5060wo-00-G10",
+          "url": "https://www.kabum.com.br/produto/877496/placa-de-video-rtx-5060-windforce-oc-nvidia-gigabyte-8gb-gddr7-128-bits-9vn5060wo-00-g10"
+        },
+        {
+          "store": "amazon_br",
+          "decision": "auto_match",
+          "confidence": "0.92",
+          "title": "Placa de Vídeo Gigabyte RTX 5060 8GB GDDR7 128 BITS WINDFORCE GIGABYTE GV-N5060WF2-8GD",
+          "url": "https://www.amazon.com.br/dp/B0F6NKGTR4"
+        },
+        {
+          "store": "mercadolivre",
+          "decision": "auto_match",
+          "confidence": "0.92",
+          "title": "Placa De Vídeo Gigabyte Rtx 5060 Windforce Oc 8g Gddr7",
+          "url": "https://www.mercadolivre.com.br/placa-de-video-gigabyte-rtx-5060-windforce-oc-8g-gddr7/p/MLB2079788424"
+        }
+      ],
+      "errors": [],
+      "browser_launches": 3,
+      "browser_reuses": 17
+    },
+    {
+      "label": "warm:gpu_gigabyte_rtx5060",
+      "title": "Placa de Vídeo Gigabyte GeForce RTX 5060 Windforce OC 8GB",
+      "category": "gpu",
+      "elapsed_s": 128.4,
+      "match_count": 3,
+      "unmatched": [
+        "shoppingchina",
+        "pichau",
+        "terabyteshop",
+        "nissei",
+        "amazon_us"
+      ],
+      "error_count": 0,
+      "matches": [
+        {
+          "store": "kabum",
+          "decision": "auto_match",
+          "confidence": "0.92",
+          "title": "Placa De Vídeo RTX 5060 Windforce Oc Nvidia Gigabyte, 8GB, GDDR7, 128 Bits - 9vn5060wo-00-G10",
+          "url": "https://www.kabum.com.br/produto/877496/placa-de-video-rtx-5060-windforce-oc-nvidia-gigabyte-8gb-gddr7-128-bits-9vn5060wo-00-g10"
+        },
+        {
+          "store": "amazon_br",
+          "decision": "auto_match",
+          "confidence": "0.92",
+          "title": "Placa de Vídeo Gigabyte RTX 5060 8GB GDDR7 128 BITS WINDFORCE GIGABYTE GV-N5060WF2-8GD",
+          "url": "https://www.amazon.com.br/dp/B0F6NKGTR4"
+        },
+        {
+          "store": "mercadolivre",
+          "decision": "auto_match",
+          "confidence": "0.92",
+          "title": "Placa De Vídeo Gigabyte Rtx 5060 Windforce Oc 8g Gddr7",
+          "url": "https://www.mercadolivre.com.br/placa-de-video-gigabyte-rtx-5060-windforce-oc-8g-gddr7/p/MLB2079788424"
+        }
+      ],
+      "errors": [],
+      "browser_launches": 6,
+      "browser_reuses": 30,
+      "launch_delta": 3,
+      "reuse_delta": 13
+    }
+  ],
+  "summary": {
+    "cold_elapsed_s": 277.6,
+    "warm_elapsed_s": 128.4,
+    "cross_elapsed_s": null,
+    "cold_matches": 3,
+    "warm_matches": 3,
+    "cross_matches": null,
+    "cold_errors": 0,
+    "warm_launch_delta": 3,
+    "warm_reuse_delta": 13,
+    "total_launches": 6,
+    "total_reuses": 30,
+    "skip_cross": true
+  }
+}

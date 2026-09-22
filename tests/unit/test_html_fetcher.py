@@ -98,6 +98,8 @@ def test_locale_and_warmup_for_url() -> None:
     assert locale_for_url("https://www.magazineluiza.com.br/p/1") == "pt-BR"
     assert locale_for_url("https://shopee.com.br/i.1.2") == "pt-BR"
     assert locale_for_url("https://www.amazon.com.br/dp/B09WNK39JN") == "pt-BR"
+    assert locale_for_url("https://www.kabum.com.br/produto/1") == "pt-BR"
+    assert locale_for_url("https://www.pichau.com.br/produto/1") == "pt-BR"
     assert locale_for_url("https://www.amazon.com/dp/B09WNK39JN") == "en-US"
     assert locale_for_url("https://www.bestbuy.com/product/x/1") == "en-US"
     assert locale_for_url("https://example.com/") is None
@@ -245,6 +247,7 @@ def test_bestbuy_proxied_launch_enables_geoip(tmp_path: Any) -> None:
         max_settle_attempts=1,
         user_data_dir=tmp_path / "bb-profile",
         warmup_origin=False,
+        warm_reuse=False,
     )
     fetcher.fetch("https://www.bestbuy.com/product/ps5/JXHQ37TYYL")
     assert captured["locale"] == "en-US"
@@ -306,10 +309,258 @@ def test_camoufox_fetcher_returns_html_response(tmp_path: Any) -> None:
         max_settle_attempts=1,
         user_data_dir=tmp_path / "profile",
         warmup_origin=False,
+        warm_reuse=False,
     )
     response = fetcher.fetch("https://www.magazineluiza.com.br/p/240590700")
     assert isinstance(response, HtmlResponse)
     assert "PlayStation 5" in response.text
+
+
+def test_camoufox_warm_reuses_browser_across_fetches(tmp_path: Any) -> None:
+    """Warm reuse must launch once and open a new page per URL."""
+    launches = {"n": 0}
+    pages = {"n": 0}
+
+    class FakePage:
+        url = "https://www.kabum.com.br/produto/1"
+
+        def goto(self, url: str, **kwargs: Any) -> None:
+            self.url = url
+            del kwargs
+
+        def content(self) -> str:
+            return f"<html><body><h1>ok-{self.url}</h1></body></html>"
+
+        def title(self) -> str:
+            return "ok"
+
+        def wait_for_timeout(self, ms: int) -> None:
+            del ms
+
+        def close(self) -> None:
+            return None
+
+    class FakeBrowser:
+        def new_page(self) -> FakePage:
+            pages["n"] += 1
+            return FakePage()
+
+    @contextmanager
+    def fake_factory(**kwargs: Any) -> Iterator[FakeBrowser]:
+        del kwargs
+        launches["n"] += 1
+        yield FakeBrowser()
+
+    fetcher = CamoufoxHtmlFetcher(
+        browser_factory=fake_factory,
+        settle_ms=0,
+        max_settle_attempts=1,
+        user_data_dir=tmp_path / "warm-profile",
+        warmup_origin=False,
+        warm_reuse=True,
+        warm_max_fetches=10,
+    )
+    try:
+        r1 = fetcher.fetch("https://www.kabum.com.br/produto/1")
+        r2 = fetcher.fetch("https://www.kabum.com.br/produto/2")
+    finally:
+        fetcher.close()
+    assert "ok-" in r1.text and "ok-" in r2.text
+    assert launches["n"] == 1
+    assert pages["n"] == 2
+    assert fetcher.browser_launch_count == 1
+    assert fetcher.browser_reuse_count == 1
+
+
+def test_camoufox_fetch_is_safe_from_worker_threads(tmp_path: Any) -> None:
+    """Match wave-2 ThreadPool must not trip Playwright greenlet affinity."""
+    import threading
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    launches = {"n": 0}
+    pages = {"n": 0}
+    page_threads: list[str] = []
+
+    class FakePage:
+        url = "https://www.kabum.com.br/produto/1"
+
+        def goto(self, url: str, **kwargs: Any) -> None:
+            self.url = url
+            del kwargs
+
+        def content(self) -> str:
+            return f"<html><body><h1>ok-{self.url}</h1></body></html>"
+
+        def title(self) -> str:
+            return "ok"
+
+        def wait_for_timeout(self, ms: int) -> None:
+            del ms
+
+        def close(self) -> None:
+            return None
+
+    class FakeBrowser:
+        def new_page(self) -> FakePage:
+            pages["n"] += 1
+            page_threads.append(threading.current_thread().name)
+            return FakePage()
+
+    @contextmanager
+    def fake_factory(**kwargs: Any) -> Iterator[FakeBrowser]:
+        del kwargs
+        launches["n"] += 1
+        yield FakeBrowser()
+
+    fetcher = CamoufoxHtmlFetcher(
+        browser_factory=fake_factory,
+        settle_ms=0,
+        max_settle_attempts=1,
+        user_data_dir=tmp_path / "thread-profile",
+        warmup_origin=False,
+        warm_reuse=True,
+        warm_max_fetches=20,
+    )
+    urls = [f"https://www.kabum.com.br/produto/{i}" for i in range(1, 5)]
+    try:
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            futures = [pool.submit(fetcher.fetch, url) for url in urls]
+            texts = [fut.result().text for fut in as_completed(futures)]
+    finally:
+        fetcher.close()
+
+    assert len(texts) == 4
+    assert all("ok-" in t for t in texts)
+    assert launches["n"] == 1
+    assert pages["n"] == 4
+    # All Playwright calls must share the camoufox-owner thread.
+    assert len(set(page_threads)) == 1
+    assert page_threads[0].startswith("camoufox-owner")
+
+
+def test_camoufox_oneshot_drops_warm_before_nested_launch(tmp_path: Any) -> None:
+    """AliExpress oneshot must close warm first (no nested Sync Camoufox)."""
+    launches = {"n": 0}
+    closed = {"n": 0}
+
+    class FakePage:
+        url = "https://www.kabum.com.br/produto/1"
+
+        def goto(self, url: str, **kwargs: Any) -> None:
+            self.url = url
+            del kwargs
+
+        def content(self) -> str:
+            return f"<html><body><h1>ok-{self.url}</h1></body></html>"
+
+        def title(self) -> str:
+            return "ok"
+
+        def wait_for_timeout(self, ms: int) -> None:
+            del ms
+
+        def close(self) -> None:
+            return None
+
+    class FakeBrowser:
+        def new_page(self) -> FakePage:
+            return FakePage()
+
+    @contextmanager
+    def fake_factory(**kwargs: Any) -> Iterator[FakeBrowser]:
+        del kwargs
+        launches["n"] += 1
+        try:
+            yield FakeBrowser()
+        finally:
+            closed["n"] += 1
+
+    fetcher = CamoufoxHtmlFetcher(
+        browser_factory=fake_factory,
+        settle_ms=0,
+        max_settle_attempts=1,
+        user_data_dir=tmp_path / "oneshot-profile",
+        warmup_origin=False,
+        warm_reuse=True,
+        warm_max_fetches=20,
+    )
+    try:
+        fetcher.fetch("https://www.kabum.com.br/produto/1")
+        assert launches["n"] == 1
+        # AliExpress forces oneshot temp profile → must drop warm first.
+        # Fake HTML will not yield MTop payload; we only assert launch/close.
+        with pytest.raises(RequestError):
+            fetcher.fetch("https://pt.aliexpress.com/item/1005001.html")
+        assert launches["n"] == 2
+        assert closed["n"] >= 1
+        # Next BR fetch cold-starts again after oneshot.
+        fetcher.fetch("https://www.kabum.com.br/produto/2")
+        assert launches["n"] == 3
+    finally:
+        fetcher.close()
+
+
+def test_camoufox_keeps_warm_after_upstream_blocked(tmp_path: Any) -> None:
+    """Classified UPSTREAM_BLOCKED must not force a relaunch (ADR 0032 reuse)."""
+    launches = {"n": 0}
+    pages = {"n": 0}
+    mode = {"challenge": True}
+
+    class FakePage:
+        url = "https://www.kabum.com.br/produto/1"
+
+        def goto(self, url: str, **kwargs: Any) -> None:
+            self.url = url
+            del kwargs
+
+        def content(self) -> str:
+            if mode["challenge"]:
+                return "<html><body>Performing security verification</body></html>"
+            return f"<html><body><h1>ok-{self.url}</h1></body></html>"
+
+        def title(self) -> str:
+            return "Just a moment..." if mode["challenge"] else "ok"
+
+        def wait_for_timeout(self, ms: int) -> None:
+            del ms
+
+        def close(self) -> None:
+            return None
+
+    class FakeBrowser:
+        def new_page(self) -> FakePage:
+            pages["n"] += 1
+            return FakePage()
+
+    @contextmanager
+    def fake_factory(**kwargs: Any) -> Iterator[FakeBrowser]:
+        del kwargs
+        launches["n"] += 1
+        yield FakeBrowser()
+
+    fetcher = CamoufoxHtmlFetcher(
+        browser_factory=fake_factory,
+        settle_ms=0,
+        max_settle_attempts=1,
+        user_data_dir=tmp_path / "keep-warm",
+        warmup_origin=False,
+        warm_reuse=True,
+        warm_max_fetches=10,
+    )
+    try:
+        with pytest.raises(RequestError) as exc:
+            fetcher.fetch("https://www.kabum.com.br/produto/1")
+        assert exc.value.code == "UPSTREAM_BLOCKED"
+        mode["challenge"] = False
+        ok = fetcher.fetch("https://www.kabum.com.br/produto/2")
+    finally:
+        fetcher.close()
+
+    assert "ok-" in ok.text
+    assert launches["n"] == 1
+    assert pages["n"] == 2
+    assert fetcher.browser_launch_count == 1
+    assert fetcher.browser_reuse_count == 1
 
 
 def test_camoufox_fetcher_raises_when_challenge_persists(tmp_path: Any) -> None:
@@ -343,6 +594,7 @@ def test_camoufox_fetcher_raises_when_challenge_persists(tmp_path: Any) -> None:
         max_settle_attempts=2,
         user_data_dir=tmp_path / "profile",
         warmup_origin=False,
+        warm_reuse=False,
     )
     with pytest.raises(RequestError) as exc:
         fetcher.fetch("https://nissei.com/py/x")
@@ -381,6 +633,7 @@ def test_camoufox_fetcher_raises_non_retryable_on_hard_block(tmp_path: Any) -> N
         max_settle_attempts=1,
         user_data_dir=tmp_path / "profile",
         warmup_origin=False,
+        warm_reuse=False,
     )
     with pytest.raises(RequestError) as exc:
         fetcher.fetch("https://nissei.com/py/x")
@@ -426,6 +679,7 @@ def test_camoufox_launch_kwargs_include_proxy_profile_and_coop(tmp_path: Any) ->
         max_settle_attempts=1,
         user_data_dir=tmp_path / "profile",
         warmup_origin=True,
+        warm_reuse=False,
     )
     fetcher.fetch("https://nissei.com/py/x")
     assert captured["proxy"] == {
@@ -491,6 +745,7 @@ def test_camoufox_profile_dir_falls_back_when_unwritable(
         settle_ms=0,
         max_settle_attempts=1,
         warmup_origin=False,
+        warm_reuse=False,
     )
     fetcher.fetch("https://www.magazineluiza.com.br/p/1")
 
@@ -623,6 +878,7 @@ def test_camoufox_intercepts_shopee_get_pc_network_response(tmp_path: Any) -> No
         max_settle_attempts=2,
         user_data_dir=tmp_path / "profile",
         warmup_origin=False,
+        warm_reuse=False,
     )
     response = fetcher.fetch(url)
     assert "data-shopee-pdp" in response.text

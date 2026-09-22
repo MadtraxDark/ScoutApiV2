@@ -31,8 +31,9 @@ No FX conversion in spiders.
   Matching builds SERP queries as `GTIN → MZ-V9S1T0B/AM (display MPN) →
   brand + spaced series + capacity → compacted fallback → title tokens`, then
   re-ranks SERP cards by query/title overlap before scraping candidates.
-- HTTP-first still applies to SERP URLs (ADR 0016); challenge/robot pages follow
-  the usual escalate path — empty SERP after a clean 200 is usually a **query
+- HTTP-first still applies to SERP URLs (ADR 0016 + ADR 0032): clean SERP HTML
+  with `s-search-result` cards is accepted **without** Camoufox; challenge/robot
+  pages escalate. Empty SERP after a clean 200 is usually a **query
   quality** issue, not an anti-bot miss.
 
 ## Offer source

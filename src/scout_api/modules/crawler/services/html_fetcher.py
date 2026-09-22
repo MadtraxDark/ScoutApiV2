@@ -6,12 +6,14 @@ Spiders only parse ``HtmlResponse``; fetchers own upstream access and WAF waits.
 from __future__ import annotations
 
 import logging
+import queue
 import re
 import sys
 import threading
 import time
 from collections import Counter
 from collections.abc import Callable, Sequence
+from concurrent.futures import Future
 from contextlib import AbstractContextManager
 from http.cookiejar import CookieJar
 from pathlib import Path
@@ -40,6 +42,57 @@ SHOPEE_BLOCKED_RESOURCE_TYPES: tuple[str, ...] = ("image", "media", "font")
 PROXY_COST_BLOCKED_RESOURCE_TYPES: tuple[str, ...] = SHOPEE_BLOCKED_RESOURCE_TYPES
 WarmupPolicy = str  # always | once_per_session | never
 
+
+class _PlaywrightOwnerLoop:
+    """Run Playwright sync_api work on one OS thread.
+
+    Playwright's greenlet is thread-affine. Product Match wave-2 may call
+    ``fetch`` from a ThreadPoolExecutor; without a dedicated owner thread,
+    warm reuse raises ``greenlet.error: Cannot switch to a different thread``.
+    """
+
+    def __init__(self, *, name: str = "camoufox-owner") -> None:
+        self._queue: queue.Queue[tuple[Callable[[], Any], Future[Any]] | None] = (
+            queue.Queue()
+        )
+        self._thread = threading.Thread(target=self._run, name=name, daemon=True)
+        self._started = False
+        self._start_lock = threading.Lock()
+
+    def _ensure_started(self) -> None:
+        with self._start_lock:
+            if self._started:
+                return
+            self._thread.start()
+            self._started = True
+
+    def _run(self) -> None:
+        while True:
+            item = self._queue.get()
+            if item is None:
+                return
+            fn, fut = item
+            try:
+                fut.set_result(fn())
+            except BaseException as exc:  # noqa: BLE001 — forward to caller
+                fut.set_exception(exc)
+
+    def call(self, fn: Callable[[], Any]) -> Any:
+        self._ensure_started()
+        if threading.current_thread() is self._thread:
+            return fn()
+        fut: Future[Any] = Future()
+        self._queue.put((fn, fut))
+        return fut.result()
+
+    def shutdown(self, *, timeout: float = 30.0) -> None:
+        with self._start_lock:
+            if not self._started:
+                return
+        self._queue.put(None)
+        self._thread.join(timeout=timeout)
+
+
 # Playwright/Firefox resets that typically mean WAF/IP reset, not local bugs.
 _CAMOUFOX_UPSTREAM_BLOCK_MARKERS: tuple[str, ...] = (
     "ns_error_net_reset",
@@ -53,6 +106,24 @@ _CAMOUFOX_UPSTREAM_BLOCK_MARKERS: tuple[str, ...] = (
     "net::err_connection_reset",
     "net::err_connection_refused",
 )
+
+# Playwright sync state that makes the warm context unsafe to reuse.
+_WARM_SESSION_POISON_MARKERS: tuple[str, ...] = (
+    "sync api inside",
+    "cannot switch to a different thread",
+    "greenlet.error",
+    "target closed",
+    "browser has been closed",
+    "context or browser has been closed",
+    "execution context was destroyed",
+    "connection closed while reading from the driver",
+)
+
+
+def _should_drop_warm_session(exc: BaseException) -> bool:
+    """True when the warm Camoufox context is likely unusable after ``exc``."""
+    message = str(exc).casefold()
+    return any(marker in message for marker in _WARM_SESSION_POISON_MARKERS)
 
 
 def classify_camoufox_navigation_error(exc: BaseException, *, url: str) -> RequestError:
@@ -294,6 +365,17 @@ def locale_for_url(url: str) -> str | None:
         return "en-US"
     if hostname == "mercadolivre.com.br" or hostname.endswith(".mercadolivre.com.br"):
         return "pt-BR"
+    # Keep BR e-commerce on one Camoufox fingerprint (warm reuse / Match waves).
+    if hostname.endswith(".com.br") or hostname in {
+        "kabum.com.br",
+        "pichau.com.br",
+        "terabyteshop.com.br",
+        "shoppingchina.com.br",
+        "visaovip.com.br",
+    }:
+        return "pt-BR"
+    if "shoppingchina" in hostname:
+        return "pt-BR"
     return None
 
 
@@ -481,11 +563,7 @@ def looks_like_aliexpress_pdp(raw: str) -> bool:
 
 def looks_like_aliexpress_search_payload(raw: str) -> bool:
     sample = (raw or "")[:4_000]
-    return (
-        '"itemList"' in sample
-        or '"productId"' in sample
-        or "mods" in sample[:200]
-    )
+    return '"itemList"' in sample or '"productId"' in sample or "mods" in sample[:200]
 
 
 def wrap_aliexpress_pdp_json(raw: str) -> str:
@@ -771,6 +849,35 @@ class UrllibHtmlFetcher:
             ) from exc
 
 
+class _WarmBrowserSession:
+    """Keep one Camoufox persistent context alive across fetches.
+
+    Launch is amortized; pages are created/closed per URL. Fingerprint is
+    locale + profile + proxy — changing fingerprint replaces the session
+    (Playwright Sync cannot hold multiple Camoufox contexts on one thread).
+    """
+
+    __slots__ = ("cm", "browser", "fingerprint", "fetch_count")
+
+    def __init__(
+        self,
+        *,
+        cm: AbstractContextManager[Any],
+        browser: Any,
+        fingerprint: str,
+    ) -> None:
+        self.cm = cm
+        self.browser = browser
+        self.fingerprint = fingerprint
+        self.fetch_count = 0
+
+    def close(self) -> None:
+        try:
+            self.cm.__exit__(None, None, None)
+        except Exception:
+            logger.debug("camoufox_warm_session_close_failed", exc_info=True)
+
+
 class CamoufoxHtmlFetcher:
     """Fetch product HTML with Camoufox (Firefox patched for anti-bot)."""
 
@@ -792,6 +899,8 @@ class CamoufoxHtmlFetcher:
         fetch_strategy: str = "camoufox",
         browser_factory: BrowserFactory | None = None,
         challenge_resolver: Any | None = None,
+        warm_reuse: bool = True,
+        warm_max_fetches: int = 40,
     ) -> None:
         self._headless = headless
         self._humanize = humanize
@@ -811,8 +920,15 @@ class CamoufoxHtmlFetcher:
         self._fetch_strategy = fetch_strategy
         self._browser_factory = browser_factory
         self._challenge_resolver = challenge_resolver
+        self._warm_reuse = warm_reuse
+        self._warm_max_fetches = max(1, warm_max_fetches)
         self._lock = threading.Lock()
+        self._owner = _PlaywrightOwnerLoop()
         self._warmed_origins: set[str] = set()
+        self._warm_session: _WarmBrowserSession | None = None
+        self._active_fingerprint: str | None = None
+        self._browser_launches = 0
+        self._browser_reuses = 0
 
     @property
     def proxy_url(self) -> str | None:
@@ -826,9 +942,103 @@ class CamoufoxHtmlFetcher:
     def warmed_origins(self) -> frozenset[str]:
         return frozenset(self._warmed_origins)
 
+    @property
+    def browser_launch_count(self) -> int:
+        return self._browser_launches
+
+    @property
+    def browser_reuse_count(self) -> int:
+        return self._browser_reuses
+
+    def close(self) -> None:
+        """Release any warm Camoufox session held by this fetcher."""
+
+        def _close() -> None:
+            with self._lock:
+                self._close_warm_session_unlocked()
+
+        self._owner.call(_close)
+
     def fetch(self, url: str) -> HtmlResponse:
-        with self._lock:
-            return self._fetch_locked(url)
+        def _fetch() -> HtmlResponse:
+            with self._lock:
+                return self._fetch_locked(url)
+
+        result = self._owner.call(_fetch)
+        assert isinstance(result, HtmlResponse)
+        return result
+
+    def _close_warm_session_unlocked(self) -> None:
+        """Close the single warm Camoufox session, if any."""
+        session = self._warm_session
+        self._warm_session = None
+        self._active_fingerprint = None
+        if session is not None:
+            session.close()
+
+    @staticmethod
+    def _warm_fingerprint(launch_kwargs: dict[str, Any]) -> str:
+        proxy = launch_kwargs.get("proxy") or {}
+        proxy_key = ""
+        if isinstance(proxy, dict):
+            proxy_key = f"{proxy.get('server', '')}|{proxy.get('username', '')}"
+        return (
+            f"locale={launch_kwargs.get('locale')}"
+            f"|dir={launch_kwargs.get('user_data_dir')}"
+            f"|proxy={proxy_key}"
+        )
+
+    def _oneshot_browser(self, url: str) -> bool:
+        """AliExpress needs a fresh temp profile; never reuse that context."""
+        return is_aliexpress_url(url) or not self._warm_reuse
+
+    def _acquire_browser(self, url: str) -> tuple[Any, bool]:
+        """Return ``(browser, reused)``. Caller must not close a reused browser."""
+        launch_kwargs = self._launch_kwargs(url=url)
+        fingerprint = self._warm_fingerprint(launch_kwargs)
+        self._active_fingerprint = fingerprint
+        session = self._warm_session
+        if session is not None and (
+            session.fingerprint != fingerprint
+            or session.fetch_count >= self._warm_max_fetches
+        ):
+            self._close_warm_session_unlocked()
+            session = None
+        if session is None:
+            timed = self._open_browser(url=url)
+            browser = timed.__enter__()
+            self._warm_session = _WarmBrowserSession(
+                cm=timed,
+                browser=browser,
+                fingerprint=fingerprint,
+            )
+            self._warm_session.fetch_count = 1
+            self._browser_launches += 1
+            store_cfg = resolve_store_config(url)
+            logger.info(
+                "camoufox_warm_launch",
+                extra={
+                    "store": store_cfg.key if store_cfg is not None else None,
+                    "launches": self._browser_launches,
+                    "fingerprint": fingerprint,
+                },
+            )
+            return browser, False
+        session.fetch_count += 1
+        self._browser_reuses += 1
+        store_cfg = resolve_store_config(url)
+        store_key = store_cfg.key if store_cfg is not None else "unknown"
+        observe(
+            "browser_reuse",
+            0.0,
+            category=OperationCategory.BROWSER_LAUNCH,
+            stage=store_key,
+            context={
+                "reuses": self._browser_reuses,
+                "session_fetches": session.fetch_count,
+            },
+        )
+        return session.browser, True
 
     def _fetch_locked(self, url: str) -> HtmlResponse:
         store_cfg = resolve_store_config(url)
@@ -843,8 +1053,27 @@ class CamoufoxHtmlFetcher:
         request_types: Counter[str] = Counter()
         transferred = 0
         t0 = time.perf_counter()
+        oneshot = self._oneshot_browser(url)
+        browser: Any = None
+        reused = False
         try:
-            with self._open_browser(url=url) as browser:
+            if oneshot:
+                # Playwright Sync cannot nest a second Camoufox context on the
+                # owner thread while a warm session still holds the driver loop
+                # (AliExpress oneshot during Match wave-2 → Sync-in-asyncio).
+                if self._warm_session is not None:
+                    logger.info(
+                        "camoufox_warm_drop_for_oneshot",
+                        extra={"url": url},
+                    )
+                    self._close_warm_session_unlocked()
+                browser_cm = self._open_browser(url=url)
+                browser = browser_cm.__enter__()
+                self._browser_launches += 1
+            else:
+                browser, reused = self._acquire_browser(url)
+                browser_cm = None
+            try:
                 page = self._new_page(browser)
                 self._maybe_attach_resource_blocking(page, url)
                 self._attach_cost_listeners(page, request_types)
@@ -1087,15 +1316,44 @@ class CamoufoxHtmlFetcher:
                 transferred = byte_holder["n"]
                 metrics.result = "success"
                 self._log_metrics(metrics, request_types, transferred, t0)
-                response.meta["fetch_metrics"] = metrics.as_log_dict()
+                meta = metrics.as_log_dict()
+                meta["browser_reused"] = reused
+                meta["browser_launches"] = self._browser_launches
+                meta["browser_reuses"] = self._browser_reuses
+                response.meta["fetch_metrics"] = meta
                 try:
                     page.close()
                 except Exception:
                     logger.debug("camoufox_page_close_failed", exc_info=True)
                 return response
-        except RequestError:
+            finally:
+                if oneshot and browser_cm is not None:
+                    try:
+                        browser_cm.__exit__(None, None, None)
+                    except Exception:
+                        logger.debug(
+                            "camoufox_oneshot_browser_close_failed",
+                            exc_info=True,
+                        )
+        except RequestError as exc:
+            # Owner-thread serializes Playwright; only drop warm when the
+            # context itself is poisoned (not every UPSTREAM_BLOCKED/challenge).
+            if not oneshot and _should_drop_warm_session(exc):
+                logger.info(
+                    "camoufox_warm_drop_after_error",
+                    extra={"url": url, "code": exc.code},
+                )
+                self._close_warm_session_unlocked()
             raise
         except Exception as exc:
+            if not oneshot:
+                # Unknown render/process failure — drop warm session so the
+                # next fetch cold-starts instead of reusing a dead browser.
+                logger.info(
+                    "camoufox_warm_drop_after_error",
+                    extra={"url": url, "code": "unclassified"},
+                )
+                self._close_warm_session_unlocked()
             metrics.result = "error"
             self._log_metrics(metrics, request_types, transferred, t0)
             logger.exception("camoufox_fetch_failed", extra={"url": url})
@@ -1221,6 +1479,19 @@ class CamoufoxHtmlFetcher:
         if self._headless is True and sys.platform.startswith("linux"):
             headless = "virtual"
         profile_dir = self._ensure_user_data_dir()
+        # Isolate locale fingerprints so the warm pool never shares one
+        # Firefox profile directory (``.parentlock`` / concurrent contexts).
+        if self._warm_reuse and not is_aliexpress_url(url):
+            locale_slug = (locale_for_url(url) or "default").replace("-", "_").lower()
+            profile_dir = profile_dir / f"locale_{locale_slug}"
+            try:
+                profile_dir.mkdir(parents=True, exist_ok=True)
+            except OSError:
+                logger.debug(
+                    "camoufox_locale_profile_mkdir_failed",
+                    exc_info=True,
+                    extra={"dir": str(profile_dir)},
+                )
         kwargs: dict[str, Any] = {
             "headless": headless,
             "humanize": self._humanize,
@@ -1435,6 +1706,7 @@ class CamoufoxHtmlFetcher:
         html = ""
         final_url = ""
         title = ""
+        resolve_failures = 0
         for attempt in range(max(1, self._max_settle_attempts)):
             if captured and captured.get("body"):
                 break
@@ -1475,6 +1747,16 @@ class CamoufoxHtmlFetcher:
                     if not needs_interstitial_resolution(
                         html, url=final_url, title=title
                     ):
+                        return html, final_url, title
+                else:
+                    # Failed resolve: do not burn remaining settle ticks
+                    # (Magalu/Akamai previously hung /match for many minutes).
+                    resolve_failures += 1
+                    if resolve_failures >= 1:
+                        logger.info(
+                            "camoufox_challenge_fail_fast",
+                            extra={"url": final_url, "attempt": attempt + 1},
+                        )
                         return html, final_url, title
                 # Shopee /verify/traffic: one auth attempt is enough — do not
                 # re-login for every settle tick (can hang /match for minutes).
@@ -1675,7 +1957,6 @@ class CamoufoxHtmlFetcher:
         on_fn("response", on_response)
 
 
-
 class _TimedBrowserLaunch:
     """Measure browser/context enter without changing launch behavior."""
 
@@ -1704,7 +1985,6 @@ class _TimedBrowserLaunch:
         return result if isinstance(result, bool) else None
 
 
-
 def profile_dirs_for_base(base: Path) -> tuple[Path, Path]:
     """Return ``(direct_profile, proxied_profile)`` under the Camoufox profiles root."""
     # Seeded sticky Shopee sessions live in ``default``; direct stores use a sibling.
@@ -1727,6 +2007,8 @@ def build_html_fetcher(
     camoufox_user_data_dir: str | None = None,
     camoufox_disable_coop: bool = True,
     camoufox_warmup_origin: bool = True,
+    camoufox_warm_reuse: bool = True,
+    camoufox_warm_max_fetches: int = 40,
     shopee_warmup_policy: WarmupPolicy = "once_per_session",
     shopee_resource_blocking_enabled: bool = True,
     captcha_solver_enabled: bool = True,
@@ -1792,6 +2074,8 @@ def build_html_fetcher(
         "disable_coop": camoufox_disable_coop,
         "warmup_origin": camoufox_warmup_origin,
         "challenge_resolver": challenge_resolver,
+        "warm_reuse": camoufox_warm_reuse,
+        "warm_max_fetches": camoufox_warm_max_fetches,
     }
     direct = CamoufoxHtmlFetcher(
         **common,
@@ -1829,4 +2113,9 @@ def build_html_fetcher(
     from .mercadolivre_http_first_fetcher import MercadoLivreHttpFirstHtmlFetcher
 
     ml_http = CurlCffiHtmlFetcher(timeout=float(urllib_timeout))
-    return MercadoLivreHttpFirstHtmlFetcher(http=ml_http, browser=amazon_first)
+    ml_first = MercadoLivreHttpFirstHtmlFetcher(http=ml_http, browser=amazon_first)
+
+    # KaBuM: urllib HTTP for Next.js SERP/PDP (__NEXT_DATA__) → Camoufox fallback.
+    from .kabum_http_first_fetcher import KabumHttpFirstHtmlFetcher
+
+    return KabumHttpFirstHtmlFetcher(http=http, browser=ml_first)

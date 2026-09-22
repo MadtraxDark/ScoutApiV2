@@ -1,0 +1,155 @@
+{
+  "stamp": "20260921T223714Z",
+  "stores": [
+    "kabum",
+    "nissei",
+    "shoppingchina",
+    "amazon_br",
+    "amazon_us",
+    "mercadolivre",
+    "pichau",
+    "terabyteshop"
+  ],
+  "results": [
+    {
+      "label": "cold:gpu_gigabyte_rtx5060",
+      "title": "Placa de Vídeo Gigabyte GeForce RTX 5060 Windforce OC 8GB",
+      "category": "gpu",
+      "elapsed_s": 295.6,
+      "match_count": 2,
+      "unmatched": [
+        "nissei",
+        "shoppingchina",
+        "amazon_br",
+        "amazon_us",
+        "pichau",
+        "terabyteshop"
+      ],
+      "error_count": 1,
+      "matches": [
+        {
+          "store": "kabum",
+          "decision": "auto_match",
+          "confidence": "0.92",
+          "title": "Placa De Vídeo RTX 5060 Windforce Oc Nvidia Gigabyte, 8GB, GDDR7, 128 Bits - 9vn5060wo-00-G10",
+          "url": "https://www.kabum.com.br/produto/877496/placa-de-video-rtx-5060-windforce-oc-nvidia-gigabyte-8gb-gddr7-128-bits-9vn5060wo-00-g10"
+        },
+        {
+          "store": "mercadolivre",
+          "decision": "auto_match",
+          "confidence": "0.92",
+          "title": "Placa De Vídeo Gigabyte Rtx 5060 Windforce Oc 8g Gddr7",
+          "url": "https://www.mercadolivre.com.br/placa-de-video-gigabyte-rtx-5060-windforce-oc-8g-gddr7/p/MLB2079788424"
+        }
+      ],
+      "errors": [
+        {
+          "store": "amazon_br",
+          "code": "RATE_LIMITED",
+          "message": "Muitas requisições seguidas para a mesma loja; aguarde (1s) para proteger o IP de saída"
+        }
+      ],
+      "browser_launches": 7,
+      "browser_reuses": 27
+    },
+    {
+      "label": "warm:gpu_gigabyte_rtx5060",
+      "title": "Placa de Vídeo Gigabyte GeForce RTX 5060 Windforce OC 8GB",
+      "category": "gpu",
+      "elapsed_s": 429.7,
+      "match_count": 3,
+      "unmatched": [
+        "nissei",
+        "shoppingchina",
+        "amazon_us",
+        "pichau",
+        "terabyteshop"
+      ],
+      "error_count": 0,
+      "matches": [
+        {
+          "store": "kabum",
+          "decision": "auto_match",
+          "confidence": "0.92",
+          "title": "Placa De Vídeo RTX 5060 Windforce Oc Nvidia Gigabyte, 8GB, GDDR7, 128 Bits - 9vn5060wo-00-G10",
+          "url": "https://www.kabum.com.br/produto/877496/placa-de-video-rtx-5060-windforce-oc-nvidia-gigabyte-8gb-gddr7-128-bits-9vn5060wo-00-g10"
+        },
+        {
+          "store": "amazon_br",
+          "decision": "auto_match",
+          "confidence": "0.92",
+          "title": "Placa de Vídeo Gigabyte RTX 5060 8GB GDDR7 128 BITS WINDFORCE GIGABYTE GV-N5060WF2-8GD",
+          "url": "https://www.amazon.com.br/dp/B0F6NKGTR4"
+        },
+        {
+          "store": "mercadolivre",
+          "decision": "auto_match",
+          "confidence": "0.92",
+          "title": "Placa De Vídeo Gigabyte Rtx 5060 Windforce Oc 8g Gddr7",
+          "url": "https://www.mercadolivre.com.br/placa-de-video-gigabyte-rtx-5060-windforce-oc-8g-gddr7/p/MLB2079788424"
+        }
+      ],
+      "errors": [],
+      "browser_launches": 14,
+      "browser_reuses": 51,
+      "launch_delta": 7,
+      "reuse_delta": 24
+    },
+    {
+      "label": "warm_cross:console_ps5",
+      "title": "Console Sony PlayStation 5 Slim Digital CFI-2015",
+      "category": "console",
+      "elapsed_s": 355.1,
+      "match_count": 3,
+      "unmatched": [
+        "kabum",
+        "nissei",
+        "shoppingchina",
+        "amazon_br",
+        "amazon_us"
+      ],
+      "error_count": 0,
+      "matches": [
+        {
+          "store": "mercadolivre",
+          "decision": "auto_match",
+          "confidence": "0.92",
+          "title": "Sony PlayStation 5 Digital Edition 825GB Branco E Preto",
+          "url": "https://www.mercadolivre.com.br/sony-playstation-5-digital-edition-825gb-branco-e-preto/p/MLB16253015"
+        },
+        {
+          "store": "pichau",
+          "decision": "auto_match",
+          "confidence": "0.92",
+          "title": "Controle DualSense Sony PS5 Chroma Pearl, Wireless, 1000050332",
+          "url": "https://www.pichau.com.br/controle-dualsense-sony-ps5-chroma-pearl-wireless-1000050332"
+        },
+        {
+          "store": "terabyteshop",
+          "decision": "auto_match",
+          "confidence": "0.92",
+          "title": "Console Playstation 5 Slim Digital Edition + Returnal e Ratchet &amp; Clank, 1TB, Com 1 Controle",
+          "url": "https://www.terabyteshop.com.br/produto/31100/console-playstation-5-slim-digital-edition-returnal-e-ratchet-clank-1tb-com-1-controle"
+        }
+      ],
+      "errors": [],
+      "browser_launches": 22,
+      "browser_reuses": 63,
+      "launch_delta": 8,
+      "reuse_delta": 12
+    }
+  ],
+  "summary": {
+    "cold_elapsed_s": 295.6,
+    "warm_elapsed_s": 429.7,
+    "cross_elapsed_s": 355.1,
+    "cold_matches": 2,
+    "warm_matches": 3,
+    "cross_matches": 3,
+    "cold_errors": 1,
+    "warm_launch_delta": 7,
+    "warm_reuse_delta": 24,
+    "total_launches": 22,
+    "total_reuses": 63
+  }
+}

@@ -88,10 +88,10 @@ Secrets/tokens/cookies/credentials **nunca** entram no contexto (redaction em
 
 | Área | Evidência |
 |---|---|
-| Product Match | `match_store_timing`, `match_total_timing`, `match_timing_summary`, `observe(product_match*)` |
+| Product Match | `match_store_timing`, `match_total_timing`, `match_timing_summary`, `match_store_waves` / `match_store_wave_parallel`, `observe(product_match*)`, caches request-scoped (`search_cache_entries` / `scrape_cache_entries`), `MATCH_STORE_CONCURRENCY` |
 | Product Search / scrape no match | `observe(product_search\|product_scrape)` |
-| Browser fetch | `fetch_cost_metrics` + `observe(browser_fetch)` |
-| Browser launch | `observe(browser_launch)` no enter do Camoufox |
+| Browser fetch | `fetch_cost_metrics` + `observe(browser_fetch)` + `browser_reused` |
+| Browser launch / reuse | `observe(browser_launch)` no enter; warm session (ADR 0032) amortiza launches |
 | HTTP curl_cffi | `RetryLedger` + `curl_cffi_retry*` com `attempt_timings` |
 | Scrapy retry | `retry_scheduled` + `observe(scrapy_retry)` |
 | DB | listener SQLAlchemy de query lenta (`attach_slow_query_listener`) |
@@ -134,6 +134,10 @@ mesmo com testes verdes. Reportar no relatório final; otimizar ou abrir
 pendência `PERFORMANCE`.
 
 Baselines resumidos: [`performance/baselines.md`](performance/baselines.md).
+
+Product Match full-store (13 lojas, `…023048Z`): completa sem hang, mas a
+Shopee sozinha pode consumir ~25–34 min antes de `AUTH_REQUIRED` — ver
+[`docs/pending/PENDING-016-shopee-match-wall-time.md`](pending/PENDING-016-shopee-match-wall-time.md).
 
 ## Pendência de performance
 

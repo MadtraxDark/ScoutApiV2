@@ -36,6 +36,8 @@ def get_shared_html_fetcher() -> HtmlFetcher:
         camoufox_user_data_dir=settings.camoufox_user_data_dir,
         camoufox_disable_coop=settings.camoufox_disable_coop,
         camoufox_warmup_origin=settings.camoufox_warmup_origin,
+        camoufox_warm_reuse=settings.camoufox_warm_reuse,
+        camoufox_warm_max_fetches=settings.camoufox_warm_max_fetches,
         shopee_warmup_policy=settings.shopee_warmup_policy,
         shopee_resource_blocking_enabled=settings.shopee_resource_blocking_enabled,
         captcha_solver_enabled=settings.captcha_solver_enabled,

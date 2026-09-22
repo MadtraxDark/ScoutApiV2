@@ -82,6 +82,22 @@ def looks_like_amazon_pdp(response: HtmlResponse) -> bool:
     return bool(_ASIN_IN_URL.search(response.url or ""))
 
 
+def looks_like_amazon_search(response: HtmlResponse) -> bool:
+    """True when HTML looks like a public SERP with parseable result cards."""
+    text = response.text or ""
+    if is_challenge_page(text) or is_amazon_robot_check(text):
+        return False
+    if is_auth_wall_page(text, url=str(response.url or "")):
+        return False
+    if response.css(
+        "div[data-component-type='s-search-result'][data-asin], "
+        "div.s-result-item[data-asin]"
+    ).get():
+        return True
+    path = (urlparse(response.url or "").path or "").rstrip("/")
+    return path == "/s" or path.startswith("/s/")
+
+
 def has_buybox_price_signal(response: HtmlResponse) -> bool:
     """True when Buy Box price widgets (not AOD ingress) expose a digit price."""
     for selector in _BUYBOX_SIGNAL_SELECTORS:
@@ -167,6 +183,11 @@ class AmazonHttpFirstHtmlFetcher:
                 extra={"url": url},
             )
             return self._browser.fetch(url)
+
+        # SERP can succeed on HTTP without Buy Box widgets — keep Camoufox off.
+        if looks_like_amazon_search(response):
+            logger.info("amazon_http_search_accepted", extra={"url": url})
+            return self._annotate_http(response, url=url)
 
         if not looks_like_amazon_pdp(response):
             logger.info(

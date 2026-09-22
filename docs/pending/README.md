@@ -82,8 +82,17 @@ Itens resolvidos **não** ficam no índice ativo.
 
 | ID | Título | Status | Tipo | Prioridade | Área |
 |---|---|---|---|---|---|
+| [PENDING-016](PENDING-016-shopee-match-wall-time.md) | Shopee domina wall-time Product Match full-store | OPEN | PERFORMANCE | P1 | crawler/shopee |
 
-*(pendências ativas: 0)*
+*(pendências ativas: 1)*
+
+Resolvida em 2026-09-22:
+
+- PENDING-015 Product Match concorrência + benchmark live — arquivo
+  apagado; waves 3-fase + scrape budget + owner-thread; subset 8
+  (`…004109Z`) cold 277,6s / warm 128,4s / 3 MATCH; full 13
+  (`…023048Z`) sem hang cold 1726s / warm 2225s / 2 MATCH / 3 ERROR;
+  follow-up Shopee → PENDING-016
 
 Resolvida em 2026-09-21:
 

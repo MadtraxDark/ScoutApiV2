@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import logging
 import re
+import threading
 import time
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import replace
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -13,6 +15,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from scout_api.core.config import get_settings
 from scout_api.core.performance import (
     DuplicateWorkTracker,
     OperationCategory,
@@ -25,6 +28,7 @@ from scout_api.modules.crawler.models.product import (
     ProductPriceItem,
     product_offer_from_price_item,
 )
+from scout_api.modules.crawler.models.search import SearchCandidate
 from scout_api.modules.crawler.services.product_scrape_service import (
     ProductScrapeService,
 )
@@ -56,7 +60,10 @@ from scout_api.modules.matching.schemas import (
     MatchResponse,
     MatchStoreError,
 )
-from scout_api.modules.matching.store_search_order import order_stores_for_match
+from scout_api.modules.matching.store_search_order import (
+    order_stores_for_match,
+    split_stores_for_match_waves,
+)
 from scout_api.modules.matching.store_search_service import StoreSearchService
 
 logger = logging.getLogger(__name__)
@@ -84,6 +91,11 @@ _MAX_RATE_LIMIT_WAIT_SECONDS = 20.0
 # Identifier-only misses (bare MPN/GTIN) do not count — the next commercial
 # series query may still recover the SKU (e.g. CFI-2114B vs CFI-2115B on SC).
 _MAX_EMPTY_SEARCH_QUERIES = 2
+
+
+def _normalize_query_key(query: str) -> str:
+    """Collapse whitespace/case so near-duplicate progressive queries are skipped."""
+    return " ".join((query or "").casefold().split())
 
 
 def _is_identifier_only_query(query: str) -> bool:
@@ -242,6 +254,8 @@ class ProductMatchService:
         canonical_product_id: UUID | None = None,
         on_progress: ProgressCallback | None = None,
     ) -> MatchResponse:
+        # Product Match never needs gallery bytes — ignore caller flag for cost.
+        include_images = False
         queries = build_search_queries(ref_identity)
         target_stores = self._resolve_stores(
             stores,
@@ -258,22 +272,32 @@ class ProductMatchService:
             learned = TrustedGtin(gtin=ref_identity.gtin, source="reference")
 
         seq = 0
+        # Request-scoped caches (one Match execution).
+        search_cache: dict[tuple[str, str, int], list[SearchCandidate]] = {}
+        scrape_cache: dict[str, ProductPriceItem] = {}
+
+        match_t0 = time.perf_counter()
+        store_stage_ms: dict[str, dict[str, object]] = {}
+        dup_tracker = DuplicateWorkTracker()
+        state_lock = threading.Lock()
+        concurrency = max(1, int(get_settings().match_store_concurrency))
 
         def emit(**kwargs: object) -> None:
             nonlocal seq
             if on_progress is None:
                 return
-            seq += 1
-            payload = dict(kwargs)
-            payload.setdefault("sequence", seq)
+            with state_lock:
+                seq += 1
+                payload = dict(kwargs)
+                payload.setdefault("sequence", seq)
             on_progress(MatchProgressEvent.model_validate(payload))
 
-        match_t0 = time.perf_counter()
-        store_stage_ms: dict[str, dict[str, object]] = {}
-        dup_tracker = DuplicateWorkTracker()
-        for store_key in target_stores:
-            display = STORE_CONFIGS.get(store_key)
-            display_name = store_key if display is None else store_key
+        def process_one(store_key: str) -> None:
+            nonlocal queries, ref_identity, learned
+            display_name = store_key
+            with state_lock:
+                local_queries = list(queries)
+                local_identity = ref_identity
             emit(
                 type="store_started",
                 store=store_key,
@@ -289,7 +313,8 @@ class ProductMatchService:
                     message=f"Busca ao vivo não disponível para {store_key}",
                 )
                 # SEARCH_UNSUPPORTED is ERROR, never silent NO_MATCH/unmatched.
-                errors.append(err)
+                with state_lock:
+                    errors.append(err)
                 emit(
                     type="error",
                     store=store_key,
@@ -298,7 +323,7 @@ class ProductMatchService:
                     status="error",
                     message=err.message,
                 )
-                continue
+                return
 
             store_t0 = time.perf_counter()
             store_matched = False
@@ -308,10 +333,23 @@ class ProductMatchService:
             scrape_failures = 0
             title_rejects = 0
             scrapes_done = 0
+            queries_skipped = 0
+            duplicate_skips = 0
             search_ms_total = 0.0
             scrape_ms_total = 0.0
             last_scrape_error: MatchStoreError | None = None
-            for query in queries:
+            seen_query_keys: set[str] = set()
+            for query in local_queries:
+                qkey = _normalize_query_key(query)
+                if qkey and qkey in seen_query_keys:
+                    queries_skipped += 1
+                    logger.debug(
+                        "match_query_dedup_skip",
+                        extra={"store": store_key, "query": query},
+                    )
+                    continue
+                if qkey:
+                    seen_query_keys.add(qkey)
                 emit(
                     type="searching",
                     store=store_key,
@@ -322,11 +360,19 @@ class ProductMatchService:
                 )
                 try:
                     search_t0 = time.perf_counter()
-                    candidates = self._search.search(
-                        store_key,
-                        query,
-                        limit=max_candidates_per_store,
-                    )
+                    cache_key = (store_key, qkey, max_candidates_per_store)
+                    with state_lock:
+                        cached_candidates = search_cache.get(cache_key)
+                    if cached_candidates is not None:
+                        candidates = list(cached_candidates)
+                    else:
+                        candidates = self._search.search(
+                            store_key,
+                            query,
+                            limit=max_candidates_per_store,
+                        )
+                        with state_lock:
+                            search_cache[cache_key] = list(candidates)
                     search_ms = (time.perf_counter() - search_t0) * 1000
                     search_ms_total += search_ms
                     observe(
@@ -337,6 +383,7 @@ class ProductMatchService:
                         context={
                             "query_len": len(query),
                             "candidates": len(candidates),
+                            "cache_hit": cached_candidates is not None,
                         },
                     )
                 except RequestError as exc:
@@ -390,13 +437,23 @@ class ProductMatchService:
                     },
                 )
                 for candidate in candidates:
+                    if scrapes_done >= max_candidates_per_store:
+                        logger.info(
+                            "match_scrape_budget_cap",
+                            extra={
+                                "store": store_key,
+                                "scrapes": scrapes_done,
+                                "budget": max_candidates_per_store,
+                            },
+                        )
+                        break
                     if canonicalize_url(candidate.url) == canonicalize_url(
                         reference.canonical_url
                     ):
                         continue
                     candidates_seen += 1
                     reject = _serp_title_reject_reason(
-                        ref_identity, title=candidate.title
+                        local_identity, title=candidate.title
                     )
                     if reject is not None:
                         title_rejects += 1
@@ -410,24 +467,37 @@ class ProductMatchService:
                         )
                         continue
                     canon = canonicalize_url(candidate.url)
-                    dup_count = dup_tracker.record("scrape_url", canon)
-                    emit(
-                        type="scraping_candidate",
-                        store=store_key,
-                        display_name=display_name,
-                        stage="scraping_candidate",
-                        status="running",
-                        message="Avaliando candidato",
-                    )
-                    scrape_t0 = time.perf_counter()
-                    product, scrape_error = self._scrape_candidate(
-                        candidate.url,
-                        store_key=store_key,
-                        include_images=include_images,
-                    )
-                    scrapes_done += 1
-                    scrape_ms = (time.perf_counter() - scrape_t0) * 1000
-                    scrape_ms_total += scrape_ms
+                    with state_lock:
+                        dup_count = dup_tracker.record("scrape_url", canon)
+                        cached_product = scrape_cache.get(canon)
+                    product: ProductPriceItem | None
+                    scrape_error: MatchStoreError | None
+                    if cached_product is not None:
+                        duplicate_skips += 1
+                        product = cached_product
+                        scrape_error = None
+                        scrape_ms = 0.0
+                    else:
+                        emit(
+                            type="scraping_candidate",
+                            store=store_key,
+                            display_name=display_name,
+                            stage="scraping_candidate",
+                            status="running",
+                            message="Avaliando candidato",
+                        )
+                        scrape_t0 = time.perf_counter()
+                        product, scrape_error = self._scrape_candidate(
+                            candidate.url,
+                            store_key=store_key,
+                            include_images=include_images,
+                        )
+                        scrapes_done += 1
+                        scrape_ms = (time.perf_counter() - scrape_t0) * 1000
+                        scrape_ms_total += scrape_ms
+                        if product is not None:
+                            with state_lock:
+                                scrape_cache[canon] = product
                     observe(
                         "product_scrape",
                         scrape_ms,
@@ -435,6 +505,7 @@ class ProductMatchService:
                         stage=store_key,
                         context={
                             "duplicate_scrape": dup_count > 1,
+                            "cache_hit": cached_product is not None,
                             "ok": product is not None,
                         },
                     )
@@ -445,7 +516,7 @@ class ProductMatchService:
                         continue
 
                     score = self._engine.score(
-                        ref_identity, identity_from_price_item(product)
+                        local_identity, identity_from_price_item(product)
                     )
                     if score.decision == "reject":
                         continue
@@ -461,24 +532,30 @@ class ProductMatchService:
                         product=product,
                         search_query=query,
                     )
-                    existing = best_by_store.get(store_key)
-                    if existing is None or hit.confidence > existing.confidence:
-                        best_by_store[store_key] = hit
+                    with state_lock:
+                        existing = best_by_store.get(store_key)
+                        if existing is None or hit.confidence > existing.confidence:
+                            best_by_store[store_key] = hit
                     if score.decision == "auto_match":
                         store_matched = True
-                        learned = self._maybe_learn_gtin(learned, ref_identity, hit)
-                        if learned and not ref_identity.gtin:
-                            ref_identity = identity_with_gtin(
-                                ref_identity, learned.gtin
+                        with state_lock:
+                            learned = self._maybe_learn_gtin(
+                                learned, local_identity, hit
                             )
-                            queries = build_search_queries(ref_identity)
-                            logger.info(
-                                "trusted_gtin_learned",
-                                extra={
-                                    "gtin": learned.gtin,
-                                    "source": learned.source,
-                                },
-                            )
+                            if learned and not ref_identity.gtin:
+                                ref_identity = identity_with_gtin(
+                                    ref_identity, learned.gtin
+                                )
+                                queries = build_search_queries(ref_identity)
+                                local_identity = ref_identity
+                                local_queries = list(queries)
+                                logger.info(
+                                    "trusted_gtin_learned",
+                                    extra={
+                                        "gtin": learned.gtin,
+                                        "source": learned.source,
+                                    },
+                                )
                         logger.debug(
                             "match_auto_match_early_stop",
                             extra={
@@ -492,6 +569,8 @@ class ProductMatchService:
 
                 if store_matched:
                     break
+                if scrapes_done >= max_candidates_per_store:
+                    break
 
             store_elapsed_ms = (time.perf_counter() - store_t0) * 1000
             store_timing = {
@@ -503,8 +582,11 @@ class ProductMatchService:
                 "title_rejects": title_rejects,
                 "scrapes": scrapes_done,
                 "matched": store_matched,
+                "queries_skipped": queries_skipped,
+                "duplicate_skips": duplicate_skips,
             }
-            store_stage_ms[store_key] = store_timing
+            with state_lock:
+                store_stage_ms[store_key] = store_timing
             logger.info("match_store_timing", extra=store_timing)
             observe(
                 "product_match_store",
@@ -515,7 +597,8 @@ class ProductMatchService:
             )
 
             if store_key in best_by_store:
-                matches.append(best_by_store[store_key])
+                with state_lock:
+                    matches.append(best_by_store[store_key])
                 emit(
                     type="matched",
                     store=store_key,
@@ -525,11 +608,13 @@ class ProductMatchService:
                     message=f"Match em {store_key}",
                 )
             else:
-                unmatched.append(store_key)
+                with state_lock:
+                    unmatched.append(store_key)
                 # Prefer search-level errors; otherwise surface scrape failures
                 # so UPSTREAM_BLOCKED / RATE_LIMITED never look like NO_MATCH.
                 if last_error is not None:
-                    errors.append(last_error)
+                    with state_lock:
+                        errors.append(last_error)
                     emit(
                         type="error",
                         store=store_key,
@@ -543,7 +628,8 @@ class ProductMatchService:
                     and scrape_failures >= scrapes_done
                     and last_scrape_error is not None
                 ):
-                    errors.append(last_scrape_error)
+                    with state_lock:
+                        errors.append(last_scrape_error)
                     emit(
                         type="error",
                         store=store_key,
@@ -562,11 +648,47 @@ class ProductMatchService:
                         message=f"Sem correspondência em {store_key}",
                     )
 
+        def run_stores(store_list: list[str], *, parallel: bool) -> None:
+            if not store_list:
+                return
+            if not parallel or len(store_list) == 1 or concurrency <= 1:
+                for key in store_list:
+                    process_one(key)
+                return
+            logger.info(
+                "match_store_wave_parallel",
+                extra={"workers": concurrency, "stores": len(store_list)},
+            )
+            with ThreadPoolExecutor(max_workers=concurrency) as pool:
+                futures = [pool.submit(process_one, key) for key in store_list]
+                for fut in as_completed(futures):
+                    fut.result()
+
+        wave1, wave2, wave3 = split_stores_for_match_waves(target_stores)
+        logger.info(
+            "match_store_waves",
+            extra={
+                "wave1": wave1,
+                "wave2": wave2,
+                "wave3": wave3,
+                "concurrency": concurrency,
+            },
+        )
+        # Wave 1 serial: GTIN + dominant locale (barcode learning, no thrash).
+        run_stores(wave1, parallel=False)
+        # Wave 2 parallel: same locale remainder (Camoufox owner-thread serializes).
+        run_stores(wave2, parallel=True)
+        # Wave 3 serial: other locales last (es-PY / en-US) after pt-BR cluster.
+        run_stores(wave3, parallel=False)
+
         match_elapsed_ms = (time.perf_counter() - match_t0) * 1000
         total_extra = {
             "elapsed_ms": round(match_elapsed_ms, 1),
             "stores": len(target_stores),
             "matches": len(matches),
+            "concurrency": concurrency,
+            "search_cache_entries": len(search_cache),
+            "scrape_cache_entries": len(scrape_cache),
             "stores_timing": {
                 key: {
                     "elapsed_ms": val["elapsed_ms"],
@@ -574,6 +696,9 @@ class ProductMatchService:
                     "scrape_ms": val["scrape_ms"],
                     "scrapes": val["scrapes"],
                     "matched": val["matched"],
+                    "title_rejects": val.get("title_rejects"),
+                    "queries_skipped": val.get("queries_skipped"),
+                    "duplicate_skips": val.get("duplicate_skips"),
                 }
                 for key, val in store_stage_ms.items()
             },

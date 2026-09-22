@@ -1481,3 +1481,134 @@ def test_match_skips_scrape_when_serp_title_clearly_conflicts() -> None:
     assert scrape.scrape.call_args.args[0] == good.url
     assert resp.matches
     assert resp.matches[0].product.product_id == "456"
+
+
+def test_match_skips_duplicate_candidate_url_scrape() -> None:
+    """Same candidate URL appearing twice must be scraped once per Match."""
+    from unittest.mock import MagicMock
+
+    from scout_api.modules.crawler.models.search import SearchCandidate
+    from scout_api.modules.matching.identity import identity_reference_item
+    from scout_api.modules.matching.product_match_service import ProductMatchService
+
+    reference = identity_reference_item(
+        "Placa de Vídeo Gigabyte GeForce RTX 5060 Windforce OC 8GB",
+        category="gpu",
+    )
+    # Candidate scrapes to a clearly different SKU → reject, loop continues.
+    noise = _item(
+        store="kabum",
+        product_id="noise-1",
+        title="Placa de Vídeo MSI GeForce RTX 4070 Ventus 12GB",
+        brand="MSI",
+        model="GeForce RTX 4070",
+        url="https://www.kabum.com.br/produto/noise-1/placa",
+        canonical_url="https://www.kabum.com.br/produto/noise-1/placa",
+    )
+    scrape = MagicMock()
+    scrape.scrape.return_value = noise
+    search = MagicMock()
+    search.is_search_supported.return_value = True
+    cand = SearchCandidate(
+        url=noise.url,
+        title=None,  # missing SERP title must not cheap-reject
+        product_id="noise-1",
+    )
+    search.search.return_value = [cand, cand]
+
+    ProductMatchService(scrape_service=scrape, search_service=search).match_from_item(
+        reference,
+        stores=["kabum"],
+        persist=False,
+        max_candidates_per_store=5,
+        clear_reference_price=True,
+    )
+    assert scrape.scrape.call_count == 1
+
+
+def test_match_respects_scrape_budget_across_queries() -> None:
+    """max_candidates_per_store caps total PDP scrapes for a store, not per SERP."""
+    from unittest.mock import MagicMock
+
+    from scout_api.modules.crawler.models.search import SearchCandidate
+    from scout_api.modules.matching.identity import identity_reference_item
+    from scout_api.modules.matching.product_match_service import ProductMatchService
+
+    reference = identity_reference_item(
+        "Placa de Vídeo Gigabyte GeForce RTX 5060 Windforce OC 8GB",
+        category="gpu",
+    )
+    noise = _item(
+        store="pichau",
+        product_id="noise-1",
+        title="Placa de Vídeo MSI GeForce RTX 4070 Ventus 12GB",
+        brand="MSI",
+        model="GeForce RTX 4070",
+        url="https://www.pichau.com.br/produto/noise-1",
+        canonical_url="https://www.pichau.com.br/produto/noise-1",
+    )
+    scrape = MagicMock()
+    scrape.scrape.return_value = noise
+    search = MagicMock()
+    search.is_search_supported.return_value = True
+
+    def _search(store_key: str, query: str, *, limit: int = 5) -> list[SearchCandidate]:
+        del store_key, query
+        return [
+            SearchCandidate(
+                url=f"https://www.pichau.com.br/produto/noise-{i}",
+                title=None,  # missing SERP title must not cheap-reject
+                product_id=f"noise-{i}",
+            )
+            for i in range(limit)
+        ]
+
+    search.search.side_effect = _search
+
+    ProductMatchService(scrape_service=scrape, search_service=search).match_from_item(
+        reference,
+        stores=["pichau"],
+        persist=False,
+        max_candidates_per_store=3,
+        clear_reference_price=True,
+    )
+    assert scrape.scrape.call_count == 3
+
+
+def test_match_forces_include_images_false_on_candidates() -> None:
+    from unittest.mock import MagicMock
+
+    from scout_api.modules.crawler.models.search import SearchCandidate
+    from scout_api.modules.matching.identity import identity_reference_item
+    from scout_api.modules.matching.product_match_service import ProductMatchService
+
+    reference = identity_reference_item(
+        "Placa de Vídeo Gigabyte GeForce RTX 5060 Windforce OC 8GB",
+        category="gpu",
+    )
+    good = _item(
+        store="kabum",
+        product_id="good-1",
+        title="Placa de Vídeo Gigabyte GeForce RTX 5060 Windforce OC 8GB GDDR7",
+        brand="Gigabyte",
+        model="GeForce RTX 5060",
+        url="https://www.kabum.com.br/produto/good-1/placa",
+        canonical_url="https://www.kabum.com.br/produto/good-1/placa",
+    )
+    scrape = MagicMock()
+    scrape.scrape.return_value = good
+    search = MagicMock()
+    search.is_search_supported.return_value = True
+    search.search.return_value = [
+        SearchCandidate(url=good.url, title=good.title, product_id="good-1"),
+    ]
+
+    ProductMatchService(scrape_service=scrape, search_service=search).match_from_item(
+        reference,
+        stores=["kabum"],
+        persist=False,
+        include_images=True,
+        max_candidates_per_store=3,
+        clear_reference_price=True,
+    )
+    assert scrape.scrape.call_args.kwargs.get("include_images") is False

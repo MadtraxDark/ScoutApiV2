@@ -86,6 +86,11 @@ class Settings(BaseSettings):
     camoufox_user_data_dir: str | None = None
     camoufox_disable_coop: bool = True
     camoufox_warmup_origin: bool = True
+    # Keep Camoufox persistent context warm across fetches (ADR 0032).
+    camoufox_warm_reuse: bool = True
+    camoufox_warm_max_fetches: int = 40
+    # Product Match: independent stores may overlap; Camoufox stays lock-serialized.
+    match_store_concurrency: int = 3
     # Cost-aware Shopee controls (DataImpulse is billed primarily by GB).
     shopee_warmup_policy: str = "once_per_session"
     shopee_resource_blocking_enabled: bool = True
