@@ -18,7 +18,10 @@ Frontend
 ```
 
 Refresh token permanece em cookie HttpOnly (`scout_refresh_token`, path `/auth`).
-A `service_role` **nunca** é usada pelo frontend nem retornada pela API.
+Access token de mídia: cookie HttpOnly `scout_access_token` (path `/`),
+definido em login/refresh e consumido **somente** por
+`GET /products/{id}/images/{id}/content` — ver ADR 0035. A `service_role`
+**nunca** é usada pelo frontend nem retornada pela API.
 
 ## Allowlist pública
 
@@ -71,7 +74,7 @@ desabilitados.
 | `PATCH /products/{id}/images` | `products:write` | default |
 | `DELETE /products/{id}/images/{image_id}` | `products:write` | default |
 | `POST /products/{id}/images/{image_id}/retry-optimization` | `products:write` | default |
-| `GET /products/{id}/images/{image_id}/content` | `products:read` | default |
+| `GET /products/{id}/images/{image_id}/content` | `products:read` (Bearer **ou** cookie de mídia) | default |
 | `GET /stores` | `products:read` | default |
 | `GET /exchange-rates` | `products:read` | default |
 | `GET /exchange-rates/diagnostics` | admin | default |

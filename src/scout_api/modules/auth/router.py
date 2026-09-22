@@ -12,11 +12,13 @@ from scout_api.core.config import Settings, get_settings
 from scout_api.modules.auth.deps import (
     PKCE_COOKIE,
     REFRESH_COOKIE,
+    clear_access_cookie,
     clear_refresh_cookie,
     create_pkce_pair,
     enforce_rate_limit,
     origin_allowed,
     require_authenticated_user,
+    set_access_cookie,
     set_refresh_cookie,
 )
 from scout_api.modules.auth.jwt_service import (
@@ -156,12 +158,20 @@ def google_auth_callback(
     response.delete_cookie(key=PKCE_COOKIE, path="/auth")
     refresh = tokens.get("refresh_token")
     secure = settings.environment.lower() == "production"
+    access_token = str(tokens["access_token"])
+    expires_in = int(tokens["expires_in"]) if tokens.get("expires_in") else None
     if isinstance(refresh, str) and refresh:
         set_refresh_cookie(response, refresh, secure=secure)
+    set_access_cookie(
+        response,
+        access_token,
+        secure=secure,
+        max_age=expires_in,
+    )
 
     session = AuthSessionResponse(
-        access_token=str(tokens["access_token"]),
-        expires_in=int(tokens["expires_in"]) if tokens.get("expires_in") else None,
+        access_token=access_token,
+        expires_in=expires_in,
         user=principal_to_public(principal),
     )
     success = settings.auth_frontend_success_url
@@ -205,11 +215,19 @@ def refresh_auth_session(
         raise _http_auth_error(exc) from exc
     new_refresh = tokens.get("refresh_token")
     secure = settings.environment.lower() == "production"
+    access_token = str(tokens["access_token"])
+    expires_in = int(tokens["expires_in"]) if tokens.get("expires_in") else None
     if isinstance(new_refresh, str) and new_refresh:
         set_refresh_cookie(response, new_refresh, secure=secure)
+    set_access_cookie(
+        response,
+        access_token,
+        secure=secure,
+        max_age=expires_in,
+    )
     return AuthSessionResponse(
-        access_token=str(tokens["access_token"]),
-        expires_in=int(tokens["expires_in"]) if tokens.get("expires_in") else None,
+        access_token=access_token,
+        expires_in=expires_in,
         user=principal_to_public(principal),
     )
 
@@ -223,6 +241,7 @@ def refresh_auth_session(
 )
 def logout(response: Response) -> None:
     clear_refresh_cookie(response)
+    clear_access_cookie(response)
     response.delete_cookie(key=PKCE_COOKIE, path="/auth")
 
 

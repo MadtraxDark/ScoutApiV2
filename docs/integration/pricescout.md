@@ -82,8 +82,11 @@ valida (SSRF), grava o **original** no Drive e responde sucesso. AVIF roda
 em background (`optimized_status=pending` é estado válido).
 
 Galeria persistida: usar `display_url` ou, na listagem, `primary_image_url`
-(ambos já aplicam AVIF-if-ready, senão original). Não usar URL da loja depois
-da aprovação. Credenciais Drive nunca no frontend.
+(ambos já aplicam AVIF-if-ready, senão original). Resolver paths relativos
+com o helper central do FE (`apiUrl` / `resolveMediaUrl`). O browser carrega
+bytes via cookie HttpOnly de mídia (ADR 0035) — **não** espere Bearer em
+`<img>`. Não usar URL da loja depois da aprovação. Credenciais Drive nunca
+no frontend.
 
 Canônico: [`docs/persistence/product-images.md`](../persistence/product-images.md)
 + [ADR 0029](../adr/0029-google-drive-product-images.md).
@@ -102,11 +105,14 @@ Canônico: [`docs/persistence/product-images.md`](../persistence/product-images.
    das aprovadas (idempotente no clique).
 6. Após cadastro: listar via `GET /products/{id}/images` ou campo `images` /
    `primary_image_url` do `ProductView`; renderizar `display_url` /
-   `primary_image_url` (com Bearer). **Não espere AVIF** — original já é
-   válida enquanto `optimized_status` for `pending`/`processing`/`failed`.
+   `primary_image_url` (path relativo → `resolveMediaUrl`). **Não espere
+   AVIF** — original já é válida enquanto `optimized_status` for
+   `pending`/`processing`/`failed`. Auth de bytes: cookie de mídia (ADR 0035).
 7. CRUD: `POST/PATCH/DELETE /products/{id}/images`; retry AVIF opcional.
 8. Não enviar `drive_file_id` / paths / credentials no body.
-9. Reutilizar `ImageViewer` / `ImageWithState` se já existirem.
+9. Reutilizar `ImageViewer` / `ImageWithState` / `utils/api/product-images.ts`.
+10. Listagem: **não** ignorar `primary_image_url` do `ProductView`; **não**
+    usar `source_url` da loja como capa.
 
 ### Progresso Match
 

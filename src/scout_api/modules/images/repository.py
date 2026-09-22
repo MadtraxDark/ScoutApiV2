@@ -24,6 +24,29 @@ class ProductImageRepository:
         )
         return list(self._session.scalars(stmt).all())
 
+    def list_for_products(
+        self, product_ids: list[uuid.UUID]
+    ) -> dict[uuid.UUID, list[ProductImage]]:
+        """Batch gallery load — one query for many products (avoids N+1)."""
+        if not product_ids:
+            return {}
+        stmt = (
+            select(ProductImage)
+            .where(ProductImage.canonical_product_id.in_(product_ids))
+            .where(ProductImage.original_status != "deleting")
+            .order_by(
+                ProductImage.canonical_product_id.asc(),
+                ProductImage.position.asc(),
+                ProductImage.created_at.asc(),
+            )
+        )
+        grouped: dict[uuid.UUID, list[ProductImage]] = {
+            product_id: [] for product_id in product_ids
+        }
+        for row in self._session.scalars(stmt).all():
+            grouped.setdefault(row.canonical_product_id, []).append(row)
+        return grouped
+
     def get(
         self, image_id: uuid.UUID, *, product_id: uuid.UUID | None = None
     ) -> ProductImage | None:

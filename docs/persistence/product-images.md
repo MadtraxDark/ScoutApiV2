@@ -131,6 +131,16 @@ else:
   quando o AVIF fica pronto.
 - `GET .../content` sem `variant` = `auto` (prefer AVIF se ready).
 
+### Auth no browser (`<img>`)
+
+`GET .../content` aceita **Bearer** ou cookie HttpOnly `scout_access_token`
+(`path=/`, definido em login/refresh). Tags `<img>` não enviam Bearer; o
+cookie same-site cobre a entrega. APIs JSON continuam Bearer-only (sem
+cookie) — ver [ADR 0035](../adr/0035-media-access-cookie.md).
+
+**Nunca** colocar access token na query string. **Nunca** apontar o FE para
+URLs `drive.google.com`.
+
 Falha de AVIF: original permanece; `optimized_status=failed`; retry via
 `POST .../retry-optimization` (reusa original; não rebaixa URL).
 

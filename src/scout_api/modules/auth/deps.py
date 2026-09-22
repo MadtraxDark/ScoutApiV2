@@ -21,6 +21,10 @@ _bearer = HTTPBearer(auto_error=False)
 
 REFRESH_COOKIE = "scout_refresh_token"
 PKCE_COOKIE = "scout_pkce_verifier"
+# HttpOnly access JWT for browser subresources (<img>) that cannot send Bearer.
+# Accepted ONLY by media content routes — never by mutating JSON APIs.
+ACCESS_COOKIE = "scout_access_token"
+DEFAULT_ACCESS_COOKIE_MAX_AGE = 60 * 60
 
 # Fixed local-dev principal when AUTH_REQUIRED=false (never production).
 # USER — not ADMIN — so ownership stays scoped to this UUID only.
@@ -61,18 +65,18 @@ def _development_bypass_principal() -> AuthenticatedPrincipal:
     )
 
 
-def require_authenticated_user(
-    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
-    settings: Annotated[Settings, Depends(get_settings)],
-) -> AuthenticatedPrincipal:
-    """Resolve the caller principal for protected routes.
-
-    When ``AUTH_REQUIRED=true`` (default): Bearer JWT is mandatory.
-    When ``AUTH_REQUIRED=false`` (non-production only): missing Bearer uses the
-    fixed local-dev principal; a present Bearer is still validated.
-    """
-    if not settings.auth_required:
-        # Belt-and-suspenders: Settings already rejects this in production.
+def _resolve_principal_from_bearer(
+    credentials: HTTPAuthorizationCredentials | None,
+    settings: Settings,
+    *,
+    allow_dev_bypass: bool,
+) -> AuthenticatedPrincipal | None:
+    if credentials is not None and credentials.credentials:
+        try:
+            return verify_access_token(credentials.credentials, settings=settings)
+        except AuthError as exc:
+            raise _auth_http_error(exc) from exc
+    if allow_dev_bypass and not settings.auth_required:
         if settings.environment.lower() == "production":
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -82,27 +86,84 @@ def require_authenticated_user(
                     "retryable": False,
                 },
             )
-        if credentials is None or not credentials.credentials:
-            return _development_bypass_principal()
+        return _development_bypass_principal()
+    return None
+
+
+def require_authenticated_user(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> AuthenticatedPrincipal:
+    """Resolve the caller principal for protected routes.
+
+    When ``AUTH_REQUIRED=true`` (default): Bearer JWT is mandatory.
+    When ``AUTH_REQUIRED=false`` (non-production only): missing Bearer uses the
+    fixed local-dev principal; a present Bearer is still validated.
+
+    Does **not** accept the media access cookie — JSON APIs stay Bearer-only
+    to avoid CSRF on mutating methods.
+    """
+    principal = _resolve_principal_from_bearer(
+        credentials, settings, allow_dev_bypass=True
+    )
+    if principal is not None:
+        return principal
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail={
+            "code": "UNAUTHORIZED",
+            "message": "Credencial Bearer obrigatória",
+            "retryable": False,
+        },
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+def require_media_authenticated_user(
+    request: Request,
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> AuthenticatedPrincipal:
+    """Auth for image bytes: Bearer, then HttpOnly access cookie, then dev bypass.
+
+    ``<img src>`` cannot send ``Authorization``. The access cookie is set on
+    login/refresh (path ``/``) so same-site media requests authenticate without
+    putting tokens in the URL.
+    """
+    principal = _resolve_principal_from_bearer(
+        credentials, settings, allow_dev_bypass=False
+    )
+    if principal is not None:
+        return principal
+
+    cookie_token = request.cookies.get(ACCESS_COOKIE)
+    if cookie_token:
         try:
-            return verify_access_token(credentials.credentials, settings=settings)
+            return verify_access_token(cookie_token, settings=settings)
         except AuthError as exc:
             raise _auth_http_error(exc) from exc
 
-    if credentials is None or not credentials.credentials:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={
-                "code": "UNAUTHORIZED",
-                "message": "Credencial Bearer obrigatória",
-                "retryable": False,
-            },
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    try:
-        return verify_access_token(credentials.credentials, settings=settings)
-    except AuthError as exc:
-        raise _auth_http_error(exc) from exc
+    if not settings.auth_required:
+        if settings.environment.lower() == "production":
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail={
+                    "code": "AUTH_MISCONFIGURED",
+                    "message": "AUTH_REQUIRED=false não permitido em production",
+                    "retryable": False,
+                },
+            )
+        return _development_bypass_principal()
+
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail={
+            "code": "UNAUTHORIZED",
+            "message": "Credencial Bearer ou cookie de mídia obrigatória",
+            "retryable": False,
+        },
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
 
 def require_permission(
@@ -111,6 +172,30 @@ def require_permission(
     def _dep(
         principal: Annotated[
             AuthenticatedPrincipal, Depends(require_authenticated_user)
+        ],
+    ) -> AuthenticatedPrincipal:
+        if not principal.has_permission(permission):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "code": "FORBIDDEN",
+                    "message": "Permissão insuficiente",
+                    "retryable": False,
+                },
+            )
+        return principal
+
+    return _dep
+
+
+def require_media_permission(
+    permission: str,
+) -> Callable[[AuthenticatedPrincipal], AuthenticatedPrincipal]:
+    """Like ``require_permission``, but resolves identity via media auth rules."""
+
+    def _dep(
+        principal: Annotated[
+            AuthenticatedPrincipal, Depends(require_media_authenticated_user)
         ],
     ) -> AuthenticatedPrincipal:
         if not principal.has_permission(permission):
@@ -214,6 +299,29 @@ def set_refresh_cookie(response: Response, refresh_token: str, *, secure: bool) 
 
 def clear_refresh_cookie(response: Response) -> None:
     response.delete_cookie(key=REFRESH_COOKIE, path="/auth")
+
+
+def set_access_cookie(
+    response: Response,
+    access_token: str,
+    *,
+    secure: bool,
+    max_age: int | None = None,
+) -> None:
+    """HttpOnly access JWT for same-site media GETs (not for JSON API CSRF)."""
+    response.set_cookie(
+        key=ACCESS_COOKIE,
+        value=access_token,
+        httponly=True,
+        secure=secure,
+        samesite="lax",
+        path="/",
+        max_age=max_age if max_age is not None else DEFAULT_ACCESS_COOKIE_MAX_AGE,
+    )
+
+
+def clear_access_cookie(response: Response) -> None:
+    response.delete_cookie(key=ACCESS_COOKIE, path="/")
 
 
 def origin_allowed(url: str, allowed: str) -> bool:

@@ -21,7 +21,11 @@ from sqlalchemy.orm import Session
 
 from scout_api.core.config import get_settings
 from scout_api.core.database import get_db_session
-from scout_api.modules.auth.deps import enforce_rate_limit, require_permission
+from scout_api.modules.auth.deps import (
+    enforce_rate_limit,
+    require_media_permission,
+    require_permission,
+)
 from scout_api.modules.auth.schemas import AuthenticatedPrincipal
 from scout_api.modules.crawler.core.exceptions import RequestError
 from scout_api.modules.crawler.schemas import CrawlErrorResponse
@@ -192,10 +196,11 @@ def retry_optimization(
 @router.get(
     "/products/{product_id}/images/{image_id}/content",
     tags=["Imagens"],
-    dependencies=[Depends(require_permission("products:read"))],
+    dependencies=[Depends(require_media_permission("products:read"))],
     summary="Conteúdo da imagem",
     description=(
-        "Proxy autenticado. Use variant=original|optimized (URLs imutáveis); "
+        "Proxy autenticado (Bearer ou cookie HttpOnly de mídia). "
+        "Use variant=original|optimized (URLs imutáveis); "
         "sem variant, auto prefere AVIF quando ready."
     ),
     responses={
@@ -209,7 +214,7 @@ def get_image_content(
     image_id: Annotated[UUID, Path()],
     service: Annotated[ProductImageService, Depends(get_image_service)],
     principal: Annotated[
-        AuthenticatedPrincipal, Depends(require_permission("products:read"))
+        AuthenticatedPrincipal, Depends(require_media_permission("products:read"))
     ],
     if_none_match: Annotated[str | None, Header(alias="If-None-Match")] = None,
     variant: Annotated[
@@ -231,6 +236,7 @@ def get_image_content(
         media_type=content_type,
         headers={
             "ETag": etag,
+            "Content-Disposition": "inline",
             "Cache-Control": (
                 f"private, max-age={settings.image_media_cache_max_age_seconds}"
             ),

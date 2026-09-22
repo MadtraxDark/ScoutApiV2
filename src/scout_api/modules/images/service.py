@@ -281,6 +281,17 @@ class ProductImageService:
                 data = self._drive.download_bytes(row.optimized_drive_file_id)
                 ctype = row.optimized_mime_type or "image/avif"
                 etag = row.original_sha256 or str(row.id)
+                logger.info(
+                    "media_content product_id=%s image_id=%s original_status=%s "
+                    "optimized_status=%s selected_source=optimized "
+                    "media_file_id=%s media_response_status=200 content_type=%s",
+                    product_id,
+                    image_id,
+                    row.original_status,
+                    row.optimized_status,
+                    row.optimized_drive_file_id,
+                    ctype,
+                )
                 return data, ctype, f'"{etag}-avif"'
 
         if variant == "optimized":
@@ -293,7 +304,26 @@ class ProductImageService:
             data = self._drive.download_bytes(row.original_drive_file_id)
             ctype = row.original_mime_type or "application/octet-stream"
             etag = row.original_sha256 or str(row.id)
+            logger.info(
+                "media_content product_id=%s image_id=%s original_status=%s "
+                "optimized_status=%s selected_source=original "
+                "media_file_id=%s media_response_status=200 content_type=%s",
+                product_id,
+                image_id,
+                row.original_status,
+                row.optimized_status,
+                row.original_drive_file_id,
+                ctype,
+            )
             return data, ctype, f'"{etag}-original"'
+        logger.warning(
+            "media_content product_id=%s image_id=%s original_status=%s "
+            "optimized_status=%s selected_source=none media_response_status=422",
+            product_id,
+            image_id,
+            row.original_status,
+            row.optimized_status,
+        )
         raise RequestError(
             "Imagem ainda não disponível",
             code="INVALID_REQUEST",

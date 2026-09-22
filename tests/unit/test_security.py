@@ -460,3 +460,51 @@ def test_auth_enabled_alias_maps_to_auth_required(
     get_settings.cache_clear()
     assert get_settings().auth_required is False
     get_settings.cache_clear()
+
+
+def test_media_content_accepts_access_cookie_without_bearer(
+    auth_settings: str,
+) -> None:
+    """``<img src>`` cannot send Bearer — cookie HttpOnly must authenticate media."""
+    from unittest.mock import MagicMock
+
+    from scout_api.modules.auth.deps import ACCESS_COOKIE
+    from scout_api.modules.images.router import get_image_service
+
+    token = _mint(auth_settings)
+    product_id = uuid4()
+    image_id = uuid4()
+
+    mock_svc = MagicMock()
+    mock_svc.get_content.return_value = (b"\xff\xd8\xff", "image/jpeg", '"etag-1"')
+
+    app.dependency_overrides[get_image_service] = lambda: mock_svc
+    client = TestClient(app)
+    try:
+        denied = client.get(f"/products/{product_id}/images/{image_id}/content")
+        assert denied.status_code == 401
+
+        ok = client.get(
+            f"/products/{product_id}/images/{image_id}/content",
+            cookies={ACCESS_COOKIE: token},
+        )
+        assert ok.status_code == 200
+        assert ok.headers["content-type"].startswith("image/jpeg")
+        assert ok.headers.get("content-disposition", "").startswith("inline")
+        mock_svc.get_content.assert_called()
+
+        # Cookie must NOT authenticate mutating/JSON catalog APIs.
+        json_api = client.get("/products", cookies={ACCESS_COOKIE: token})
+        assert json_api.status_code == 401
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_logout_clears_access_cookie(auth_settings: str) -> None:
+    from scout_api.modules.auth.deps import ACCESS_COOKIE
+
+    client = TestClient(app)
+    response = client.post("/auth/logout")
+    assert response.status_code == 204
+    set_cookie = ",".join(response.headers.get_list("set-cookie"))
+    assert ACCESS_COOKIE in set_cookie

@@ -270,8 +270,27 @@ class ProductRegistrationService:
             limit=cap,
             offset=start,
         )
-        items = [self.get_product(product.id, viewer=viewer) for product in rows]
-        views = [item for item in items if item is not None]
+        from scout_api.modules.images.repository import ProductImageRepository
+
+        product_ids = [product.id for product in rows]
+        images_by_product = ProductImageRepository(self._session).list_for_products(
+            product_ids
+        )
+        views: list[ProductView] = []
+        for product in rows:
+            if not can_access_product(product, viewer):
+                continue
+            listings = list(product.listings or [])
+            if not listings:
+                listings = repo.list_listings_for_canonical(product.id)
+            images = [
+                to_image_view(row) for row in images_by_product.get(product.id, [])
+            ]
+            views.append(
+                _to_product_view(
+                    product, listings, images=images, session=self._session
+                )
+            )
         return ProductListResponse(
             items=views,
             count=len(views),
