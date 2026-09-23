@@ -1,0 +1,32 @@
+{
+  "curl_pdp": {
+    "status": 403,
+    "bytes": 6077,
+    "content_type": "text/html; charset=UTF-8",
+    "note": "Cloudflare managed challenge (Cf-Mitigated: challenge)"
+  },
+  "browser_pdp": {
+    "status": 200,
+    "bytes": 657098,
+    "chars": 655235,
+    "content_type": "text/html (rendered document.outerHTML)"
+  },
+  "apis_via_browser_session": {
+    "openbox": {
+      "status": 200,
+      "bytes": 36
+    },
+    "reviews": {
+      "status": 200,
+      "bytes": 2014
+    },
+    "installments": {
+      "status": 200,
+      "bytes": 2351
+    }
+  },
+  "apis_via_curl": {
+    "all": 403,
+    "note": "Cloudflare blocks bare curl without CF cookies"
+  }
+}

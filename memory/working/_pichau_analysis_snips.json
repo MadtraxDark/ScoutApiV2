@@ -1,0 +1,160 @@
+{
+  "bytes": 657098,
+  "chars": 655235,
+  "counts": {
+    "application/ld+json": 7,
+    "__next_f": 38,
+    "product": 592,
+    "\\\"product\\\"": 3,
+    "\"product\"": 0,
+    "avista": 3,
+    "à vista": 11,
+    "pichau_prices": 1,
+    "marcas_info": 1,
+    "caracteristicas": 2,
+    "sku": 11,
+    "100-100000651": 94,
+    "100-100000651POF": 56,
+    "PIX": 13
+  },
+  "indexes": {
+    "escaped_product_colon": 287344,
+    "escaped_product": 287165,
+    "plain_product_colon": -1,
+    "plain_product": -1,
+    "next_f": 255272,
+    "pichau_prices": 288890,
+    "marcas_info": 287889,
+    "caracteristicas": 287778,
+    "sku_frag": 231690,
+    "avista": 288909
+  },
+  "escaped_product_colon_count": 1,
+  "plain_product_colon_count": 0,
+  "snips": {
+    "escaped_product_colon": "sh([1,\"6:[[\\\"$\\\",\\\"$L11\\\",null,{\\\"kind\\\":\\\"product\\\",\\\"name\\\":\\\"Processador AMD Ryzen 7 5800X3D, 8-Core, 16-Threads, 3.4GHz (4.5GHz Turbo), Cache 100MB, AM4, 100-100000651POF\\\",\\\"family\\\":\\\"cpu\\\"}],[\\\"$\\\",\\\"$L12\\\",null,{\\\"product\\\":{\\\"id\\\":66151,\\\"sku\\\":\\\"100-100000651POF\\\",\\\"url_key\\\":\\\"processador-amd-ryzen-7-5800x3d-8-core-16-threads-3-4ghz-4-5ghz-turbo-cache-100mb-am4-100-100000651pof\\\",\\\"name\\\":\\\"Processador AMD Ryzen 7 5800X3D, 8-",
+    "escaped_product": "echnology, Windows® 11 Gaming, AMD Ryzen™ VR-Ready Premium \\u003c/td\\u003e\\r\\n    \\u003c/tr\\u003e\\r\\n  \\u003c/tbody\\u003e\\r\\n\\u003c/table\\u003e\"])</script><script>self.__next_f.push([1,\"6:[[\\\"$\\\",\\\"$L11\\\",null,{\\\"kind\\\":\\\"product\\\",\\\"name\\\":\\\"Processador AMD Ryzen 7 5800X3D, 8-Core, 16-Threads, 3.4GHz (4.5GHz Turbo), Cache 100MB, AM4, 100-100000651POF\\\",\\\"family\\\":\\\"cpu\\\"}],[\\\"$\\\",\\\"$L12\\\",null,{\\\"product\\\":{\\\"id\\\":66151,\\\"sku\\\":\\\"100-1",
+    "plain_product_colon": null,
+    "plain_product": null,
+    "next_f": "&(\"number\"!==typeof $RT?requestAnimationFrame($RV.bind(null,$RB)):(a=performance.now(),setTimeout($RV.bind(null,$RB),2300>a&&2E3<a?2300-a:$RT+300-a)))):b.parentNode.removeChild(b)};$RC(\"B:0\",\"S:0\")</script><script>(self.__next_f=self.__next_f||[]).push([0])</script><script>self.__next_f.push([1,\"1:\\\"$Sreact.fragment\\\"\\n3:I[9766,[],\\\"\\\"]\\n4:I[35618,[\\\"1548\\\",\\\"static/chunks/1548-be6f47e59531de8b.js\\\",\\\"5635\\\",\\\"static/chunks/5635-6ab9dfe",
+    "pichau_prices": "\":\\\"1/2/4/14\\\",\\\"__typename\\\":\\\"CategoryTree\\\"},{\\\"name\\\":\\\"AMD\\\",\\\"url_path\\\":\\\"hardware/processadores/amd\\\",\\\"path\\\":\\\"1/2/4/14/246\\\",\\\"__typename\\\":\\\"CategoryTree\\\"}],\\\"special_price\\\":2517.64,\\\"pichau_prevenda\\\":0,\\\"pichau_prices\\\":{\\\"avista\\\":2139.99,\\\"avista_discount\\\":15,\\\"avista_method\\\":\\\"PIX\\\",\\\"base_price\\\":3294.11,\\\"final_price\\\":2517.64,\\\"max_installments\\\":12,\\\"min_installment_price\\\":209.8,\\\"__typename\\\":\\\"PichauPrices\\\"}",
+    "marcas_info": "rom_search\\\":0,\\\"is_openbox\\\":0,\\\"openbox_state\\\":null,\\\"openbox_condition\\\":null,\\\"tipo_de_memoria\\\":null,\\\"caracteristicas\\\":null,\\\"distribution_center_name\\\":\\\"santa-catarina\\\",\\\"slots_memoria\\\":null,\\\"marcas\\\":116,\\\"marcas_info\\\":{\\\"name\\\":\\\"AMD\\\",\\\"url_key\\\":\\\"amd\\\",\\\"__typename\\\":\\\"MarcasProduct\\\"},\\\"product_page_layout\\\":null,\\\"formato_placa\\\":null,\\\"plataforma\\\":\\\"7\\\",\\\"portas_sata\\\":null,\\\"slot_cooler_120\\\":null,\\\"slot_cooler_8",
+    "caracteristicas": "3D, 8-Core, 16-Threads, 3.4GHz (4.5GHz Turbo), Cache 100MB, AM4, 100-100000651POF\\\",\\\"socket\\\":\\\"539\\\",\\\"hide_from_search\\\":0,\\\"is_openbox\\\":0,\\\"openbox_state\\\":null,\\\"openbox_condition\\\":null,\\\"tipo_de_memoria\\\":null,\\\"caracteristicas\\\":null,\\\"distribution_center_name\\\":\\\"santa-catarina\\\",\\\"slots_memoria\\\":null,\\\"marcas\\\":116,\\\"marcas_info\\\":{\\\"name\\\":\\\"AMD\\\",\\\"url_key\\\":\\\"amd\\\",\\\"__typename\\\":\\\"MarcasProduct\\\"},\\\"product_page_layout\\\"",
+    "sku_frag": " initial-scale=1, minimum-scale=1\"><meta name=\"theme-color\" content=\"#e90313\"><meta name=\"next-size-adjust\" content=\"\"><title>Processador AMD Ryzen 7 5800X3D, 8-Core, 16-Threads, 3.4GHz (4.5GHz Turbo), Cache 100MB, AM4, 100-100000651POF | Pichau</title><meta name=\"description\" content=\"Processador AMD Ryzen 7 5800X3D, 8-Core, 16-Threads, 3.4GHz (4.5GHz Turbo), Cache 100MB, AM4, 100-100000651POF, Soquete AM4, Núcleos 8, Frequência base 3",
+    "avista": "typename\\\":\\\"CategoryTree\\\"},{\\\"name\\\":\\\"AMD\\\",\\\"url_path\\\":\\\"hardware/processadores/amd\\\",\\\"path\\\":\\\"1/2/4/14/246\\\",\\\"__typename\\\":\\\"CategoryTree\\\"}],\\\"special_price\\\":2517.64,\\\"pichau_prevenda\\\":0,\\\"pichau_prices\\\":{\\\"avista\\\":2139.99,\\\"avista_discount\\\":15,\\\"avista_method\\\":\\\"PIX\\\",\\\"base_price\\\":3294.11,\\\"final_price\\\":2517.64,\\\"max_installments\\\":12,\\\"min_installment_price\\\":209.8,\\\"__typename\\\":\\\"PichauPrices\\\"},\\\"price_range\\\":{\\"
+  },
+  "jsonld": [
+    {
+      "index": 0,
+      "type": "BreadcrumbList"
+    },
+    {
+      "index": 1,
+      "type": "Product",
+      "name": "Processador AMD Ryzen 7 5800X3D, 8-Core, 16-Threads, 3.4GHz (4.5GHz Turbo), Cache 100MB, AM4, 100-100000651POF",
+      "sku": "100-100000651POF",
+      "price": "2517.64",
+      "currency": "BRL",
+      "availability": "https://schema.org/InStock"
+    },
+    {
+      "index": 2,
+      "type": "BreadcrumbList"
+    },
+    {
+      "index": 3,
+      "type": "WebSite"
+    },
+    {
+      "index": 4,
+      "type": "Organization"
+    }
+  ],
+  "avista_snips": [
+    "\":\\\"CategoryTree\\\"}],\\\"special_price\\\":2517.64,\\\"pichau_prevenda\\\":0,\\\"pichau_prices\\\":{\\\"avista\\\":2139.99,\\\"avista_discount\\\":15,\\\"avista_method\\\":\\\"PIX\\\",\\\"base_price\\\":3294.11,\\\"final_price\\\":2517.64,\\\"max_install"
+  ],
+  "pichau_prices_near": [
+    {
+      "chunk": "pichau_prices\\\":{\\\"avista\\\":2139.99,\\\"avista_discount\\\":15,\\\"avista_method\\\":\\\"PIX\\\",\\\"base_price\\\":3294.11,\\\"final_price\\\":2517.64,\\\"max_installments\\\":12,\\\"min_installment_price\\\":209.8,\\\"__typename\\\":\\\"PichauPrices\\\"},\\\"price_range\\\":{\\\"__typename\\\":\\\"PriceRange\\\"},\\\"description\\\":{\\\"html\\\":\\\"$13\\\",\\\"__typename\\\":\\\"ComplexTextValue\\\"},\\\"garantia\\\":\\\"12 Meses\\\",\\\"informacoes_adicionais\\\":\\\"$14\\\",\\\"image\\\":{\\\"url\\\":\\\"https://media.pichau.com.br/media/catalog/product/cache/74c1057f7991b4edb2bc7b",
+      "nums": [
+        "2139.99",
+        "3294.11",
+        "2517.64"
+      ]
+    }
+  ],
+  "api_abs": [
+    "https://assets.api.useinsider.com/css/info.min.css",
+    "https://eitri.api.useinsider.com/static/info.js",
+    "https://eitri.api.useinsider.com/static/ins-smart-recommender.js",
+    "https://eitri.api.useinsider.com/static/native-push-sdk.js",
+    "https://media.pichau.com.br/media/catalog/product/cache/22c0d71a45cddf08af7927cb2bce3571/1/0/100-100000651pof2.jpg",
+    "https://media.pichau.com.br/media/catalog/product/cache/22c0d71a45cddf08af7927cb2bce3571/1/0/100-100000651pof2.jpg\\",
+    "https://media.pichau.com.br/media/catalog/product/cache/74c1057f7991b4edb2bc7bdaa94de933/1/0/100-100000457box1.jpg&quot;);",
+    "https://media.pichau.com.br/media/catalog/product/cache/74c1057f7991b4edb2bc7bdaa94de933/1/0/100-100000651pof.jpg",
+    "https://media.pichau.com.br/media/catalog/product/cache/74c1057f7991b4edb2bc7bdaa94de933/1/0/100-100000651pof.jpg\\",
+    "https://media.pichau.com.br/media/catalog/product/cache/74c1057f7991b4edb2bc7bdaa94de933/1/0/100-100000651pof1.jpg",
+    "https://media.pichau.com.br/media/catalog/product/cache/74c1057f7991b4edb2bc7bdaa94de933/1/0/100-100000651pof1.jpg\\",
+    "https://media.pichau.com.br/media/catalog/product/cache/74c1057f7991b4edb2bc7bdaa94de933/1/0/100-100000651pof2.jpg",
+    "https://media.pichau.com.br/media/catalog/product/cache/74c1057f7991b4edb2bc7bdaa94de933/1/0/100-100000651pof2.jpg\\",
+    "https://media.pichau.com.br/media/catalog/product/cache/74c1057f7991b4edb2bc7bdaa94de933/1/0/100-100000926wof.jpg&quot;);",
+    "https://media.pichau.com.br/media/catalog/product/cache/74c1057f7991b4edb2bc7bdaa94de933/a/-/a-pc-gladiator-gpu-m_monitor_ariete.jpg&quot;);",
+    "https://media.pichau.com.br/media/catalog/product/cache/74c1057f7991b4edb2bc7bdaa94de933/b/5/b550m-aorus-elite3.jpg&quot;);",
+    "https://media.pichau.com.br/media/catalog/product/cache/74c1057f7991b4edb2bc7bdaa94de933/c/o/computador-gamer-legion-sgpu-cventoinha-001_1.jpg&quot;);",
+    "https://media.pichau.com.br/media/catalog/product/cache/74c1057f7991b4edb2bc7bdaa94de933/g/5/g5090-32lz3.jpg&quot;);",
+    "https://media.pichau.com.br/media/catalog/product/cache/74c1057f7991b4edb2bc7bdaa94de933/g/v/gv-r76gaming-oc-8gd4.jpg&quot;);",
+    "https://media.pichau.com.br/media/catalog/product/cache/74c1057f7991b4edb2bc7bdaa94de933/p/c/pc-completo-gamer-legion-sgpu-cventoinha-orc-v2_1_1.jpg&quot;);",
+    "https://media.pichau.com.br/media/catalog/product/cache/74c1057f7991b4edb2bc7bdaa94de933/p/c/pc-completo-jester-v2-ryan-scadeira-pichau-004.jpg&quot;);",
+    "https://media.pichau.com.br/media/catalog/product/cache/74c1057f7991b4edb2bc7bdaa94de933/r/x/rx-76pswftfy5.jpg&quot;);",
+    "https://recommendation.api.useinsider.com/",
+    "https://www.pichau.com.br/media/catalog/category/10_-_Categorias_site_-_V_deo_Games.png\\",
+    "https://www.pichau.com.br/media/catalog/category/11_-_Categorias_site_-_Redes_e_Wireless.png\\",
+    "https://www.pichau.com.br/media/catalog/category/13_-_Categorias_site_-_Casa_Inteligente.png\\",
+    "https://www.pichau.com.br/media/catalog/category/14_-_Categorias_site_-_Casa_e_Lazer.png\\",
+    "https://www.pichau.com.br/media/catalog/category/15_-_Categorias_site_-_Openbox.png\\",
+    "https://www.pichau.com.br/media/catalog/category/16_-_Categorias_site_-_Pets.png\\",
+    "https://www.pichau.com.br/media/catalog/category/17_-_Categorias_site_-_Vestu_rio.png\\",
+    "https://www.pichau.com.br/media/catalog/category/18_-_Categorias_site_-_Energ_tico.png\\",
+    "https://www.pichau.com.br/media/catalog/category/1_-_Categorias_site_-_Hardware_1.png\\",
+    "https://www.pichau.com.br/media/catalog/category/2_-_Categorias_site_-_Perif_ricos.png\\",
+    "https://www.pichau.com.br/media/catalog/category/3_-_Categorias_site_-_Computadores.png\\",
+    "https://www.pichau.com.br/media/catalog/category/4_-_Categorias_site_-_Kit_Upgrade.png\\",
+    "https://www.pichau.com.br/media/catalog/category/5_-_Categorias_site_-_Monitores.png\\",
+    "https://www.pichau.com.br/media/catalog/category/6_-_Categorias_site_-_Cadeiras_Mesas_Gamer_e_Escrit_rio.png\\",
+    "https://www.pichau.com.br/media/catalog/category/7_-_Categorias_site_-_Eletr_nicos.png\\",
+    "https://www.pichau.com.br/media/catalog/category/8_-_Categorias_site_-_Notebooks_e_Port_teis.png\\",
+    "https://www.pichau.com.br/media/catalog/category/9_-_Categorias_site_-_Mochilas.png\\"
+  ],
+  "rel_endpoints": [
+    "/_next/image?url=%2Fimages%2Famerican.png&amp;w=128&amp;q=75 1x, /_next/image?url=%2Fimages%2Famerican.png&amp;w=256&amp;q=75 2x",
+    "/_next/image?url=%2Fimages%2Famerican.png&amp;w=256&amp;q=75",
+    "/_next/image?url=%2Fimages%2Fapplestore.svg&amp;w=256&amp;q=75 1x, /_next/image?url=%2Fimages%2Fapplestore.svg&amp;w=384&amp;q=75 2x",
+    "/_next/image?url=%2Fimages%2Fapplestore.svg&amp;w=384&amp;q=75",
+    "/_next/image?url=%2Fimages%2Fboleto.png&amp;w=128&amp;q=75 1x, /_next/image?url=%2Fimages%2Fboleto.png&amp;w=256&amp;q=75 2x",
+    "/_next/image?url=%2Fimages%2Fboleto.png&amp;w=256&amp;q=75",
+    "/_next/image?url=%2Fimages%2Fcc%2Fae.png&amp;w=48&amp;q=75 1x, /_next/image?url=%2Fimages%2Fcc%2Fae.png&amp;w=96&amp;q=75 2x",
+    "/_next/image?url=%2Fimages%2Fcc%2Fae.png&amp;w=96&amp;q=75",
+    "/_next/image?url=%2Fimages%2Fcc%2Fdn.png&amp;w=48&amp;q=75 1x, /_next/image?url=%2Fimages%2Fcc%2Fdn.png&amp;w=96&amp;q=75 2x",
+    "/_next/image?url=%2Fimages%2Fcc%2Fdn.png&amp;w=96&amp;q=75",
+    "/_next/image?url=%2Fimages%2Fcc%2Felo.png&amp;w=48&amp;q=75 1x, /_next/image?url=%2Fimages%2Fcc%2Felo.png&amp;w=96&amp;q=75 2x",
+    "/_next/image?url=%2Fimages%2Fcc%2Felo.png&amp;w=96&amp;q=75",
+    "/_next/image?url=%2Fimages%2Fcc%2Fhyper.png&amp;w=48&amp;q=75 1x, /_next/image?url=%2Fimages%2Fcc%2Fhyper.png&amp;w=96&amp;q=75 2x",
+    "/_next/image?url=%2Fimages%2Fcc%2Fhyper.png&amp;w=96&amp;q=75",
+    "/_next/image?url=%2Fimages%2Fcc%2Fmc.png&amp;w=48&amp;q=75 1x, /_next/image?url=%2Fimages%2Fcc%2Fmc.png&amp;w=96&amp;q=75 2x",
+    "/_next/image?url=%2Fimages%2Fcc%2Fmc.png&amp;w=96&amp;q=75",
+    "/_next/image?url=%2Fimages%2Fcc%2Fvi.png&amp;w=48&amp;q=75 1x, /_next/image?url=%2Fimages%2Fcc%2Fvi.png&amp;w=96&amp;q=75 2x",
+    "/_next/image?url=%2Fimages%2Fcc%2Fvi.png&amp;w=96&amp;q=75",
+    "/_next/image?url=%2Fimages%2Fmastercard.png&amp;w=128&amp;q=75 1x, /_next/image?url=%2Fimages%2Fmastercard.png&amp;w=256&amp;q=75 2x",
+    "/_next/image?url=%2Fimages%2Fmastercard.png&amp;w=256&amp;q=75",
+    "/_next/image?url=%2Fimages%2Fnubank.svg&amp;w=128&amp;q=75 1x, /_next/image?url=%2Fimages%2Fnubank.svg&amp;w=256&amp;q=75 2x",
+    "/_next/image?url=%2Fimages%2Fnubank.svg&amp;w=256&amp;q=75",
+    "/_next/image?url=%2Fimages%2Fpichau-google.png&amp;w=256&amp;q=75",
+    "/_next/image?url=%2Fimages%2Fpichau-google.png&amp;w=96&amp;q=75 1x, /_next/image?url=%2Fimages%2Fpichau-google.png&amp;w=256&amp;q=75 2x",
+    "/_next/image?url=%2Fimages%2Fpix.png&amp;w=128&amp;q=75 1x, /_next/image?url=%2Fimages%2Fpix.png&amp;w=256&amp;q=75 2x",
+    "/_next/image?url=%2Fimages%2Fpix.png&amp;w=256&amp;q=75",
+    "/_next/image?url=%2Fimages%2Fplaystore.svg&amp;w=256&amp;q=75 1x, /_next/image?url=%2Fimages%2Fplaystore.svg&amp;w=384&amp;q=75 2x",
+    "/_next/image?url=%2Fimages%2Fplaystore.svg&amp;w=384&amp;q=75",
+    "/_next/image?url=%2Fimages%2Fvisa.png&amp;w=128&amp;q=75 1x, /_next/image?url=%2Fimages%2Fvisa.png&amp;w=256&amp;q=75 2x",
+    "/_next/image?url=%2Fimages%2Fvisa.png&amp;w=256&amp;q=75"
+  ]
+}

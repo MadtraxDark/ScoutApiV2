@@ -1,0 +1,168 @@
+{
+  "id": 66151,
+  "sku": "100-100000651POF",
+  "url_key": "processador-amd-ryzen-7-5800x3d-8-core-16-threads-3-4ghz-4-5ghz-turbo-cache-100mb-am4-100-100000651pof",
+  "name": "Processador AMD Ryzen 7 5800X3D, 8-Core, 16-Threads, 3.4GHz (4.5GHz Turbo), Cache 100MB, AM4, 100-100000651POF",
+  "socket": "539",
+  "hide_from_search": 0,
+  "is_openbox": 0,
+  "openbox_state": null,
+  "openbox_condition": null,
+  "tipo_de_memoria": null,
+  "caracteristicas": null,
+  "distribution_center_name": "santa-catarina",
+  "slots_memoria": null,
+  "marcas": 116,
+  "marcas_info": {
+    "name": "AMD",
+    "url_key": "amd",
+    "__typename": "MarcasProduct"
+  },
+  "product_page_layout": null,
+  "formato_placa": null,
+  "plataforma": "7",
+  "portas_sata": null,
+  "slot_cooler_120": null,
+  "slot_cooler_80": null,
+  "slot_cooler_140": null,
+  "slot_cooler_200": null,
+  "coolerbox_included": 0,
+  "potencia": "65",
+  "quantidade_pacote": null,
+  "alerta_monteseupc": null,
+  "vgaintegrado": null,
+  "product_set_name": "Processador",
+  "clube_pichau": 0,
+  "clube_pichau_exclusive": 0,
+  "categories": [
+    {
+      "name": "Hardware",
+      "url_path": "hardware",
+      "path": "1/2/4",
+      "__typename": "CategoryTree"
+    },
+    {
+      "name": "Destaques",
+      "url_path": "destaques",
+      "path": "1/2/11",
+      "__typename": "CategoryTree"
+    },
+    {
+      "name": "Processadores",
+      "url_path": "hardware/processadores",
+      "path": "1/2/4/14",
+      "__typename": "CategoryTree"
+    },
+    {
+      "name": "AMD",
+      "url_path": "hardware/processadores/amd",
+      "path": "1/2/4/14/246",
+      "__typename": "CategoryTree"
+    }
+  ],
+  "special_price": 2517.64,
+  "pichau_prevenda": 0,
+  "pichau_prices": {
+    "avista": 2139.99,
+    "avista_discount": 15,
+    "avista_method": "PIX",
+    "base_price": 3294.11,
+    "final_price": 2517.64,
+    "max_installments": 12,
+    "min_installment_price": 209.8,
+    "__typename": "PichauPrices"
+  },
+  "price_range": {
+    "__typename": "PriceRange"
+  },
+  "description": {
+    "html": "$13",
+    "__typename": "ComplexTextValue"
+  },
+  "garantia": "12 Meses",
+  "informacoes_adicionais": "$14",
+  "image": {
+    "url": "https://media.pichau.com.br/media/catalog/product/cache/74c1057f7991b4edb2bc7bdaa94de933/1/0/100-100000651pof2.jpg",
+    "url_listing": "https://media.pichau.com.br/media/catalog/product/cache/22c0d71a45cddf08af7927cb2bce3571/1/0/100-100000651pof2.jpg",
+    "path": "/1/0/100-100000651pof2.jpg",
+    "label": "Processador AMD Ryzen 7 5800X3D, 8-Core, 16-Threads, 3.4GHz (4.5GHz Turbo), Cache 100MB, AM4, 100-100000651POF",
+    "__typename": "ProductImage"
+  },
+  "media_gallery": [
+    {
+      "url": "https://media.pichau.com.br/media/catalog/product/cache/74c1057f7991b4edb2bc7bdaa94de933/1/0/100-100000651pof2.jpg",
+      "path": "/1/0/100-100000651pof2.jpg",
+      "label": "Processador AMD Ryzen 7 5800X3D, 8-Core, 16-Threads, 3.4GHz (4.5GHz Turbo), Cache 100MB, AM4, 100-100000651POF",
+      "position": 1,
+      "disabled": false,
+      "__typename": "ProductImage"
+    },
+    {
+      "url": "https://media.pichau.com.br/media/catalog/product/cache/74c1057f7991b4edb2bc7bdaa94de933/1/0/100-100000651pof.jpg",
+      "path": "/1/0/100-100000651pof.jpg",
+      "label": "Processador AMD Ryzen 7 5800X3D, 8-Core, 16-Threads, 3.4GHz (4.5GHz Turbo), Cache 100MB, AM4, 100-100000651POF",
+      "position": 2,
+      "disabled": false,
+      "__typename": "ProductImage"
+    },
+    {
+      "url": "https://media.pichau.com.br/media/catalog/product/cache/74c1057f7991b4edb2bc7bdaa94de933/1/0/100-100000651pof1.jpg",
+      "path": "/1/0/100-100000651pof1.jpg",
+      "label": "Processador AMD Ryzen 7 5800X3D, 8-Core, 16-Threads, 3.4GHz (4.5GHz Turbo), Cache 100MB, AM4, 100-100000651POF",
+      "position": 3,
+      "disabled": false,
+      "__typename": "ProductImage"
+    }
+  ],
+  "short_description": {
+    "html": "",
+    "__typename": "ComplexTextValue"
+  },
+  "amasty_label": {
+    "name": "FRETE GRATIS - SUL SUDESTE - PERMANENTE",
+    "product_labels": [
+      {
+        "image": "https://media.pichau.com.br/media/amasty/amlabel/21label-pequeno-categoria.png",
+        "position": "bottom-right",
+        "size": 0,
+        "label": "Frete Grátis: Sul e Sudeste",
+        "label_color": "",
+        "__typename": "AmastyLabelInfo"
+      }
+    ],
+    "category_labels": [
+      {
+        "image": "https://media.pichau.com.br/media/amasty/amlabel/21label-pequeno-categoria.png",
+        "position": "bottom-right",
+        "size": 0,
+        "label": "Frete Grátis: Sul e Sudeste",
+        "label_color": "",
+        "__typename": "AmastyLabelInfo"
+      }
+    ],
+    "__typename": "AmastyLabel"
+  },
+  "reviews": {
+    "rating": 100,
+    "count": 4,
+    "__typename": "ProductReviews"
+  },
+  "mysales_promotion": {
+    "expire_at": "2026-09-30 17:00:00",
+    "price_discount": 23.57,
+    "price_promotional": 2517.64,
+    "promotion_name": "Quinzena do Cliente",
+    "promotion_url": "promocao/cliente",
+    "qty_available": 155,
+    "qty_sold": 246,
+    "__typename": "MySalesPromotionProduct"
+  },
+  "only_x_left_in_stock": null,
+  "stock_status": "IN_STOCK",
+  "codigo_barra": "730143318471",
+  "codigo_ncm": "85423190",
+  "meta_title": "Processador AMD Ryzen 7 5800X3D, 8-Core, 16-Threads, 3.4GHz (4.5GHz Turbo), Cache 100MB, AM4, 100-100000651POF",
+  "meta_keyword": "Processador AMD Ryzen 7 5800X3D, 8-Core, 16-Threads, 3.4GHz (4.5GHz Turbo), Cache 100MB, AM4, 100-100000651POF",
+  "meta_description": "Processador AMD Ryzen 7 5800X3D, 8-Core, 16-Threads, 3.4GHz (4.5GHz Turbo), Cache 100MB, AM4, 100-100000651POF, Soquete AM4, Núcleos 8, Frequência base 3.4 GHz, Pichau info",
+  "__typename": "SimpleProduct"
+}

@@ -4,69 +4,95 @@
 
 - `store=pichau`, `country=BR`, `currency=BRL`
 - Domain: `pichau.com.br`
+- Storefront: **Next.js App Router** + Magento GraphQL product embutido em
+  `self.__next_f.push([1,"..."])` (RSC flight). Não há `__NEXT_DATA__` clássico.
 
 ## Identifiers
 
-- Prefer Magento/`id` do blob RSC `product`
-- `sku` do payload ou slug da URL (ex. `CP-9020295-BR`)
+- `product_id` = Magento `id` numérico do blob RSC `product`
+- `sku` = Magento `sku` (frequentemente o código de fabricante / MPN)
+- `gtin` = `codigo_barra` quando presente
+- `specifications.mpn` = mesmo `sku` Magento (não inventar MPN distinto)
+- Fallback de slug na URL só quando o blob RSC não traz `sku`
 
 ## Live search (matching)
 
 - `supports_search=True`
 - SERP: `https://www.pichau.com.br/search?q={query}`
-- Links de PDP no domínio (slug sem `/search`)
+- Candidatos vêm de `url_key` no flight RSC (âncoras `<a>` do grid costumam
+  **não** estar no SSR); filtra favoritos/account e slugs curtos
+- PDP: path de um segmento `/slug-do-produto`
 
-## Offer source
+## Offer source priority
 
-- Prefer blob RSC embutido: `pichau_prices.avista` (PIX) → `final_price` →
-  `special_price` → JSON-LD `offers.price`
-- `original_price` = `base_price` quando maior que o preço escolhido
+1. Blob RSC (flight unescape → objeto `product` com `pichau_prices`)
+2. Tokens espalhados no HTML (escapados ou não)
+3. JSON-LD `Product.offers` (fallback parcial)
+
+### Pricing semantics
+
+| Campo | Fonte |
+|---|---|
+| `price` | `pichau_prices.final_price` (cartão / preço comercial) |
+| `pix_price` | `pichau_prices.avista` quando `avista_method=PIX` / presente |
+| `original_price` | `pichau_prices.base_price` se **>** `price` |
+| `installment_count` / `installment_price` | `max_installments` / `min_installment_price` |
+| `discount_percentage` | `(original - price) / original` só com original real |
+
+- **Não** promover PIX a `price` quando `final_price` existe (FE mapeia `price` →
+  “Preço no cartão”).
+- **Não** inferir PIX (`price * 0.9`) nem original a partir de desconto.
+- **Não** promover parcela a `price`.
+
+## Product details
+
+- Título / brand: `product.name`, `marcas_info.name` → JSON-LD / `h1`
+- Specs: atributos Magento escalares do blob (`socket`, `potencia`,
+  `garantia`, `product_set_name`, categorias, …) + `mpn`/`gtin`
+- Imagens (`include_images=true`): `media_gallery` → JSON-LD `image`
+- Sem download binário só para listar URLs
 
 ## Timed promotion
 
-- **Sem timer estruturado** na PDP pública (pesquisa 2026-09-21)
-- RSC / Magento expõe `special_price` e `pichau_prices`, mas **não**
-  `special_to_date` / countdown / `expires`
-- Spider marca `metadata.timed_promotion=false` e **não** inventa
-  `metadata.promotion`
-- Monitor usa só o intervalo regular (12h) para listings Pichau
+- Blob pode expor `mysales_promotion.expire_at` em alguns SKUs; a PDP pública
+  **não** é tratada como timer confiável de monitor — spider mantém
+  `metadata.timed_promotion=false` e **não** inventa `metadata.promotion`
+  (pesquisa 2026-09-21; revalidar se a UI passar a expor countdown estável)
 
-## Pricing semantics
+## Availability
 
-- Prefira à vista PIX (`avista`) quando presente
-- Não promover parcela a `price`
-
-## Availability semantics
-
-- Flags/`is_in_stock` do blob; JSON-LD; fallback texto
+- `stock_status` RSC (`IN_STOCK` / `OUT_OF_STOCK`) → JSON-LD → assume available
+  com preço
 
 ## Fetch strategy
 
-- HTTP-first (`curl_cffi`) retorna SSR/RSC grande (~400KB+) sem
-  `__NEXT_DATA__` clássico — preço parseável no flight data
-- Cloudflare / challenge / auth wall → **resolver** (Camoufox + ADR 0017 /
-  0018; proxy FALLBACK após bloqueio classificado). Bypass obrigatório
-- HTML de bloqueio ≠ produto: `UPSTREAM_BLOCKED` para continuar resolução;
-  nunca fabricar preço/`expires_at`
+- **HTTP-first (`curl_cffi`)** via `PichauHttpFirstHtmlFetcher`: SSR/RSC
+  (~400KB+) com `pichau_prices` parseável sem Camoufox quando o HTML chega
+  completo. `curl`/`urllib` plain costuma cair em **403 Cloudflare**; não usar
+  como prova de “HTTP insuficiente” — impersonação TLS é o fast path.
+- Challenge / HTML insuficiente / erro de rede → **Camoufox**
+  (`StoreAwareHtmlFetcher` + ADR 0017 / 0018; proxy FALLBACK após bloqueio
+  classificado)
+- HTML de bloqueio ≠ produto: `UPSTREAM_BLOCKED`; nunca fabricar preço
 
-## Bypass / anti-block notes (2026-09-21)
+## Parse quality / observability
 
-| Técnica | Resultado |
-|---|---|
-| HTTP plain | Pode 403 / HTML parcial |
-| `curl_cffi` Chrome TLS | SSR/RSC com preços OK |
-| Camoufox / auth bypass se challenge | Obrigatório até PDP real |
-| Browser headed para achar timer XHR | Sem endpoint público de expiry; UI de desconto sem countdown confiável |
-| Inventar `expires_at` a partir de `special_price` | Inválido (dado inexistente) — não confundir com bloqueio |
+- `metadata.parse_quality`: `rsc-complete` | `json-ld-fallback` | `partial`
+- `metadata.source.*` registra origem de price / pix / original / installment /
+  product blob
+- Log `pichau_parse_quality=...` quando não for `rsc-complete`
 
 ## Known limitations
 
-- Promo “especial” sem data de fim → sem antecipação de `next_check_at`
-  (limitação de dados, não de bypass)
-- Layout Next/RSC pode mudar; parser tolera blob aninhado + tokens
-  `avista`/`special_price`
+- Promo “especial” sem countdown UI confiável → sem antecipação de
+  `next_check_at`
+- SERP ainda é heurística de âncoras (sem título/preço no candidato)
+- Layout RSC pode mudar; parser usa decode de flight + brace-scan (padrão
+  Visão VIP), não classes CSS Emotion/MUI
 
 ## Tests
 
+- `tests/unit/test_pichau.py`
 - `tests/unit/test_timed_promotion_wiring.py`
-- HTML de referência: `data/_pichau_probe.html` (dev only)
+- Fixtures: `tests/fixtures/pichau/`
+- HTML de referência (dev): `data/_pichau_probe.html`

@@ -1,0 +1,117 @@
+﻿{
+    "store":  "pichau",
+    "country":  "BR",
+    "product_id":  "66151",
+    "sku":  "100-100000651POF",
+    "gtin":  "730143318471",
+    "title":  "Processador AMD Ryzen 7 5800X3D, 8-Core, 16-Threads, 3.4GHz (4.5GHz Turbo), Cache 100MB, AM4, 100-100000651POF",
+    "brand":  "AMD",
+    "model":  "Ryzen 7 5800X3D",
+    "variant":  null,
+    "seller":  "Pichau",
+    "url":  "https://www.pichau.com.br/processador-amd-ryzen-7-5800x3d-8-core-16-threads-3-4ghz-4-5ghz-turbo-cache-100mb-am4-100-100000651pof",
+    "canonical_url":  "https://www.pichau.com.br/processador-amd-ryzen-7-5800x3d-8-core-16-threads-3-4ghz-4-5ghz-turbo-cache-100mb-am4-100-100000651pof",
+    "currency":  "BRL",
+    "price":  "2517.64",
+    "original_price":  "3294.11",
+    "discount_percentage":  "23.57",
+    "pix_price":  "2139.99",
+    "availability":  "available",
+    "installment_price":  "209.80",
+    "installment_count":  12,
+    "shipping_price":  null,
+    "available":  true,
+    "images":  [
+                   "https://media.pichau.com.br/media/catalog/product/cache/74c1057f7991b4edb2bc7bdaa94de933/1/0/100-100000651pof2.jpg",
+                   "https://media.pichau.com.br/media/catalog/product/cache/74c1057f7991b4edb2bc7bdaa94de933/1/0/100-100000651pof.jpg",
+                   "https://media.pichau.com.br/media/catalog/product/cache/74c1057f7991b4edb2bc7bdaa94de933/1/0/100-100000651pof1.jpg"
+               ],
+    "image_candidates":  [
+                             {
+                                 "source_url":  "https://media.pichau.com.br/media/catalog/product/cache/74c1057f7991b4edb2bc7bdaa94de933/1/0/100-100000651pof2.jpg",
+                                 "position":  0,
+                                 "alt":  null,
+                                 "width":  null,
+                                 "height":  null
+                             },
+                             {
+                                 "source_url":  "https://media.pichau.com.br/media/catalog/product/cache/74c1057f7991b4edb2bc7bdaa94de933/1/0/100-100000651pof.jpg",
+                                 "position":  1,
+                                 "alt":  null,
+                                 "width":  null,
+                                 "height":  null
+                             },
+                             {
+                                 "source_url":  "https://media.pichau.com.br/media/catalog/product/cache/74c1057f7991b4edb2bc7bdaa94de933/1/0/100-100000651pof1.jpg",
+                                 "position":  2,
+                                 "alt":  null,
+                                 "width":  null,
+                                 "height":  null
+                             }
+                         ],
+    "scraped_at":  "2026-09-23T01:55:54.624807Z",
+    "last_changed_at":  null,
+    "metadata":  {
+                     "source":  {
+                                    "price":  "pichau_prices.final_price",
+                                    "pix_price":  "pichau_prices.avista",
+                                    "original_price":  "pichau_prices.base_price",
+                                    "installment":  "pichau_prices.installments",
+                                    "availability":  "rsc-stock_status",
+                                    "product":  "rsc-flight",
+                                    "promotion":  "absent-no-structured-expiry",
+                                    "title":  "rsc",
+                                    "brand":  "structured-data",
+                                    "model":  "product-title-fallback",
+                                    "gtin":  "rsc-codigo_barra",
+                                    "specifications":  "rsc-attributes",
+                                    "processor":  "product-title-fallback",
+                                    "socket":  "product-title-fallback",
+                                    "cores":  "product-title-fallback",
+                                    "threads":  "product-title-fallback",
+                                    "wattage":  "product-specifications",
+                                    "category":  "cpu"
+                                },
+                     "image_status":  "success",
+                     "image_pipeline":  {
+                                            "store":  "pichau",
+                                            "source":  "extract_images",
+                                            "images_found_raw":  3,
+                                            "images_after_filter":  3,
+                                            "images_after_dedup":  3,
+                                            "images_returned":  3,
+                                            "image_source_discovery_ms":  0.0,
+                                            "image_parse_ms":  0.0,
+                                            "image_filter_ms":  0.0,
+                                            "image_dedup_ms":  0.0
+                                        },
+                     "parse_quality":  "rsc-complete",
+                     "pichau_prices":  {
+                                           "avista":  2139.99,
+                                           "avista_discount":  15,
+                                           "avista_method":  "PIX",
+                                           "base_price":  3294.11,
+                                           "final_price":  2517.64,
+                                           "max_installments":  12,
+                                           "min_installment_price":  209.8
+                                       },
+                     "special_price":  2517.64,
+                     "timed_promotion":  false,
+                     "specifications":  {
+                                            "mpn":  "100-100000651POF",
+                                            "sku":  "100-100000651POF",
+                                            "gtin":  "730143318471",
+                                            "CÃ³digo de barras":  "730143318471",
+                                            "PotÃªncia":  "65",
+                                            "Categoria":  "Processador",
+                                            "Garantia":  "12 Meses",
+                                            "NCM":  "85423190",
+                                            "Categorias":  "Hardware \u003e Processadores \u003e AMD",
+                                            "processor":  "AMD Ryzen 7 5800X3D",
+                                            "socket":  "AM4",
+                                            "cores":  "8",
+                                            "threads":  "16",
+                                            "wattage":  "65"
+                                        }
+                 }
+}

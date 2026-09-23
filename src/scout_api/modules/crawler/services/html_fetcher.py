@@ -2115,7 +2115,13 @@ def build_html_fetcher(
     ml_http = CurlCffiHtmlFetcher(timeout=float(urllib_timeout))
     ml_first = MercadoLivreHttpFirstHtmlFetcher(http=ml_http, browser=amazon_first)
 
+    # Pichau: curl_cffi SSR/RSC flight → Camoufox fallback (challenge / miss).
+    from .pichau_http_first_fetcher import PichauHttpFirstHtmlFetcher
+
+    pichau_http = CurlCffiHtmlFetcher(timeout=float(urllib_timeout))
+    pichau_first = PichauHttpFirstHtmlFetcher(http=pichau_http, browser=ml_first)
+
     # KaBuM: urllib HTTP for Next.js SERP/PDP (__NEXT_DATA__) → Camoufox fallback.
     from .kabum_http_first_fetcher import KabumHttpFirstHtmlFetcher
 
-    return KabumHttpFirstHtmlFetcher(http=http, browser=ml_first)
+    return KabumHttpFirstHtmlFetcher(http=http, browser=pichau_first)
