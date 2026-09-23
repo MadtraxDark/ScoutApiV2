@@ -17,7 +17,7 @@
 
 ## Live search (matching)
 
-- `supports_search=True`
+- Search: `matching.search_adapters` (PDP spider sem Search)
 - SERP: `https://nissei.com/br/catalogsearch/result/?q={query}`
   (locale prefix is required — bare `/catalogsearch/…` redirects to home;
   `/br/` ranks the BR storefront PDPs used by Product Match; `/py/` also works

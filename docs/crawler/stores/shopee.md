@@ -14,7 +14,7 @@
 
 ## Live search (matching)
 
-- `supports_search=True`
+- Search: `matching.search_adapters` (PDP spider sem Search)
 - **Product Match:** temporariamente `match_enabled=false`
   (`match_disabled_reason="login instability"`) — a loja **não** entra no
   conjunto elegível de `POST /match` / “Buscar preço em outras lojas”.

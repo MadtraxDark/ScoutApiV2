@@ -11,7 +11,7 @@
 
 ## Live search (matching)
 
-- `supports_search=True`
+- Search: `matching.search_adapters` (PDP spider sem Search)
 - SERP: `https://www.magazineluiza.com.br/busca/{query}/`
 - Parser: product card `/p/{id}/` links
 - Used by `POST /match` (ADR 0019)

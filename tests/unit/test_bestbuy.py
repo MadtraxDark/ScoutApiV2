@@ -10,6 +10,7 @@ from scout_api.modules.crawler.services.product_scrape_service import (
 )
 from scout_api.modules.crawler.services.store_resolver import resolve_store_spider
 from scout_api.modules.crawler.spiders.usa.bestbuy import BestBuySpider
+from scout_api.modules.matching.search_adapters.usa.bestbuy import BestBuySearchAdapter
 
 FIXTURES = Path(__file__).parents[1] / "fixtures" / "bestbuy"
 URL = "https://www.bestbuy.com/product/apple-iphone-17-512gb-lavender-at-t/ABC123XYZ9"
@@ -273,7 +274,7 @@ def test_bestbuy_search_derives_title_from_product_slug() -> None:
         encoding="utf-8",
         request=Request("https://www.bestbuy.com/site/searchpage.jsp?st=iphone"),
     )
-    candidates = BestBuySpider().parse_search_results(response)
+    candidates = BestBuySearchAdapter().parse_candidates(response)
     assert len(candidates) == 2
     assert candidates[0].product_id == "JCQ6HRGR8C"
     assert candidates[0].title is not None

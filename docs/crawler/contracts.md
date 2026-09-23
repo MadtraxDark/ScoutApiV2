@@ -56,11 +56,11 @@ ADR: [0011](../adr/0011-offer-vs-product-details.md), [0012](../adr/0012-optiona
   eligible = registered(STORE_CONFIGS)
              ∩ implemented
              ∩ match_enabled
-             ∩ supports_search
+             ∩ registered_search_store_keys (matching search_adapters)
   ```
 
   Fonte cadastral: `STORE_CONFIGS` / `GET /stores` (não lista hardcoded no
-  frontend).   Spiders sem search e lojas com
+  frontend).   Lojas sem Search adapter e lojas com
   `match_enabled=false` **não** entram no conjunto — omitidas, não
   `ERROR`/`NO_MATCH`.
 
@@ -74,7 +74,8 @@ ADR: [0011](../adr/0011-offer-vs-product-details.md), [0012](../adr/0012-optiona
   Discovery may start from a **URL scrape** (`POST /match`) or from an
   **identity-only** reference (`match_from_item` / `identity_reference_item`)
   — brand/model(/variant) without known store URLs, product IDs, or prices
-  fed into Search. Search and Match remain separate stages.
+  fed into Search. Search and Match remain separate stages; Search lives in
+  `matching.search_adapters` (not PDP spiders).
   Queries are built from **structured ProductIdentity** (progressive ladder:
   identifier → brand+series+critical variant → relax) — never the raw
   commercial PDP title as the primary SERP query (ADR 0033).

@@ -14,7 +14,7 @@
 
 ## Live search (matching)
 
-- `supports_search=True`
+- Search: `matching.search_adapters` (PDP spider sem Search)
 - **Product Match:** temporariamente `match_enabled=false`
   (`match_disabled_reason="login instability"`) — omitida do Match automático
   (não ERROR/NO_MATCH). Crawl manual permanece. Reativar:
@@ -128,7 +128,7 @@ challenge nunca vira produto (`available=false` / preço fabricado).
 - Seller / GTIN podem estar ausentes no JSON-LD / DOM público
 - Cold IPs quase sempre precisam de browser no primeiro hit (Snoopy)
 - Galeria via JSON-LD costuma trazer 1 imagem principal
-- Visão VIP e lojas sem `supports_search` aparecem no match como
+- Lojas sem Search adapter registrado aparecem no match como
   `SEARCH_UNSUPPORTED` (ERROR terminal), não como omissão silenciosa
 
 ## Tests / fixtures

@@ -12,6 +12,9 @@ from scout_api.modules.crawler.services.product_scrape_service import (
 )
 from scout_api.modules.crawler.services.store_resolver import resolve_store_spider
 from scout_api.modules.crawler.spiders.paraguay.visaovip import VisaoVipSpider
+from scout_api.modules.matching.search_adapters.paraguay.visaovip import (
+    VisaoVipSearchAdapter,
+)
 
 FIXTURES = Path(__file__).parents[1] / "fixtures" / "visaovip"
 URL = (
@@ -205,9 +208,8 @@ def test_visaovip_soft_404_is_parse_error_not_unavailable() -> None:
 
 
 def test_visaovip_build_search_url_uses_termo_slug() -> None:
-    spider = VisaoVipSpider()
-    assert spider.supports_search is True
-    url = spider.build_search_url("ASUS TUF Gaming B650M-E WIFI")
+    adapter = VisaoVipSearchAdapter()
+    url = adapter.build_search_request("ASUS TUF Gaming B650M-E WIFI").url
     assert url == ("https://www.visaovip.com/busca/termo/ASUS-TUF-Gaming-B650M-E-WIFI/")
     # Hyphenated model tokens survive whitespace→hyphen slugification.
     assert "B650M-E" in url
@@ -215,12 +217,12 @@ def test_visaovip_build_search_url_uses_termo_slug() -> None:
 
 
 def test_visaovip_parse_search_results_extracts_product_cards() -> None:
-    spider = VisaoVipSpider()
+    adapter = VisaoVipSearchAdapter()
     response = response_from_fixture(
         "search_termo_board.html",
         "https://www.visaovip.com/busca/termo/ASUS-TUF-Gaming-B650M-E-WIFI/",
     )
-    candidates = spider.parse_search_results(response)
+    candidates = adapter.parse_candidates(response)
     assert len(candidates) == 2
     assert candidates[0].product_id == "41749"
     assert candidates[0].url.endswith("/41749/")
@@ -235,11 +237,12 @@ def test_visaovip_parse_search_results_extracts_product_cards() -> None:
 def test_visaovip_search_candidate_url_accepted_by_pdp_parser() -> None:
     """Contract: SERP candidate URL shape is parseable by PDP extractors."""
     spider = VisaoVipSpider()
+    adapter = VisaoVipSearchAdapter()
     serp = response_from_fixture(
         "search_termo_board.html",
         "https://www.visaovip.com/busca/termo/ASUS-TUF-Gaming-B650M-E-WIFI/",
     )
-    candidates = spider.parse_search_results(serp)
+    candidates = adapter.parse_candidates(serp)
     assert candidates
     candidate = candidates[0]
     pdp = response_from_fixture("product_motherboard.html", candidate.url)
@@ -253,11 +256,12 @@ def test_visaovip_search_candidate_url_accepted_by_pdp_parser() -> None:
 
 def test_visaovip_search_parser_independent_of_broken_pdp_fixture() -> None:
     spider = VisaoVipSpider()
+    adapter = VisaoVipSearchAdapter()
     serp = response_from_fixture(
         "search_termo_board.html",
         "https://www.visaovip.com/busca/termo/ASUS-TUF-Gaming-B650M-E-WIFI/",
     )
-    candidates = spider.parse_search_results(serp)
+    candidates = adapter.parse_candidates(serp)
     assert len(candidates) == 2
     broken = HtmlResponse(
         url="https://www.visaovip.com/prod/x/y/1/",
@@ -269,7 +273,7 @@ def test_visaovip_search_parser_independent_of_broken_pdp_fixture() -> None:
     with pytest.raises(ParseError):
         spider.extract_offer(broken)
     # Search still works after PDP failure on a different response.
-    assert len(spider.parse_search_results(serp)) == 2
+    assert len(adapter.parse_candidates(serp)) == 2
 
 
 def test_visaovip_motherboard_details_identity_and_usd_price() -> None:

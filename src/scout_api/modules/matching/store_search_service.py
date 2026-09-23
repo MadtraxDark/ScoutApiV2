@@ -1,11 +1,10 @@
-"""Live store SERP discovery using existing HtmlFetcher + spider adapters."""
+"""Live store SERP discovery via StoreSearchAdapter + shared HtmlFetcher."""
 
 from __future__ import annotations
 
 import logging
 
 from scout_api.modules.crawler.core.exceptions import ParseError, RequestError
-from scout_api.modules.crawler.models.search import SearchCandidate
 from scout_api.modules.crawler.services.amazon_http_first_fetcher import (
     is_amazon_store_url,
 )
@@ -18,14 +17,15 @@ from scout_api.modules.crawler.services.html_fetcher import (
 from scout_api.modules.crawler.services.product_scrape_service import (
     get_shared_html_fetcher,
 )
-from scout_api.modules.crawler.services.store_resolver import (
-    resolve_spider_by_store_key,
-)
-from scout_api.modules.crawler.spiders.base import BaseStoreSpider
 from scout_api.modules.matching.identity import (
     enrich_candidate_title,
     rank_candidates_for_query,
 )
+from scout_api.modules.matching.search_adapters.registry import (
+    resolve_search_adapter,
+    search_adapter_available,
+)
+from scout_api.modules.matching.search_candidate import SearchCandidate
 
 logger = logging.getLogger(__name__)
 
@@ -43,19 +43,26 @@ class StoreSearchService:
         *,
         limit: int = 5,
     ) -> list[SearchCandidate]:
-        spider = resolve_spider_by_store_key(store_key)
-        if not getattr(spider, "supports_search", False):
-            raise RequestError(
-                f"Busca não suportada para a loja {store_key}",
-                code="SEARCH_UNSUPPORTED",
-                url=None,
-            )
-        search_url = spider.build_search_url(query)
-        fetch_url = spider.prepare_fetch_url(search_url)
+        adapter = resolve_search_adapter(store_key)
+        request = adapter.build_search_request(query)
+        fetch_url = request.url
+        logger.info(
+            "store_search_fetch",
+            extra={
+                "store": store_key,
+                "capability": "search",
+                "operation": "fetch_serp",
+                "prefer_browser": request.prefer_browser,
+                "method": request.method,
+                "url": fetch_url,
+            },
+        )
+        # Shared HtmlFetcher stack; prefer_browser is an adapter policy signal
+        # (logged / isolatable from PDP). Camoufox already covers SERP stores
+        # that need hydration — no second browser pool.
         response = self._fetcher.fetch(fetch_url)
         text = response.text or ""
-        page_url = str(response.url or search_url)
-        # Challenge / robot / auth on SERP must never become silent NO_MATCH.
+        page_url = str(response.url or fetch_url)
         if is_challenge_page(text) or is_amazon_robot_check(text):
             raise RequestError(
                 "Busca bloqueada por challenge/CAPTCHA na loja",
@@ -69,84 +76,38 @@ class StoreSearchService:
                 url=page_url,
             )
         try:
-            candidates = spider.parse_search_results(response)
+            candidates = adapter.parse_candidates(response)
         except NotImplementedError as exc:
             raise RequestError(
                 str(exc),
                 code="SEARCH_UNSUPPORTED",
-                url=search_url,
+                url=fetch_url,
             ) from exc
         except Exception as exc:
             logger.exception(
                 "search_parse_failed",
-                extra={"store": store_key, "url": search_url},
+                extra={
+                    "store": store_key,
+                    "capability": "search",
+                    "url": fetch_url,
+                },
             )
             raise ParseError(
                 f"Falha ao interpretar resultados de busca: {exc}"
             ) from exc
 
-        # Amazon incomplete /s shell (no cards) after fetch escalation → blocked.
-        if (
-            not candidates
-            and is_amazon_store_url(page_url)
-            and "/s" in (page_url.split("?", 1)[0])
-        ):
-            # Distinguish genuine zero hits (message present) from empty shells.
-            folded = text.casefold()
-            genuine_empty = any(
-                marker in folded
-                for marker in (
-                    "nenhum resultado",
-                    "não encontramos",
-                    "nao encontramos",
-                    "no results for",
-                    "did not match any products",
-                    "0 results for",
-                )
-            )
-            if not genuine_empty and "data-asin" not in folded:
+        if not candidates:
+            classification = adapter.classify_empty_result(response)
+            if classification == "incomplete":
                 raise RequestError(
-                    "SERP Amazon incompleta ou bloqueada (sem resultados parseáveis)",
+                    "SERP incompleta ou bloqueada (sem resultados parseáveis)",
                     code="UPSTREAM_BLOCKED",
                     url=page_url,
                 )
 
-        # Visão VIP: hydrated SERP must expose /prod/{…}/{code}/ cards. An empty
-        # Next.js shell on /busca/termo/ (no product links, no zero-hit copy)
-        # is a fetch/parser failure — never silent NO_MATCH.
-        if (
-            not candidates
-            and store_key == "visaovip"
-            and "/busca/termo/" in page_url.casefold()
-        ):
-            folded = text.casefold()
-            genuine_empty = any(
-                marker in folded
-                for marker in (
-                    "nenhum resultado",
-                    "não encontramos",
-                    "nao encontramos",
-                    "no results",
-                    "sin resultados",
-                    "0 resultados",
-                )
-            )
-            has_product_href = "/prod/" in folded
-            if not genuine_empty and not has_product_href:
-                raise RequestError(
-                    "SERP Visão VIP incompleta (sem cards /prod/ parseáveis)",
-                    code="UPSTREAM_BLOCKED",
-                    url=page_url,
-                )
-
-        # Re-rank by query relevance before capping — retailers often promote
-        # sibling SKUs above the exact manufacturer PN / series hit.
-        # Fill empty SERP titles from URL slugs (Magalu/AliExpress static HTML).
         enriched = [enrich_candidate_title(c) for c in candidates]
         ranked = rank_candidates_for_query(list(enriched), query)
 
-        # Prefer candidates with distinct URLs, capped.
-        # Amazon: dedupe by market-scoped ASIN when present.
         seen: set[str] = set()
         selected: list[SearchCandidate] = []
         for candidate in ranked:
@@ -168,8 +129,4 @@ class StoreSearchService:
 
     @staticmethod
     def is_search_supported(store_key: str) -> bool:
-        try:
-            spider: BaseStoreSpider = resolve_spider_by_store_key(store_key)
-        except RequestError:
-            return False
-        return bool(getattr(spider, "supports_search", False))
+        return search_adapter_available(store_key)

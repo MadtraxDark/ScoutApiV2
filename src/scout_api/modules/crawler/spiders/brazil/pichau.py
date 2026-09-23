@@ -7,14 +7,11 @@ import logging
 import re
 from decimal import Decimal, InvalidOperation
 from typing import Any, Literal
-from urllib.parse import quote_plus, urljoin
-
 from scrapy.http import Response
 
 from ...core.exceptions import MissingPriceError, ParseError, RequestError
 from ...core.fingerprints import canonicalize_url
 from ...models.product import ProductDetails, ProductOffer
-from ...models.search import SearchCandidate
 from ...utils.parsing import parse_money
 from ...utils.product_attributes import (
     format_identity_variant,
@@ -90,72 +87,8 @@ _SPEC_LABELS = {
 class PichauSpider(BaseStoreSpider):
     name = "pichau"
     store, country, currency = "pichau", "BR", "BRL"
-    supports_search = True
     allowed_domains = ["pichau.com.br"]
     start_urls: list[str] = []
-
-    def build_search_url(self, query: str) -> str:
-        return f"https://www.pichau.com.br/search?q={quote_plus(query.strip())}"
-
-    def parse_search_results(self, response: Response) -> list[SearchCandidate]:
-        candidates: list[SearchCandidate] = []
-        seen: set[str] = set()
-        skip_segments = {
-            "search",
-            "favorites",
-            "favoritos",
-            "cart",
-            "checkout",
-            "customer",
-            "account",
-            "login",
-            "cadastro",
-            "wishlist",
-            "blog",
-            "central",
-            "atendimento",
-            "institucional",
-            "categoria",
-            "promocao",
-            "promocoes",
-            "politica-de-privacidade",
-        }
-
-        slugs: list[str] = []
-        flight = self._flight_blob(response.text or "")
-        if flight:
-            slugs.extend(re.findall(r'"url_key"\s*:\s*"([^"]+)"', flight))
-        # Also accept real anchors when present (rare on SSR SERP).
-        for href in response.css("a[href]::attr(href)").getall():
-            absolute = urljoin(response.url, (href or "").strip())
-            path = absolute.split("?", 1)[0]
-            parts = [p for p in path.split("/") if p and "pichau.com.br" not in p]
-            if len(parts) == 1:
-                slugs.append(parts[0])
-
-        for slug in slugs:
-            slug_clean = (slug or "").strip().strip("/")
-            if not slug_clean:
-                continue
-            fold = slug_clean.casefold()
-            if fold in skip_segments:
-                continue
-            if fold.count("-") < 2 or len(fold) < 16:
-                continue
-            absolute = f"https://www.pichau.com.br/{slug_clean}"
-            canonical = canonicalize_url(absolute)
-            if canonical in seen:
-                continue
-            seen.add(canonical)
-            candidates.append(
-                SearchCandidate(
-                    url=absolute,
-                    metadata={"source": "pichau-search"},
-                )
-            )
-            if len(candidates) >= 10:
-                break
-        return candidates
 
     def extract_offer(self, response: Response) -> ProductOffer:
         self._ensure_product_page(response)

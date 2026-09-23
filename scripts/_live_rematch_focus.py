@@ -69,8 +69,12 @@ MARKERS = (
 def diagnose(store: str, query: str, fetcher: Any) -> dict[str, Any]:
     out: dict[str, Any] = {"store": store, "query": query}
     try:
-        spider = resolve_spider_by_store_key(store)
-        url = spider.prepare_fetch_url(spider.build_search_url(query))
+        from scout_api.modules.matching.search_adapters.registry import (
+            resolve_search_adapter,
+        )
+
+        adapter = resolve_search_adapter(store)
+        url = adapter.build_search_request(query).url
         out["search_url"] = url
         resp = fetcher.fetch(url)
         html = resp.text or ""
@@ -86,7 +90,7 @@ def diagnose(store: str, query: str, fetcher: Any) -> dict[str, Any]:
             "markers": [m for m in MARKERS if m.lower() in html.lower()],
         }
         try:
-            cands = spider.parse_search_results(resp)
+            cands = adapter.parse_candidates(resp)
             out["parsed_candidates"] = len(cands)
             out["titles"] = [(c.title or "")[:100] for c in cands[:5]]
         except Exception as exc:

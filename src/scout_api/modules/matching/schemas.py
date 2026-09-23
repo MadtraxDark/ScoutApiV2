@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 
 from scout_api.core.http_url import AbsoluteHttpUrl
 from scout_api.modules.crawler.models.product import ProductOffer, ProductPriceItem
-from scout_api.modules.crawler.models.search import SearchCandidate
+from scout_api.modules.matching.search_candidate import SearchCandidate
 from scout_api.modules.images.schemas import ApprovedImageInput, ProductImageView
 
 MatchDecision = Literal["auto_match", "review", "reject"]

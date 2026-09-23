@@ -1,0 +1,11 @@
+# PDP scraping ≠ Store Search
+
+Store Product Scraping and Store Search are independent capabilities
+(ADR 0038).
+
+- Do **not** implement SERP search logic inside ProductPage spiders/adapters.
+- Do **not** implement PDP extraction (`extract_offer` / `extract_details` /
+  `extract_images`) inside StoreSearch adapters.
+- Search registry: `matching/search_adapters/`.
+- Product registry: `crawler/spiders/`.
+- Docs: `docs/matching/README.md`.

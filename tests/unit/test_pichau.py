@@ -11,6 +11,7 @@ from scout_api.modules.crawler.core.exceptions import ParseError, RequestError
 from scout_api.modules.crawler.services.store_resolver import resolve_store_spider
 from scout_api.modules.crawler.spiders.brazil.pichau import PichauSpider
 from scout_api.modules.crawler.utils.parsing import parse_money
+from scout_api.modules.matching.search_adapters.brazil.pichau import PichauSearchAdapter
 
 FIXTURES = Path(__file__).parents[1] / "fixtures" / "pichau"
 PSU_URL = (
@@ -157,7 +158,7 @@ def test_pichau_search_prefers_url_key_slugs() -> None:
         encoding="utf-8",
         request=Request("https://www.pichau.com.br/search?q=b550"),
     )
-    candidates = PichauSpider().parse_search_results(response)
+    candidates = PichauSearchAdapter().parse_candidates(response)
     assert candidates
     assert "favorites" not in candidates[0].url
     assert "placa-mae-msi-b550" in candidates[0].url

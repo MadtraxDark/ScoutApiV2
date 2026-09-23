@@ -15,7 +15,7 @@
 
 ## Live search (matching)
 
-- `supports_search=True`
+- Search: `matching.search_adapters` (PDP spider sem Search)
 - SERP: `https://www.kabum.com.br/busca/{query}`
 - Parser: prefer `__NEXT_DATA__` → `catalogServer.data`; fallback anchors
   `/produto/{id}`

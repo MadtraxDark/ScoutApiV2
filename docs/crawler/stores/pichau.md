@@ -17,7 +17,7 @@
 
 ## Live search (matching)
 
-- `supports_search=True`
+- Search: `matching.search_adapters` (PDP spider sem Search)
 - SERP: `https://www.pichau.com.br/search?q={query}`
 - Candidatos vêm de `url_key` no flight RSC (âncoras `<a>` do grid costumam
   **não** estar no SSR); filtra favoritos/account e slugs curtos

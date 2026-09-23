@@ -10,6 +10,9 @@ from scout_api.modules.crawler.services.product_scrape_service import (
 )
 from scout_api.modules.crawler.services.store_resolver import resolve_store_spider
 from scout_api.modules.crawler.spiders.paraguay.shoppingchina import ShoppingChinaSpider
+from scout_api.modules.matching.search_adapters.paraguay.shoppingchina import (
+    ShoppingChinaSearchAdapter,
+)
 
 FIXTURES = Path(__file__).parents[1] / "fixtures" / "shoppingchina"
 URL = (
@@ -57,7 +60,7 @@ def test_shoppingchina_py_rewrites_legacy_produto_path() -> None:
 
 
 def test_shoppingchina_quick_search_rewrites_produto_urls() -> None:
-    spider = ShoppingChinaSpider()
+    adapter = ShoppingChinaSearchAdapter()
     body = (
         '[{"url_po":"/produto/celular-apple-iphone-16-a3287-128gb-black-sim-948623",'
         '"title_po":"CELULAR APPLE IPHONE 16 A3287 128GB BLACK SIM"}]'
@@ -68,7 +71,7 @@ def test_shoppingchina_quick_search_rewrites_produto_urls() -> None:
         encoding="utf-8",
         request=Request("https://www.shoppingchina.com.py/quick_search?search=iphone"),
     )
-    candidates = spider.parse_search_results(response)
+    candidates = adapter.parse_candidates(response)
     assert len(candidates) == 1
     assert "/producto/" in candidates[0].url
     assert "/produto/" not in candidates[0].url

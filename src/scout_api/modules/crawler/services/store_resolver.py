@@ -1,25 +1,17 @@
-from ..spiders.registry import (
+from scout_api.modules.crawler.spiders.registry import (
     resolve_spider_by_store_key,
     resolve_store_spider,
-    stores_supporting_search,
 )
-from ..stores import STORE_CONFIGS, match_enabled_store_keys
+from scout_api.modules.crawler.stores import STORE_CONFIGS
 
 
 def eligible_match_store_keys() -> tuple[str, ...]:
-    """Stores that may run in Product Match auto-discovery.
+    """Lazy re-export — canonical implementation is matching.eligibility."""
+    from scout_api.modules.matching.eligibility import (
+        eligible_match_store_keys as _eligible,
+    )
 
-    Intersection of:
-    - registered catalog entries (``STORE_CONFIGS``)
-    - ``implemented=True``
-    - ``match_enabled=True`` (temporary exclusions live here)
-    - spider ``supports_search=True``
-
-    Implemented stores without search (or with ``match_enabled=False``) are
-    omitted — they are not ERROR / NO_MATCH for that match operation.
-    """
-    search_ok = set(stores_supporting_search())
-    return tuple(key for key in match_enabled_store_keys() if key in search_ok)
+    return _eligible()
 
 
 def store_match_disabled_reason(store_key: str) -> str | None:
@@ -29,6 +21,15 @@ def store_match_disabled_reason(store_key: str) -> str | None:
     if config.match_enabled:
         return None
     return config.match_disabled_reason
+
+
+def stores_supporting_search() -> tuple[str, ...]:
+    """Deprecated alias for registered Search adapter keys (lazy import)."""
+    from scout_api.modules.matching.search_adapters.registry import (
+        registered_search_store_keys,
+    )
+
+    return registered_search_store_keys()
 
 
 __all__ = [

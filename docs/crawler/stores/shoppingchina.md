@@ -13,7 +13,7 @@
 
 ## Live search (matching)
 
-- `supports_search=True`
+- Search: `matching.search_adapters` (PDP spider sem Search)
 - SERP JSON: `https://www.shoppingchina.com.py/quick_search?search={query}`
   (legacy Magento `/catalogsearch/result` returns 404)
 - Fallback HTML parser for `/site/search?query=` pages when JSON is absent

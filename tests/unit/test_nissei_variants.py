@@ -22,6 +22,9 @@ from scout_api.modules.matching.identity import (
     identity_reference_item,
 )
 from scout_api.modules.matching.product_match_service import _serp_title_reject_reason
+from scout_api.modules.matching.search_adapters.paraguay.nissei import (
+    NisseiSearchAdapter,
+)
 
 FIXTURES = Path(__file__).parents[1] / "fixtures" / "nissei"
 
@@ -242,7 +245,7 @@ def test_nissei_search_keeps_family_candidate_without_storage_in_title() -> None
     """
     url = "https://nissei.com/py/catalogsearch/result/?q=acme+phone"
     response = HtmlResponse(url, body=body, encoding="utf-8", request=Request(url))
-    hits = NisseiSpider().parse_search_results(response)
+    hits = NisseiSearchAdapter().parse_candidates(response)
     assert len(hits) == 1
     assert "256" not in (hits[0].title or "")
     reference = identity_from_price_item(

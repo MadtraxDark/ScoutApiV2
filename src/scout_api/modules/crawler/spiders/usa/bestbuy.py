@@ -5,9 +5,7 @@ from html import unescape
 from typing import Any, Literal
 from urllib.parse import (
     parse_qsl,
-    quote_plus,
     urlencode,
-    urljoin,
     urlparse,
     urlsplit,
     urlunsplit,
@@ -19,7 +17,6 @@ from scrapy.selector import Selector
 from ...core.exceptions import ParseError
 from ...core.fingerprints import canonicalize_url
 from ...models.product import ProductDetails, ProductOffer
-from ...models.search import SearchCandidate
 from ...utils.parsing import parse_money
 from ...utils.product_attributes import resolve_attributes, resolve_product_identity
 from ..base import BaseStoreSpider
@@ -45,72 +42,14 @@ _US_CARRIERS = frozenset(
     }
 )
 
-_LEGACY_SKU_PATH = re.compile(r"/site/[^?]+\.p(?:\?|$)", re.I)
-_MODERN_PRODUCT = re.compile(r"/product/[^/]+/([A-Za-z0-9]+)", re.I)
-_SKU_QUERY = re.compile(r"(?:^|[?&])skuId=(\d{5,12})(?:&|$)", re.I)
-
 
 class BestBuySpider(BaseStoreSpider):
     """Best Buy adapter based on product JSON and semantic product markup."""
 
     name = "bestbuy"
     store, country, currency = "bestbuy", "US", "USD"
-    supports_search = True
     allowed_domains = ["bestbuy.com", "www.bestbuy.com"]
     start_urls: list[str] = []
-
-    def build_search_url(self, query: str) -> str:
-        q = quote_plus(query.strip())
-        return f"https://www.bestbuy.com/site/searchpage.jsp?st={q}"
-
-    def parse_search_results(self, response: Response) -> list[SearchCandidate]:
-        candidates: list[SearchCandidate] = []
-        seen: set[str] = set()
-        for href in response.css(
-            "a[href*='/product/']::attr(href), "
-            "a[href*='/site/'][href*='.p']::attr(href), "
-            "ol.sku-item-list a::attr(href), "
-            "li.sku-item a::attr(href)"
-        ).getall():
-            absolute = urljoin(response.url, href.strip())
-            path = urlparse(absolute).path or ""
-            if "/searchpage" in path or "/site/search" in path:
-                continue
-            modern = _MODERN_PRODUCT.search(path)
-            legacy = _LEGACY_SKU_PATH.search(absolute)
-            sku_q = _SKU_QUERY.search(absolute)
-            if not modern and not legacy and not sku_q:
-                continue
-            canonical = canonicalize_url(absolute)
-            if canonical in seen:
-                continue
-            seen.add(canonical)
-            product_id = None
-            title = None
-            if modern:
-                product_id = modern.group(1)
-                # SERP cards often omit accessible title text; slug is enough
-                # for matching re-rank (e.g. apple-iphone-16-128gb-…-black-verizon).
-                slug_match = re.search(
-                    r"/product/([^/]+)/" + re.escape(product_id),
-                    path,
-                    re.I,
-                )
-                if slug_match:
-                    title = slug_match.group(1).replace("-", " ").strip() or None
-            elif sku_q:
-                product_id = sku_q.group(1)
-            candidates.append(
-                SearchCandidate(
-                    url=absolute,
-                    title=title,
-                    product_id=product_id,
-                    metadata={"source": "bestbuy-search"},
-                )
-            )
-            if len(candidates) >= 10:
-                break
-        return candidates
 
     def prepare_fetch_url(self, url: str) -> str:
         """Normalize fetch URL and skip the international country splash.

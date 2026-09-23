@@ -86,18 +86,3 @@ def resolve_spider_by_store_key(store_key: str) -> BaseStoreSpider:
         code="UNSUPPORTED_STORE",
         url=None,
     )
-
-
-def stores_supporting_search() -> tuple[str, ...]:
-    """Catalog keys whose spiders expose live search."""
-    supported: list[str] = []
-    for key, config in STORE_CONFIGS.items():
-        if not config.implemented:
-            continue
-        try:
-            spider = resolve_spider_by_store_key(key)
-        except RequestError:
-            continue
-        if getattr(spider, "supports_search", False):
-            supported.append(key)
-    return tuple(supported)

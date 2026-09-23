@@ -24,6 +24,7 @@ from scout_api.modules.crawler.services.product_scrape_service import (
 from scout_api.modules.crawler.spiders.aliexpress import AliExpressSpider
 from scout_api.modules.crawler.spiders.registry import resolve_store_spider
 from scout_api.modules.crawler.stores import STORE_CONFIGS
+from scout_api.modules.matching.search_adapters.aliexpress import AliExpressSearchAdapter
 
 FIXTURES = Path(__file__).parents[1] / "fixtures" / "aliexpress"
 
@@ -214,7 +215,7 @@ def test_fetcher_helpers_detect_aliexpress() -> None:
 
 
 def test_search_candidates() -> None:
-    candidates = AliExpressSpider().parse_search_results(
+    candidates = AliExpressSearchAdapter().parse_candidates(
         _html("search_msi.html", SEARCH_URL)
     )
     assert candidates

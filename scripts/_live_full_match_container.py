@@ -98,9 +98,13 @@ def diagnose_page(html: str, *, url: str, title: str) -> dict[str, Any]:
 def diagnose_search(store: str, query: str, fetcher: Any) -> dict[str, Any]:
     out: dict[str, Any] = {"store": store, "query": query}
     try:
-        spider = resolve_spider_by_store_key(store)
-        search_url = spider.build_search_url(query)
-        fetch_url = spider.prepare_fetch_url(search_url)
+        from scout_api.modules.matching.search_adapters.registry import (
+            resolve_search_adapter,
+        )
+
+        adapter = resolve_search_adapter(store)
+        search_url = adapter.build_search_request(query).url
+        fetch_url = search_url
         out["search_url"] = search_url
         t0 = time.perf_counter()
         response = fetcher.fetch(fetch_url)
@@ -113,7 +117,7 @@ def diagnose_search(store: str, query: str, fetcher: Any) -> dict[str, Any]:
             html, url=str(out["final_url"] or fetch_url), title=title
         )
         try:
-            cands = spider.parse_search_results(response)
+            cands = adapter.parse_candidates(response)
             out["parsed_candidates"] = len(cands)
             out["candidate_titles"] = [(c.title or "")[:120] for c in cands[:5]]
             out["candidate_urls"] = [c.url for c in cands[:5]]

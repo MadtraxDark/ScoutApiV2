@@ -1,4 +1,4 @@
-"""Search candidate DTO shared by store spiders and matching services."""
+"""Search candidate DTO for Product Match candidate discovery."""
 
 from __future__ import annotations
 

@@ -85,7 +85,7 @@ Currency comes from the price payload (`originalPrice.currency` /
 
 ## Live search (matching)
 
-- `supports_search=True`
+- Search: `matching.search_adapters` (PDP spider sem Search)
 - SERP: `https://pt.aliexpress.com/w/wholesale-{query}.html`
 - Prefer captured search JSON (`data-aliexpress-search`) → `/item/{id}.html` links
   → embedded item ids

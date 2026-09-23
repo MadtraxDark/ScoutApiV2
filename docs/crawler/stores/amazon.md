@@ -20,7 +20,7 @@ No FX conversion in spiders.
 
 ## Live search (matching)
 
-- Amazon BR and US: `supports_search=True`
+- Amazon BR and US: Search via `matching.search_adapters` (PDP spiders sem Search)
 - SERP BR: `https://www.amazon.com.br/s?k={query}`
 - SERP US: `https://www.amazon.com/s?k={query}`
 - Parser: shared `parse_amazon_search_results` over `s-search-result` cards

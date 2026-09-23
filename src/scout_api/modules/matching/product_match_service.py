@@ -32,14 +32,12 @@ from scout_api.modules.crawler.models.product import (
     ProductPriceItem,
     product_offer_from_price_item,
 )
-from scout_api.modules.crawler.models.search import SearchCandidate
+from scout_api.modules.matching.search_candidate import SearchCandidate
 from scout_api.modules.crawler.services.product_scrape_service import (
     ProductScrapeService,
 )
-from scout_api.modules.crawler.services.store_resolver import (
-    eligible_match_store_keys,
-)
 from scout_api.modules.crawler.stores import STORE_CONFIGS, store_display_name
+from scout_api.modules.matching.eligibility import eligible_match_store_keys
 from scout_api.modules.matching.engine import MatchingEngine
 from scout_api.modules.matching.gtin_learning import (
     TrustedGtin,
@@ -1181,7 +1179,7 @@ class ProductMatchService:
         *,
         reference_has_gtin: bool = False,
     ) -> list[str]:
-        # Eligible = registered ∩ implemented ∩ match_enabled ∩ supports_search.
+        # Eligible = registered ∩ implemented ∩ match_enabled ∩ search adapter.
         # Temporarily disabled stores (match_enabled=False) are omitted entirely
         # — never ERROR / NO_MATCH for that operation.
         available = list(eligible_match_store_keys()) or list(MVP_SEARCH_STORES)

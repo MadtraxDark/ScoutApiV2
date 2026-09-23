@@ -91,7 +91,7 @@ Auth / Google). Públicos: `GET /health` e `/auth/*` de sessão. Detalhes:
 - `POST /crawl/offer` — consulta leve (preço/seller/disponibilidade) via
   `OfferScrapeService`, sem executar a extração de detalhes nem de imagens.
 - `POST /match` — Product Matching: scrape da URL de referência, busca ao vivo
-  nas lojas com `supports_search` (Amazon BR/US, Kabum, Magalu, Shopee,
+  nas lojas com Search adapter registrado (Amazon BR/US, Kabum, Magalu, Shopee,
   Best Buy, Nissei, Shopping China), score precision-first (GTIN → marca+modelo
   → título auxiliar) e persistência opcional no PostgreSQL (ADR 0019). Use
   `persist=false` sem `DATABASE_URL`.

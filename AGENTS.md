@@ -57,6 +57,10 @@
   React. Uma Run ativa por produto; polling leve; toast efêmero ≠ central de
   notificações persistente; logs observáveis (sem chain-of-thought). Ver
   ADR 0036 e `docs/integration/pricescout.md`.
+- **PDP ≠ Store Search (crítico):** scraping de página de produto e candidate
+  discovery do Match são capabilities independentes (ADR 0038). Não implemente
+  lógica de SERP em spiders PDP; não implemente `extract_offer`/`extract_details`
+  em `StoreSearchAdapter`. Ver `docs/matching/README.md`.
 - **Imagens de produto (crítico):** candidata do crawl ≠ imagem de catálogo;
   upload no Drive **só após aprovação** humana; original nunca é apagado ao
   gerar AVIF; credenciais Drive nunca vão ao frontend; download de URL

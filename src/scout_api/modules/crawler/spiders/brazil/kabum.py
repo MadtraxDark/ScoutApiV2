@@ -3,7 +3,7 @@ import re
 from decimal import Decimal, InvalidOperation
 from html import unescape
 from typing import Any, Literal
-from urllib.parse import quote_plus, urljoin, urlparse
+from urllib.parse import urlparse
 
 from scrapy.http import Response
 from scrapy.selector import Selector
@@ -11,7 +11,6 @@ from scrapy.selector import Selector
 from ...core.exceptions import ParseError
 from ...core.fingerprints import canonicalize_url
 from ...models.product import ProductDetails, ProductOffer
-from ...models.search import SearchCandidate
 from ...utils.parsing import parse_money
 from ...utils.product_attributes import (
     format_identity_variant,
@@ -26,106 +25,8 @@ Availability = Literal["available", "out_of_stock", "unavailable"]
 class KabumSpider(BaseStoreSpider):
     name = "kabum"
     store, country, currency = "kabum", "BR", "BRL"
-    supports_search = True
     allowed_domains = ["kabum.com.br"]
     start_urls: list[str] = []
-
-    def build_search_url(self, query: str) -> str:
-        return f"https://www.kabum.com.br/busca/{quote_plus(query.strip())}"
-
-    def parse_search_results(self, response: Response) -> list[SearchCandidate]:
-        # Modern KaBuM SERP is Next.js: catalog cards live in __NEXT_DATA__
-        # (anchors with /produto/ are often absent from the initial HTML).
-        from_state = self._parse_search_next_data(response)
-        if from_state:
-            return from_state
-        return self._parse_search_anchor_fallback(response)
-
-    def _parse_search_next_data(self, response: Response) -> list[SearchCandidate]:
-        candidates: list[SearchCandidate] = []
-        seen: set[str] = set()
-        for raw in response.css("script#__NEXT_DATA__::text").getall():
-            try:
-                state = json.loads(raw)
-            except json.JSONDecodeError:
-                continue
-            props = state.get("props", {}) if isinstance(state, dict) else {}
-            page_props = props.get("pageProps", {}) if isinstance(props, dict) else {}
-            data = page_props.get("data", {}) if isinstance(page_props, dict) else {}
-            catalog = (
-                data.get("catalogServer", {}) if isinstance(data, dict) else {}
-            )
-            rows = catalog.get("data") if isinstance(catalog, dict) else None
-            if not isinstance(rows, list):
-                continue
-            for row in rows:
-                if not isinstance(row, dict):
-                    continue
-                code = row.get("code")
-                if code is None or str(code).strip() == "":
-                    continue
-                product_id = str(code).strip()
-                slug = (
-                    self._string(row.get("friendlyName"))
-                    or self._string(row.get("name"))
-                    or product_id
-                )
-                if slug:
-                    slug = re.sub(r"\s+", "-", slug.strip().casefold())
-                    slug = re.sub(r"[^a-z0-9\-]+", "", slug)
-                path = (
-                    f"/produto/{product_id}/{slug}"
-                    if slug
-                    else f"/produto/{product_id}"
-                )
-                absolute = urljoin(response.url, path)
-                canonical = canonicalize_url(absolute)
-                if canonical in seen:
-                    continue
-                seen.add(canonical)
-                candidates.append(
-                    SearchCandidate(
-                        url=absolute,
-                        title=self._string(row.get("name")),
-                        product_id=product_id,
-                        metadata={"source": "kabum-search-next-data"},
-                    )
-                )
-                if len(candidates) >= 10:
-                    return candidates
-        return candidates
-
-    def _parse_search_anchor_fallback(
-        self, response: Response
-    ) -> list[SearchCandidate]:
-        candidates: list[SearchCandidate] = []
-        seen: set[str] = set()
-        for href in response.css(
-            "a.productLink::attr(href), "
-            "a[href*='/produto/']::attr(href), "
-            "main a[href*='/produto/']::attr(href)"
-        ).getall():
-            absolute = urljoin(response.url, href.strip())
-            if "/produto/" not in absolute:
-                continue
-            canonical = canonicalize_url(absolute)
-            if canonical in seen:
-                continue
-            seen.add(canonical)
-            product_id = None
-            match = re.search(r"/produto/(\d+)", absolute)
-            if match:
-                product_id = match.group(1)
-            candidates.append(
-                SearchCandidate(
-                    url=absolute,
-                    product_id=product_id,
-                    metadata={"source": "kabum-search"},
-                )
-            )
-            if len(candidates) >= 10:
-                break
-        return candidates
 
     def extract_offer(self, response: Response) -> ProductOffer:
         product = self._product(response)

@@ -11,7 +11,7 @@ import pytest
 from scout_api.modules.crawler.core.exceptions import RequestError
 from scout_api.modules.crawler.core.fingerprints import canonicalize_url
 from scout_api.modules.crawler.models.product import ProductPriceItem
-from scout_api.modules.crawler.models.search import SearchCandidate
+from scout_api.modules.matching.search_candidate import SearchCandidate
 from scout_api.modules.crawler.services.store_resolver import eligible_match_store_keys
 from scout_api.modules.crawler.stores import STORE_CONFIGS
 from scout_api.modules.matching.product_match_service import ProductMatchService

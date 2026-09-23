@@ -21,7 +21,9 @@ from scout_api.modules.auth.deps import (
 from scout_api.modules.auth.schemas import AuthenticatedPrincipal
 from scout_api.modules.crawler.core.exceptions import ParseError, RequestError
 from scout_api.modules.crawler.schemas import CrawlErrorResponse
-from scout_api.modules.crawler.spiders.registry import stores_supporting_search
+from scout_api.modules.matching.search_adapters.registry import (
+    registered_search_store_keys,
+)
 from scout_api.modules.crawler.stores import STORE_CONFIGS
 from scout_api.modules.matching.match_run_serializers import (
     match_run_to_detail,
@@ -248,7 +250,7 @@ def list_stores(
         AuthenticatedPrincipal, Depends(require_permission("products:read"))
     ],
 ) -> StoreListResponse:
-    search_keys = set(stores_supporting_search())
+    search_keys = set(registered_search_store_keys())
     stores = [
         StoreInfo(
             key=key,

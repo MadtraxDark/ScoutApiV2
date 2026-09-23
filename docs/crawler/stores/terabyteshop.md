@@ -11,7 +11,7 @@
 
 ## Live search (matching)
 
-- `supports_search=True`
+- Search: `matching.search_adapters` (PDP spider sem Search)
 - SERP: `https://www.terabyteshop.com.br/busca?str={query}`
 - Parser: links `/produto/{id}/…`
 

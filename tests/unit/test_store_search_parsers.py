@@ -4,15 +4,25 @@ from __future__ import annotations
 
 from scrapy.http import HtmlResponse
 
-from scout_api.modules.crawler.spiders.brazil.amazon import AmazonBrazilSpider
-from scout_api.modules.crawler.spiders.brazil.kabum import KabumSpider
-from scout_api.modules.crawler.spiders.brazil.magazineluiza import MagazineLuizaSpider
-from scout_api.modules.crawler.spiders.brazil.shopee import ShopeeSpider
-from scout_api.modules.crawler.spiders.paraguay.nissei import NisseiSpider
-from scout_api.modules.crawler.spiders.paraguay.shoppingchina import ShoppingChinaSpider
-from scout_api.modules.crawler.spiders.registry import stores_supporting_search
-from scout_api.modules.crawler.spiders.usa.amazon import AmazonUSSpider
-from scout_api.modules.crawler.spiders.usa.bestbuy import BestBuySpider
+from scout_api.modules.matching.search_adapters.brazil.amazon import (
+    AmazonBrazilSearchAdapter,
+)
+from scout_api.modules.matching.search_adapters.brazil.kabum import KabumSearchAdapter
+from scout_api.modules.matching.search_adapters.brazil.magazineluiza import (
+    MagazineLuizaSearchAdapter,
+)
+from scout_api.modules.matching.search_adapters.brazil.shopee import ShopeeSearchAdapter
+from scout_api.modules.matching.search_adapters.paraguay.nissei import (
+    NisseiSearchAdapter,
+)
+from scout_api.modules.matching.search_adapters.paraguay.shoppingchina import (
+    ShoppingChinaSearchAdapter,
+)
+from scout_api.modules.matching.search_adapters.registry import (
+    registered_search_store_keys,
+)
+from scout_api.modules.matching.search_adapters.usa.amazon import AmazonUSSearchAdapter
+from scout_api.modules.matching.search_adapters.usa.bestbuy import BestBuySearchAdapter
 
 
 def _response(url: str, body: str) -> HtmlResponse:
@@ -27,8 +37,8 @@ def test_kabum_parse_search_results() -> None:
       <a href="/produto/999/outro">Outro</a>
     </body></html>
     """
-    spider = KabumSpider()
-    results = spider.parse_search_results(
+    adapter = KabumSearchAdapter()
+    results = adapter.parse_candidates(
         _response("https://www.kabum.com.br/busca/kingston", html)
     )
     assert len(results) == 2
@@ -73,8 +83,8 @@ def test_kabum_parse_search_next_data_catalog() -> None:
       <script id="__NEXT_DATA__" type="application/json">{json.dumps(payload)}</script>
     </body></html>
     """
-    spider = KabumSpider()
-    results = spider.parse_search_results(
+    adapter = KabumSearchAdapter()
+    results = adapter.parse_candidates(
         _response("https://www.kabum.com.br/busca/msi%20rtx%205070", html)
     )
     assert len(results) == 2
@@ -91,8 +101,8 @@ def test_magalu_parse_search_results() -> None:
       <a href="/busca/iphone/">ignore</a>
     </body></html>
     """
-    spider = MagazineLuizaSpider()
-    results = spider.parse_search_results(
+    adapter = MagazineLuizaSearchAdapter()
+    results = adapter.parse_candidates(
         _response("https://www.magazineluiza.com.br/busca/iphone/", html)
     )
     assert len(results) == 1
@@ -110,8 +120,8 @@ def test_amazon_br_parse_search_results() -> None:
       </div>
     </body></html>
     """
-    spider = AmazonBrazilSpider()
-    results = spider.parse_search_results(
+    adapter = AmazonBrazilSearchAdapter()
+    results = adapter.parse_candidates(
         _response("https://www.amazon.com.br/s?k=teste", html)
     )
     assert len(results) == 1
@@ -127,8 +137,8 @@ def test_amazon_us_parse_search_results() -> None:
       </div>
     </body></html>
     """
-    spider = AmazonUSSpider()
-    results = spider.parse_search_results(
+    adapter = AmazonUSSearchAdapter()
+    results = adapter.parse_candidates(
         _response("https://www.amazon.com/s?k=teste", html)
     )
     assert len(results) == 1
@@ -144,8 +154,8 @@ def test_bestbuy_parse_search_results() -> None:
       <a href="/site/searchpage.jsp?st=sony">ignore</a>
     </body></html>
     """
-    spider = BestBuySpider()
-    results = spider.parse_search_results(
+    adapter = BestBuySearchAdapter()
+    results = adapter.parse_candidates(
         _response("https://www.bestbuy.com/site/searchpage.jsp?st=sony", html)
     )
     assert len(results) == 2
@@ -160,8 +170,8 @@ def test_nissei_parse_search_results() -> None:
       <a href="/py/catalogsearch/result/?q=iphone">ignore</a>
     </body></html>
     """
-    spider = NisseiSpider()
-    results = spider.parse_search_results(
+    adapter = NisseiSearchAdapter()
+    results = adapter.parse_candidates(
         _response("https://nissei.com/py/catalogsearch/result/?q=iphone", html)
     )
     assert len(results) == 1
@@ -176,8 +186,8 @@ def test_shoppingchina_parse_search_results() -> None:
       <a href="/site/search?query=x">ignore</a>
     </body></html>
     """
-    spider = ShoppingChinaSpider()
-    results = spider.parse_search_results(
+    adapter = ShoppingChinaSearchAdapter()
+    results = adapter.parse_candidates(
         _response(
             "https://www.shoppingchina.com.py/site/search?query=note",
             html,
@@ -198,8 +208,8 @@ def test_shoppingchina_parse_quick_search_json() -> None:
       }
     ]
     """
-    spider = ShoppingChinaSpider()
-    results = spider.parse_search_results(
+    adapter = ShoppingChinaSearchAdapter()
+    results = adapter.parse_candidates(
         _response(
             "https://www.shoppingchina.com.py/quick_search?search=iphone",
             payload,
@@ -218,8 +228,8 @@ def test_shopee_parse_search_results() -> None:
       <a href="/search?keyword=x">ignore</a>
     </body></html>
     """
-    spider = ShopeeSpider()
-    results = spider.parse_search_results(
+    adapter = ShopeeSearchAdapter()
+    results = adapter.parse_candidates(
         _response("https://shopee.com.br/search?keyword=kingston", html)
     )
     assert len(results) == 1
@@ -235,8 +245,8 @@ def test_shopee_parse_search_api_payload() -> None:
       </script>
     </body></html>
     """
-    spider = ShopeeSpider()
-    results = spider.parse_search_results(
+    adapter = ShopeeSearchAdapter()
+    results = adapter.parse_candidates(
         _response("https://shopee.com.br/search?keyword=iphone", html)
     )
     assert len(results) == 1
@@ -247,8 +257,8 @@ def test_shopee_parse_search_api_payload() -> None:
 
 def test_shopee_parse_search_embedded_fallback() -> None:
     html = '<html><body><script>const x="i.111.222";</script></body></html>'
-    spider = ShopeeSpider()
-    results = spider.parse_search_results(
+    adapter = ShopeeSearchAdapter()
+    results = adapter.parse_candidates(
         _response("https://shopee.com.br/search?keyword=x", html)
     )
     assert len(results) == 1
@@ -257,20 +267,26 @@ def test_shopee_parse_search_embedded_fallback() -> None:
 
 
 def test_build_search_urls() -> None:
-    assert "busca/" in KabumSpider().build_search_url("rtx 4060")
-    assert "busca/" in MagazineLuizaSpider().build_search_url("rtx 4060")
-    assert "s?k=" in AmazonBrazilSpider().build_search_url("rtx 4060")
-    assert "amazon.com/s?k=" in AmazonUSSpider().build_search_url("rtx 4060")
-    assert "searchpage.jsp" in BestBuySpider().build_search_url("rtx 4060")
-    assert "nissei.com/br/catalogsearch/result" in NisseiSpider().build_search_url(
-        "rtx 4060"
+    assert "busca/" in KabumSearchAdapter().build_search_request("rtx 4060").url
+    assert "busca/" in MagazineLuizaSearchAdapter().build_search_request("rtx 4060").url
+    assert "s?k=" in AmazonBrazilSearchAdapter().build_search_request("rtx 4060").url
+    assert (
+        "amazon.com/s?k="
+        in AmazonUSSearchAdapter().build_search_request("rtx 4060").url
     )
-    assert "quick_search?search=" in ShoppingChinaSpider().build_search_url("rtx 4060")
-    assert "search?keyword=" in ShopeeSpider().build_search_url("rtx 4060")
+    assert "searchpage.jsp" in BestBuySearchAdapter().build_search_request("rtx 4060").url
+    assert "nissei.com/br/catalogsearch/result" in NisseiSearchAdapter().build_search_request(
+        "rtx 4060"
+    ).url
+    assert (
+        "quick_search?search="
+        in ShoppingChinaSearchAdapter().build_search_request("rtx 4060").url
+    )
+    assert "search?keyword=" in ShopeeSearchAdapter().build_search_request("rtx 4060").url
 
 
 def test_all_implemented_stores_support_search() -> None:
-    supported = set(stores_supporting_search())
+    supported = set(registered_search_store_keys())
     expected = {
         "amazon_br",
         "amazon_us",

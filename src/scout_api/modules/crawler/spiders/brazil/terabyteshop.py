@@ -5,14 +5,11 @@ from __future__ import annotations
 import re
 from decimal import Decimal, InvalidOperation
 from typing import Any, Literal
-from urllib.parse import quote_plus, urljoin
-
 from scrapy.http import Response
 
 from ...core.exceptions import MissingPriceError, ParseError, RequestError
 from ...core.fingerprints import canonicalize_url
 from ...models.product import ProductDetails, ProductOffer
-from ...models.search import SearchCandidate
 from ...utils.parsing import parse_money
 from ...utils.product_attributes import (
     format_identity_variant,
@@ -29,37 +26,8 @@ _PRODUCT_ID_RE = re.compile(r"/produto/(\d+)", re.I)
 class TerabyteShopSpider(BaseStoreSpider):
     name = "terabyteshop"
     store, country, currency = "terabyteshop", "BR", "BRL"
-    supports_search = True
     allowed_domains = ["terabyteshop.com.br"]
     start_urls: list[str] = []
-
-    def build_search_url(self, query: str) -> str:
-        return f"https://www.terabyteshop.com.br/busca?str={quote_plus(query.strip())}"
-
-    def parse_search_results(self, response: Response) -> list[SearchCandidate]:
-        candidates: list[SearchCandidate] = []
-        seen: set[str] = set()
-        for href in response.css(
-            "a[href*='/produto/']::attr(href), .product-item a::attr(href)"
-        ).getall():
-            absolute = urljoin(response.url, (href or "").strip())
-            if "/produto/" not in absolute:
-                continue
-            canonical = canonicalize_url(absolute)
-            if canonical in seen:
-                continue
-            seen.add(canonical)
-            match = _PRODUCT_ID_RE.search(canonical)
-            candidates.append(
-                SearchCandidate(
-                    url=absolute,
-                    product_id=match.group(1) if match else None,
-                    metadata={"source": "terabyte-search"},
-                )
-            )
-            if len(candidates) >= 10:
-                break
-        return candidates
 
     def extract_offer(self, response: Response) -> ProductOffer:
         self._ensure_product_page(response)

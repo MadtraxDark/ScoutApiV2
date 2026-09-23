@@ -73,7 +73,7 @@ def test_serp_prefilter_rejects_renewed_when_reference_is_new() -> None:
 def test_asin_length_gate_in_search_parser() -> None:
     from scrapy.http import HtmlResponse
 
-    from scout_api.modules.crawler.spiders.amazon.search import parse_amazon_search_results
+    from scout_api.modules.matching.search_adapters.amazon.parse import parse_amazon_search_results
 
     html = (
         '<div data-component-type="s-search-result" data-asin="B0DSYJCY45">'

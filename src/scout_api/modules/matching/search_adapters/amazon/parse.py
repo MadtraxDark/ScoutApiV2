@@ -1,4 +1,4 @@
-"""Shared Amazon SERP parsing for regional spiders."""
+"""Shared Amazon SERP parsing for regional search adapters."""
 
 from __future__ import annotations
 
@@ -6,8 +6,18 @@ from urllib.parse import urljoin
 
 from scrapy.http import Response
 
-from ...core.fingerprints import canonicalize_url
-from ...models.search import SearchCandidate
+from scout_api.modules.crawler.core.fingerprints import canonicalize_url
+from scout_api.modules.matching.search_adapters.base import EmptySearchClassification
+from scout_api.modules.matching.search_candidate import SearchCandidate
+
+_AMAZON_GENUINE_EMPTY_MARKERS = (
+    "nenhum resultado",
+    "não encontramos",
+    "nao encontramos",
+    "no results for",
+    "did not match any products",
+    "0 results for",
+)
 
 
 def parse_amazon_search_results(
@@ -58,3 +68,17 @@ def parse_amazon_search_results(
         if len(candidates) >= limit:
             break
     return candidates
+
+
+def classify_amazon_empty_result(response: Response) -> EmptySearchClassification:
+    """Distinguish genuine Amazon zero hits from incomplete ``/s`` shells."""
+    page_url = str(response.url or "")
+    if "/s" not in page_url.split("?", 1)[0]:
+        return "unknown"
+    folded = (response.text or "").casefold()
+    genuine_empty = any(marker in folded for marker in _AMAZON_GENUINE_EMPTY_MARKERS)
+    if genuine_empty:
+        return "genuine_empty"
+    if "data-asin" not in folded:
+        return "incomplete"
+    return "unknown"

@@ -94,7 +94,7 @@
 
 | Layer | Responsibility |
 |---|---|
-| Search | `build_search_url` + `parse_search_results` → candidates |
+| Search | `matching.search_adapters` (`build_search_request` + `parse_candidates`) |
 | PDP | `extract_offer` / `extract_details` / `extract_images` |
 | Identity / Match | shared `ProductIdentity` + `MatchingEngine` (not store-specific) |
 
@@ -102,7 +102,7 @@ Fixing PDP pricing must not change Search query generation or matcher thresholds
 
 ## Live search (matching)
 
-- `supports_search=True`
+- Search: `matching.search_adapters` (PDP spider sem Search)
 - SERP: `https://www.visaovip.com/busca/termo/{slug}/`
   - Storefront search form converts whitespace to hyphens in the path
     (`ASUS TUF Gaming B650M-E WIFI` → `ASUS-TUF-Gaming-B650M-E-WIFI`)

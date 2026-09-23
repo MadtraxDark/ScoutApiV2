@@ -13,7 +13,7 @@
 
 ## Live search (matching)
 
-- `supports_search=True`
+- Search: `matching.search_adapters` (PDP spider sem Search)
 - SERP: `https://www.bestbuy.com/site/searchpage.jsp?st={query}`
 - Parser: modern `/product/{slug}/{bsin}` and legacy `/site/…/{sku}.p?skuId=`
 - Used by `POST /match` (ADR 0019)

@@ -9,6 +9,9 @@ from scrapy.http import HtmlResponse, Request
 from scout_api.modules.crawler.core.exceptions import RequestError
 from scout_api.modules.crawler.spiders.brazil.mercadolivre import MercadoLivreSpider
 from scout_api.modules.crawler.spiders.registry import resolve_store_spider
+from scout_api.modules.matching.search_adapters.brazil.mercadolivre import (
+    MercadoLivreSearchAdapter,
+)
 
 FIXTURE = (
     Path(__file__).parents[1] / "fixtures" / "mercadolivre" / "product_catalog_pdp.html"
@@ -59,9 +62,8 @@ def test_mercadolivre_catalog_vs_item_id_semantics() -> None:
 
 
 def test_mercadolivre_search_url_and_parse() -> None:
-    spider = MercadoLivreSpider()
-    assert spider.supports_search is True
-    assert "lista.mercadolivre.com.br" in spider.build_search_url("msi rtx 5070")
+    adapter = MercadoLivreSearchAdapter()
+    assert "lista.mercadolivre.com.br" in adapter.build_search_request("msi rtx 5070").url
     serp = HtmlResponse(
         "https://lista.mercadolivre.com.br/msi-rtx-5070",
         body=(
@@ -79,7 +81,7 @@ def test_mercadolivre_search_url_and_parse() -> None:
         encoding="utf-8",
         request=Request("https://lista.mercadolivre.com.br/msi-rtx-5070"),
     )
-    candidates = spider.parse_search_results(serp)
+    candidates = adapter.parse_candidates(serp)
     assert candidates
     assert candidates[0].product_id == "MLB111"
     assert candidates[0].title and "MSI" in candidates[0].title
@@ -91,7 +93,7 @@ def test_mercadolivre_search_url_and_parse() -> None:
 
 
 def test_mercadolivre_search_rejects_account_verification() -> None:
-    spider = MercadoLivreSpider()
+    adapter = MercadoLivreSearchAdapter()
     verify = HtmlResponse(
         "https://www.mercadolivre.com.br/gz/account-verification?go=x",
         body=b"<html><body>Verificacao</body></html>",
@@ -99,7 +101,7 @@ def test_mercadolivre_search_rejects_account_verification() -> None:
         request=Request("https://lista.mercadolivre.com.br/rtx"),
     )
     with pytest.raises(RequestError) as exc:
-        spider.parse_search_results(verify)
+        adapter.parse_candidates(verify)
     assert exc.value.code == "AUTH_REQUIRED"
 
 
