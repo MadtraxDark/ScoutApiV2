@@ -14,6 +14,7 @@ from scout_api.modules.crawler.core.browser_health import (
     is_browser_infrastructure_error,
     is_browser_launch_failure,
     reset_browser_circuit_for_tests,
+    TrialToken,
 )
 from scout_api.modules.crawler.services.html_fetcher import (
     classify_camoufox_navigation_error,
@@ -56,11 +57,13 @@ def test_circuit_opens_on_launch_failure_not_page_timeout() -> None:
     circuit.record_launch_failure(now=now)
     assert not circuit.allow(now=now)
     assert circuit.snapshot()["state"] == BrowserHealthState.UNAVAILABLE.value
-    # Half-open after TTL.
+    # Half-open after cooldown: allow() is False; claim_trial() grants one probe token.
     half = now + timedelta(seconds=61)
-    assert circuit.allow(now=half)
+    assert not circuit.allow(now=half)  # HALF_OPEN → allow False (use claim_trial)
     assert circuit.snapshot()["state"] == BrowserHealthState.DEGRADED.value
-    circuit.record_success()
+    token = circuit.claim_trial(now=half)
+    assert isinstance(token, TrialToken), "Must receive probe token in HALF_OPEN"
+    circuit.complete_trial(token, success=True)
     assert circuit.snapshot()["state"] == BrowserHealthState.HEALTHY.value
 
 
@@ -77,4 +80,9 @@ def test_cooldown_probe_window() -> None:
     t0 = datetime(2026, 9, 23, 12, 0, 0, tzinfo=UTC)
     circuit.record_launch_failure(now=t0)
     assert not circuit.allow(now=t0 + timedelta(seconds=10))
-    assert circuit.allow(now=t0 + timedelta(seconds=31))
+    # After cooldown: HALF_OPEN — allow() is False; a probe must use claim_trial().
+    half_open_at = t0 + timedelta(seconds=31)
+    assert not circuit.allow(now=half_open_at)
+    assert circuit.state == BrowserHealthState.DEGRADED
+    token = circuit.claim_trial(now=half_open_at)
+    assert token is not None, "Must receive probe token when HALF_OPEN"

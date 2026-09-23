@@ -1,0 +1,17 @@
+HTTP/1.1 500 Internal Server Error
+Date: Wed, 23 Sep 2026 18:53:45 GMT
+Content-Type: text/x-component
+Transfer-Encoding: chunked
+Connection: keep-alive
+Cache-Control: no-cache, no-store, max-age=0, must-revalidate
+Report-To: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=TZO%2FTIdjZr2h2TAkm958fYw4wt54SKb9BTiJ1oNnLhTloWoRo1ay1UvFoVPETvCyWKsauJAlNe%2BTxSHoyIiXFv8uILgBt%2BJMBnp2TXZ%2FGEz3ylPJxFaV5XRFjBrNwfayVvpTF7vbMxGUymHgbfE%3D"}]}
+Vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch, Accept-Encoding
+x-intlayer-locale: pt-BR
+x-middleware-rewrite: /pt-BR/busca/termo/ASUS-TUF-Gaming-B650M-E-WIFI/
+x-nextjs-cache: HIT
+x-nextjs-prerender: 1
+cf-cache-status: DYNAMIC
+Nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+Server: cloudflare
+CF-RAY: a3fbc1063ad09892-GIG
+

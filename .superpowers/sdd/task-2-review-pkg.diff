@@ -1,0 +1,945 @@
+﻿ .../modules/crawler/core/browser_health.py         | 162 ++++++++++-
+ src/scout_api/modules/crawler/core/exceptions.py   |   6 +-
+ .../modules/crawler/services/html_fetcher.py       | 160 +++++++++--
+ tests/unit/test_browser_circuit_claim_trial.py     | 307 +++++++++++++++++++++
+ 4 files changed, 612 insertions(+), 23 deletions(-)
+---
+
+diff --git a/src/scout_api/modules/crawler/core/browser_health.py b/src/scout_api/modules/crawler/core/browser_health.py
+index 933019f..f515a71 100644
+--- a/src/scout_api/modules/crawler/core/browser_health.py
++++ b/src/scout_api/modules/crawler/core/browser_health.py
+@@ -1,28 +1,62 @@
+ """Process-wide Camoufox/browser infrastructure health + circuit breaker.
+ 
+ Launch failures (missing binary, profile I/O, Playwright launch timeout) are
+ structural: once the browser cannot start, repeating the same launch for every
+ store/query wastes minutes. Page navigation timeouts must NOT open this circuit.
++
++Half-open / single-flight (Phase 2):
++  CLOSED   (HEALTHY)   ÔåÆ allow() True; normal operation
++  OPEN     (UNAVAILABLE) ÔåÆ allow() False; fail-fast
++  cooldown elapsed     ÔåÆ HALF_OPEN (DEGRADED); allow() still False
++  claim_trial()        ÔåÆ returns TrialToken for exactly ONE caller; others get None
++  non-holders          ÔåÆ fail-fast (do not wait for probe)
++  complete_trial(success=True)  ÔåÆ CLOSED
++  complete_trial(success=False) ÔåÆ OPEN + new cooldown
++  trial TTL expired    ÔåÆ auto-reopen (probe crash/cancel cannot leave HALF_OPEN forever)
+ """
+ 
+ from __future__ import annotations
+ 
+ import threading
++import uuid
++from dataclasses import dataclass, field
+ from datetime import UTC, datetime, timedelta
+ from enum import StrEnum
+ 
+ from scout_api.modules.crawler.core.exceptions import RequestError
+ 
+ # Structural browser codes ÔÇö never map to Product Match NO_MATCH.
++# Queue infra codes are browser infra for Match fail-fast purposes.
+ BROWSER_INFRASTRUCTURE_ERROR_CODES: frozenset[str] = frozenset(
+     {
+         "BROWSER_LAUNCH_ERROR",
+         "BROWSER_INFRASTRUCTURE_UNAVAILABLE",
++        "BROWSER_QUEUE_SATURATED",
++        "BROWSER_QUEUE_TIMEOUT",
++        "BROWSER_JOB_CANCELLED",
+     }
+ )
+ 
++# Maximum seconds a probe trial is allowed to run before it is considered
++# crashed/cancelled and the circuit auto-reopens.
++TRIAL_TTL_SECONDS: int = 120
++
++
++@dataclass
++class TrialToken:
++    """Opaque probe-permit issued by claim_trial().
++
++    Exactly one token is active at any time in HALF_OPEN state.
++    If the holder does not call complete_trial() before ``expires_at``,
++    snapshot() / claim_trial() will reap the expired trial and reopen
++    the circuit (HALF_OPEN cannot persist forever).
++    """
++
++    token_id: str = field(default_factory=lambda: str(uuid.uuid4()))
++    expires_at: datetime = field(default_factory=lambda: datetime.now(UTC))
++
+ _LAUNCH_FAILURE_MARKERS: tuple[str, ...] = (
+     "launch_persistent_context",
+     "browsertype.launch",
+     "failed to launch",
+     "executable doesn't exist",
+@@ -38,66 +72,184 @@ class BrowserHealthState(StrEnum):
+     DEGRADED = "degraded"
+     UNAVAILABLE = "unavailable"
+ 
+ 
+ class BrowserCircuitBreaker:
+-    """Shared circuit for structural Camoufox launch failures."""
+-
+-    def __init__(self, *, threshold: int = 1, cooldown_seconds: int = 60) -> None:
++    """Shared circuit for structural Camoufox launch failures.
++
++    State machine:
++      HEALTHY (CLOSED)     ÔåÆ allow() True
++      UNAVAILABLE (OPEN)   ÔåÆ allow() False; fail-fast for all callers
++      DEGRADED (HALF_OPEN) ÔåÆ allow() False; claim_trial() grants ONE probe token;
++                             all other callers fail-fast without waiting
++    """
++
++    def __init__(
++        self,
++        *,
++        threshold: int = 1,
++        cooldown_seconds: int = 60,
++        trial_ttl_seconds: int = TRIAL_TTL_SECONDS,
++    ) -> None:
+         self.threshold = max(1, threshold)
+         self.cooldown_seconds = max(1, cooldown_seconds)
++        self._trial_ttl_seconds = max(1, trial_ttl_seconds)
+         self._failures = 0
+         self._state = BrowserHealthState.HEALTHY
+         self._opened_at: datetime | None = None
+         self._lock = threading.Lock()
+         self.launch_failures = 0
+         self.circuit_open_count = 0
++        # Active probe token ÔÇö None when no trial is in progress.
++        self._active_trial: TrialToken | None = None
+ 
+     @property
+     def state(self) -> BrowserHealthState:
+         with self._lock:
+             self._maybe_half_open_unlocked()
++            self._reap_expired_trial_unlocked()
+             return self._state
+ 
+     def allow(self, now: datetime | None = None) -> bool:
++        """Return True only when circuit is CLOSED (HEALTHY).
++
++        OPEN (UNAVAILABLE) and HALF_OPEN (DEGRADED) both return False.
++        Callers that want to probe in HALF_OPEN must call claim_trial() instead.
++        """
++        with self._lock:
++            self._maybe_half_open_unlocked(now)
++            self._reap_expired_trial_unlocked(now)
++            return self._state == BrowserHealthState.HEALTHY
++
++    def claim_trial(self, *, now: datetime | None = None) -> TrialToken | None:
++        """Atomically claim the probe slot in HALF_OPEN (DEGRADED) state.
++
++        Returns a TrialToken for exactly ONE caller; all other concurrent
++        callers receive None and must fail-fast (do not wait for the probe).
++
++        Returns None if:
++          - circuit is CLOSED or OPEN (not in HALF_OPEN)
++          - another probe is already in progress
++          - active trial has expired (circuit auto-reopened)
++        """
+         with self._lock:
+             self._maybe_half_open_unlocked(now)
+-            return self._state != BrowserHealthState.UNAVAILABLE
++            self._reap_expired_trial_unlocked(now)
++            if self._state != BrowserHealthState.DEGRADED:
++                return None
++            if self._active_trial is not None:
++                # Another probe is in progress ÔÇö fail-fast for this caller.
++                return None
++            current = now or datetime.now(UTC)
++            token = TrialToken(
++                token_id=str(uuid.uuid4()),
++                expires_at=current + timedelta(seconds=self._trial_ttl_seconds),
++            )
++            self._active_trial = token
++            return token
++
++    def complete_trial(
++        self,
++        token: TrialToken,
++        *,
++        success: bool,
++        now: datetime | None = None,
++    ) -> None:
++        """Close or reopen the circuit based on the probe result.
++
++        Must be called exactly once per TrialToken, ideally in a ``finally``
++        block so that crash / cancellation are also handled.
++
++        If the token has already been reaped (expired TTL), this is a no-op.
++        """
++        with self._lock:
++            # Guard: only apply if this token is still the active trial.
++            if (
++                self._active_trial is None
++                or self._active_trial.token_id != token.token_id
++            ):
++                return  # Stale token (expired + reaped) ÔÇö no-op.
++            self._active_trial = None
++            if success:
++                self._failures = 0
++                self._state = BrowserHealthState.HEALTHY
++                self._opened_at = None
++            else:
++                # Reopen with a fresh cooldown.
++                if self._state != BrowserHealthState.UNAVAILABLE:
++                    self.circuit_open_count += 1
++                self._state = BrowserHealthState.UNAVAILABLE
++                self._opened_at = now or datetime.now(UTC)
+ 
+     def record_success(self) -> None:
++        """Record a successful operation when circuit is CLOSED (HEALTHY).
++
++        Do not call this when you hold a TrialToken ÔÇö use complete_trial() instead.
++        """
+         with self._lock:
+             self._failures = 0
+             self._state = BrowserHealthState.HEALTHY
+             self._opened_at = None
+ 
+     def record_launch_failure(self, now: datetime | None = None) -> None:
++        """Record a structural launch failure when circuit is CLOSED (HEALTHY).
++
++        Do not call this when you hold a TrialToken ÔÇö use complete_trial() instead.
++        """
+         with self._lock:
+             self.launch_failures += 1
+             self._failures += 1
+             if self._failures >= self.threshold:
+                 if self._state != BrowserHealthState.UNAVAILABLE:
+                     self.circuit_open_count += 1
+                 self._state = BrowserHealthState.UNAVAILABLE
+                 self._opened_at = now or datetime.now(UTC)
+ 
+     def _maybe_half_open_unlocked(self, now: datetime | None = None) -> None:
++        """Transition OPEN ÔåÆ HALF_OPEN when cooldown has elapsed. Caller holds lock."""
+         if self._state != BrowserHealthState.UNAVAILABLE or self._opened_at is None:
+             return
+         current = now or datetime.now(UTC)
+         if current >= self._opened_at + timedelta(seconds=self.cooldown_seconds):
+-            # Probe window: allow one launch attempt.
++            # Probe window: one caller may claim_trial().
+             self._state = BrowserHealthState.DEGRADED
+ 
++    def _reap_expired_trial_unlocked(self, now: datetime | None = None) -> None:
++        """Auto-reopen if the active trial's TTL has expired. Caller holds lock.
++
++        This prevents HALF_OPEN from persisting forever when a probe crashes
++        or is cancelled without calling complete_trial().
++        """
++        if self._active_trial is None:
++            return
++        current = now or datetime.now(UTC)
++        if current >= self._active_trial.expires_at:
++            self._active_trial = None
++            if self._state == BrowserHealthState.DEGRADED:
++                # Reopen with a fresh cooldown so the next probe can be attempted
++                # after another full cooldown period.
++                self._state = BrowserHealthState.UNAVAILABLE
++                self._opened_at = current
++
+     def snapshot(self) -> dict[str, object]:
+         with self._lock:
+             self._maybe_half_open_unlocked()
++            self._reap_expired_trial_unlocked()
+             return {
+                 "state": self._state.value,
+                 "failures": self._failures,
+                 "launch_failures": self.launch_failures,
+                 "circuit_open_count": self.circuit_open_count,
+                 "opened_at": self._opened_at.isoformat() if self._opened_at else None,
++                "active_trial": (
++                    self._active_trial.token_id if self._active_trial else None
++                ),
++                "active_trial_expires_at": (
++                    self._active_trial.expires_at.isoformat()
++                    if self._active_trial
++                    else None
++                ),
+             }
+ 
+ 
+ _breaker: BrowserCircuitBreaker | None = None
+ _breaker_lock = threading.Lock()
+diff --git a/src/scout_api/modules/crawler/core/exceptions.py b/src/scout_api/modules/crawler/core/exceptions.py
+index 5ebf914..061a525 100644
+--- a/src/scout_api/modules/crawler/core/exceptions.py
++++ b/src/scout_api/modules/crawler/core/exceptions.py
+@@ -38,15 +38,19 @@ class RequestError(CrawlerError):
+ # Proxy Cost Mode FALLBACK may retry these after a direct failure.
+ PROXY_FALLBACK_ERROR_CODES: frozenset[str] = frozenset(
+     {"UPSTREAM_BLOCKED", "AUTH_REQUIRED"}
+ )
+ 
+-# Structural Camoufox launch / circuit ÔÇö never Product Match NO_MATCH.
++# Structural Camoufox launch / circuit / queue ÔÇö never Product Match NO_MATCH.
++# Keep in sync with browser_health.BROWSER_INFRASTRUCTURE_ERROR_CODES.
+ BROWSER_INFRASTRUCTURE_ERROR_CODES: frozenset[str] = frozenset(
+     {
+         "BROWSER_LAUNCH_ERROR",
+         "BROWSER_INFRASTRUCTURE_UNAVAILABLE",
++        "BROWSER_QUEUE_SATURATED",
++        "BROWSER_QUEUE_TIMEOUT",
++        "BROWSER_JOB_CANCELLED",
+     }
+ )
+ 
+ SHOPEE_AUTH_REQUIRED_MESSAGE = (
+     "Shopee exige login/sess├úo autenticada (falta de login). "
+diff --git a/src/scout_api/modules/crawler/services/html_fetcher.py b/src/scout_api/modules/crawler/services/html_fetcher.py
+index b618ab6..ae823ff 100644
+--- a/src/scout_api/modules/crawler/services/html_fetcher.py
++++ b/src/scout_api/modules/crawler/services/html_fetcher.py
+@@ -908,10 +908,13 @@ class CamoufoxHtmlFetcher:
+         fetch_strategy: str = "camoufox",
+         browser_factory: BrowserFactory | None = None,
+         challenge_resolver: Any | None = None,
+         warm_reuse: bool = True,
+         warm_max_fetches: int = 40,
++        # BrowserScheduler (Phase 1 / C1 hardening)
++        scheduler: Any | None = None,
++        scheduler_enabled: bool = True,
+     ) -> None:
+         self._headless = headless
+         self._humanize = humanize
+         self._timeout_ms = timeout_ms
+         self._launch_timeout_ms = max(5_000, launch_timeout_ms)
+@@ -939,10 +942,13 @@ class CamoufoxHtmlFetcher:
+         self._active_fingerprint: str | None = None
+         self._browser_launches = 0
+         self._browser_reuses = 0
+         self._browser_launch_failures = 0
+         self._browser_circuit_open_hits = 0
++        # BrowserScheduler: bounded FIFO queue (Phase 1 / C1 hardening)
++        self._scheduler = scheduler
++        self._scheduler_enabled = scheduler_enabled and scheduler is not None
+ 
+     @property
+     def proxy_url(self) -> str | None:
+         return self._proxy_url
+ 
+@@ -977,11 +983,51 @@ class CamoufoxHtmlFetcher:
+             with self._lock:
+                 self._close_warm_session_unlocked()
+ 
+         self._owner.call(_close)
+ 
+-    def fetch(self, url: str) -> HtmlResponse:
++    def fetch(
++        self,
++        url: str,
++        *,
++        cancel_event: threading.Event | None = None,
++    ) -> HtmlResponse:
++        """Fetch URL with Camoufox, gated by BrowserScheduler when enabled.
++
++        If the scheduler is enabled, acquire() is called BEFORE dispatching to
++        the owner thread. This replaces the implicit unbounded queue of
++        _PlaywrightOwnerLoop with an explicit bounded FIFO queue with timeout
++        and cancellation support. Navigation/selectors/Camoufox kwargs are
++        unchanged.
++
++        Args:
++            url: Target product URL.
++            cancel_event: When set, the pending queue entry is removed and
++                          RequestError(BROWSER_JOB_CANCELLED) is raised.
++                          Threaded directly to BrowserScheduler.acquire().
++                          Has no effect when the scheduler is disabled.
++        """
++        if self._scheduler_enabled and self._scheduler is not None:
++            lease = self._scheduler.acquire(cancel_event=cancel_event)
++            store_cfg = resolve_store_config(url)
++            store_key = store_cfg.key if store_cfg is not None else "unknown"
++            logger.debug(
++                "browser_slot_fetch_start",
++                extra={"slot_id": lease.slot_id, "url": url, "store": store_key},
++            )
++            try:
++                return self._fetch_via_owner(url)
++            finally:
++                self._scheduler.release(lease)
++                logger.debug(
++                    "browser_slot_fetch_end",
++                    extra={"slot_id": lease.slot_id, "url": url, "store": store_key},
++                )
++        return self._fetch_via_owner(url)
++
++    def _fetch_via_owner(self, url: str) -> HtmlResponse:
++        """Dispatch fetch to the owner thread (Playwright sync API)."""
+         def _fetch() -> HtmlResponse:
+             with self._lock:
+                 return self._fetch_locked(url)
+ 
+         result = self._owner.call(_fetch)
+@@ -1013,27 +1059,39 @@ class CamoufoxHtmlFetcher:
+         return is_aliexpress_url(url) or not self._warm_reuse
+ 
+     def _acquire_browser(self, url: str) -> tuple[Any, bool]:
+         """Return ``(browser, reused)``. Caller must not close a reused browser."""
+         from scout_api.modules.crawler.core.browser_health import (
++            TrialToken,
+             browser_unavailable_error,
+             get_browser_circuit,
+         )
+ 
+         circuit = get_browser_circuit()
++        trial_token: TrialToken | None = None
++
+         if not circuit.allow():
+-            self._browser_circuit_open_hits += 1
+-            store_cfg = resolve_store_config(url)
+-            logger.warning(
+-                "camoufox_circuit_open_skip",
+-                extra={
+-                    "store": store_cfg.key if store_cfg is not None else None,
+-                    "url": url,
+-                    **circuit.snapshot(),
+-                },
++            # Circuit is OPEN or HALF_OPEN ÔÇö try to claim the probe slot.
++            trial_token = circuit.claim_trial()
++            if trial_token is None:
++                # Either still OPEN (cooldown not elapsed) or another probe is
++                # already in progress.  Fail-fast without waiting.
++                self._browser_circuit_open_hits += 1
++                store_cfg = resolve_store_config(url)
++                logger.warning(
++                    "camoufox_circuit_open_skip",
++                    extra={
++                        "store": store_cfg.key if store_cfg is not None else None,
++                        "url": url,
++                        **circuit.snapshot(),
++                    },
++                )
++                raise browser_unavailable_error(url=url)
++            logger.info(
++                "camoufox_circuit_probe_start",
++                extra={"url": url, "token_id": trial_token.token_id},
+             )
+-            raise browser_unavailable_error(url=url)
+ 
+         launch_kwargs = self._launch_kwargs(url=url)
+         fingerprint = self._warm_fingerprint(launch_kwargs)
+         self._active_fingerprint = fingerprint
+         session = self._warm_session
+@@ -1049,22 +1107,29 @@ class CamoufoxHtmlFetcher:
+                 browser = timed.__enter__()
+             except Exception as exc:
+                 # Any failure during context enter is structural launch failure
+                 # (Playwright TimeoutError often lacks "launch" in the message).
+                 self._browser_launch_failures += 1
+-                circuit.record_launch_failure()
++                if trial_token is not None:
++                    circuit.complete_trial(trial_token, success=False)
++                else:
++                    circuit.record_launch_failure()
+                 logger.warning(
+                     "camoufox_launch_failed",
+                     extra={
+                         "url": url,
+                         "fingerprint": fingerprint,
+                         "exc_type": type(exc).__name__,
++                        "probe": trial_token is not None,
+                         **circuit.snapshot(),
+                     },
+                 )
+                 raise
+-            circuit.record_success()
++            if trial_token is not None:
++                circuit.complete_trial(trial_token, success=True)
++            else:
++                circuit.record_success()
+             self._warm_session = _WarmBrowserSession(
+                 cm=timed,
+                 browser=browser,
+                 fingerprint=fingerprint,
+             )
+@@ -1076,13 +1141,17 @@ class CamoufoxHtmlFetcher:
+                 extra={
+                     "store": store_cfg.key if store_cfg is not None else None,
+                     "launches": self._browser_launches,
+                     "fingerprint": fingerprint,
+                     "launch_timeout_ms": self._launch_timeout_ms,
++                    "probe": trial_token is not None,
+                 },
+             )
+             return browser, False
++        # Warm session reuse ÔÇö browser is already running; complete any active probe.
++        if trial_token is not None:
++            circuit.complete_trial(trial_token, success=True)
+         session.fetch_count += 1
+         self._browser_reuses += 1
+         store_cfg = resolve_store_config(url)
+         store_key = store_cfg.key if store_cfg is not None else "unknown"
+         observe(
+@@ -1117,18 +1186,27 @@ class CamoufoxHtmlFetcher:
+             from scout_api.modules.crawler.core.browser_health import (
+                 browser_unavailable_error,
+                 get_browser_circuit,
+             )
+ 
++            from scout_api.modules.crawler.core.browser_health import TrialToken  # noqa: F401 (local re-import for oneshot path)
++
+             circuit = get_browser_circuit()
++            oneshot_trial: TrialToken | None = None
+             if oneshot:
+                 # Playwright Sync cannot nest a second Camoufox context on the
+                 # owner thread while a warm session still holds the driver loop
+                 # (AliExpress oneshot during Match wave-2 ÔåÆ Sync-in-asyncio).
+                 if not circuit.allow():
+-                    self._browser_circuit_open_hits += 1
+-                    raise browser_unavailable_error(url=url)
++                    oneshot_trial = circuit.claim_trial()
++                    if oneshot_trial is None:
++                        self._browser_circuit_open_hits += 1
++                        raise browser_unavailable_error(url=url)
++                    logger.info(
++                        "camoufox_circuit_probe_start",
++                        extra={"url": url, "oneshot": True, "token_id": oneshot_trial.token_id},
++                    )
+                 if self._warm_session is not None:
+                     logger.info(
+                         "camoufox_warm_drop_for_oneshot",
+                         extra={"url": url},
+                     )
+@@ -1136,22 +1214,29 @@ class CamoufoxHtmlFetcher:
+                 browser_cm = self._open_browser(url=url)
+                 try:
+                     browser = browser_cm.__enter__()
+                 except Exception as exc:
+                     self._browser_launch_failures += 1
+-                    circuit.record_launch_failure()
++                    if oneshot_trial is not None:
++                        circuit.complete_trial(oneshot_trial, success=False)
++                    else:
++                        circuit.record_launch_failure()
+                     logger.warning(
+                         "camoufox_launch_failed",
+                         extra={
+                             "url": url,
+                             "oneshot": True,
+                             "exc_type": type(exc).__name__,
++                            "probe": oneshot_trial is not None,
+                             **circuit.snapshot(),
+                         },
+                     )
+                     raise
+-                circuit.record_success()
++                if oneshot_trial is not None:
++                    circuit.complete_trial(oneshot_trial, success=True)
++                else:
++                    circuit.record_success()
+                 self._browser_launches += 1
+             else:
+                 browser, reused = self._acquire_browser(url)
+                 browser_cm = None
+             try:
+@@ -2117,10 +2202,15 @@ def build_html_fetcher(
+     auth_bypass_max_attempts: int = 2,
+     amazon_auth_email: str | None = None,
+     amazon_auth_password: str | None = None,
+     shopee_auth_email: str | None = None,
+     shopee_auth_password: str | None = None,
++    # BrowserScheduler (Phase 1 / C1 hardening)
++    camoufox_browser_scheduler_enabled: bool = True,
++    camoufox_browser_capacity: int = 1,
++    camoufox_browser_queue_capacity: int = 32,
++    camoufox_queue_timeout_ms: int = 60_000,
+ ) -> HtmlFetcher:
+     """Build the shared store-aware fetcher (direct + optional proxied Camoufox)."""
+     from .challenge_resolution import (
+         ChallengeResolver,
+         StoreAuthCredentials,
+@@ -2162,10 +2252,31 @@ def build_html_fetcher(
+         if camoufox_user_data_dir
+         else default_user_data_dir()
+     )
+     direct_dir, proxy_dir = profile_dirs_for_base(base_dir)
+ 
++    # BrowserScheduler: bounded FIFO queue (Phase 1 / C1 hardening).
++    # Each CamoufoxHtmlFetcher instance (direct / proxied) gets its own
++    # scheduler so they queue independently (direct doesn't block proxy).
++    _scheduler: Any = None
++    if camoufox_browser_scheduler_enabled:
++        from scout_api.modules.crawler.core.browser_scheduler import BrowserScheduler
++
++        _scheduler = BrowserScheduler(
++            capacity=max(1, camoufox_browser_capacity),
++            queue_capacity=max(0, camoufox_browser_queue_capacity),
++            queue_timeout_ms=max(0, camoufox_queue_timeout_ms),
++        )
++        logger.info(
++            "browser_scheduler_created",
++            extra={
++                "capacity": camoufox_browser_capacity,
++                "queue_capacity": camoufox_browser_queue_capacity,
++                "queue_timeout_ms": camoufox_queue_timeout_ms,
++            },
++        )
++
+     common: dict[str, Any] = {
+         "headless": camoufox_headless,
+         "humanize": camoufox_humanize,
+         "timeout_ms": camoufox_timeout_ms,
+         "launch_timeout_ms": camoufox_launch_timeout_ms,
+@@ -2174,21 +2285,35 @@ def build_html_fetcher(
+         "disable_coop": camoufox_disable_coop,
+         "warmup_origin": camoufox_warmup_origin,
+         "challenge_resolver": challenge_resolver,
+         "warm_reuse": camoufox_warm_reuse,
+         "warm_max_fetches": camoufox_warm_max_fetches,
++        "scheduler_enabled": camoufox_browser_scheduler_enabled,
+     }
+     direct = CamoufoxHtmlFetcher(
+         **common,
+         proxy_url=None,
+         user_data_dir=direct_dir,
+         warmup_policy="once_per_session",
+         early_stop_on_shopee_get_pc=True,
+         fetch_strategy="camoufox-direct",
++        scheduler=_scheduler,
+     )
+     proxied: CamoufoxHtmlFetcher | None = None
+     if camoufox_proxy_url:
++        # Proxied fetcher gets its own independent scheduler instance.
++        _proxy_scheduler: Any = None
++        if camoufox_browser_scheduler_enabled:
++            from scout_api.modules.crawler.core.browser_scheduler import (
++                BrowserScheduler,
++            )
++
++            _proxy_scheduler = BrowserScheduler(
++                capacity=max(1, camoufox_browser_capacity),
++                queue_capacity=max(0, camoufox_browser_queue_capacity),
++                queue_timeout_ms=max(0, camoufox_queue_timeout_ms),
++            )
+         proxied = CamoufoxHtmlFetcher(
+             **common,
+             proxy_url=camoufox_proxy_url,
+             user_data_dir=proxy_dir,
+             warmup_policy=shopee_warmup_policy,
+@@ -2197,10 +2322,11 @@ def build_html_fetcher(
+                 if shopee_resource_blocking_enabled
+                 else ()
+             ),
+             early_stop_on_shopee_get_pc=True,
+             fetch_strategy="camoufox-proxy",
++            scheduler=_proxy_scheduler,
+         )
+     browser = StoreAwareHtmlFetcher(direct=direct, proxied=proxied, http=http)
+     # Amazon HTTP leg only (non-Amazon never hits this fetcher).
+     amazon_http = UrllibHtmlFetcher(
+         user_agent=_AMAZON_HTTP_USER_AGENT,
+diff --git a/tests/unit/test_browser_circuit_claim_trial.py b/tests/unit/test_browser_circuit_claim_trial.py
+new file mode 100644
+index 0000000..d9b5978
+--- /dev/null
++++ b/tests/unit/test_browser_circuit_claim_trial.py
+@@ -0,0 +1,307 @@
++"""Tests for BrowserCircuitBreaker half-open single-flight (Task 2 / Phase 2).
++
++State machine under test:
++  HEALTHY (CLOSED)     ÔåÆ allow() True
++  UNAVAILABLE (OPEN)   ÔåÆ allow() False
++  DEGRADED (HALF_OPEN) ÔåÆ allow() False; claim_trial() ÔåÆ exactly ONE token;
++                         non-holders ÔåÆ None ÔåÆ fail-fast
++
++Concurrency test: 10 threads claim_trial() ÔåÆ exactly 1 token.
++Trial TTL test: expired token ÔåÆ circuit auto-reopens (OPEN again).
++"""
++
++from __future__ import annotations
++
++import threading
++from datetime import UTC, datetime, timedelta
++
++import pytest
++
++from scout_api.modules.crawler.core.browser_health import (
++    TRIAL_TTL_SECONDS,
++    BrowserCircuitBreaker,
++    BrowserHealthState,
++    TrialToken,
++    reset_browser_circuit_for_tests,
++)
++
++
++@pytest.fixture(autouse=True)
++def _clean() -> None:
++    reset_browser_circuit_for_tests()
++    yield
++    reset_browser_circuit_for_tests()
++
++
++# ---------------------------------------------------------------------------
++# Helpers
++# ---------------------------------------------------------------------------
++
++# Use a future anchor so that real datetime.now(UTC) is always BEFORE any
++# computed cooldown/TTL deadline, avoiding spurious state transitions when
++# state/snapshot() are called without an explicit `now` argument.
++T0 = datetime(2030, 6, 1, 10, 0, 0, tzinfo=UTC)
++
++
++def _open_circuit(cb: BrowserCircuitBreaker, *, now: datetime = T0) -> None:
++    """Drive circuit to UNAVAILABLE."""
++    cb.record_launch_failure(now=now)
++
++
++def _half_open_circuit(
++    cb: BrowserCircuitBreaker, *, now: datetime = T0
++) -> datetime:
++    """Drive circuit to DEGRADED (half-open) by opening then advancing past cooldown."""
++    _open_circuit(cb, now=now)
++    half_open_at = now + timedelta(seconds=cb.cooldown_seconds + 1)
++    # Touch state to trigger transition.
++    cb.allow(now=half_open_at)
++    return half_open_at
++
++
++# ---------------------------------------------------------------------------
++# Basic semantics
++# ---------------------------------------------------------------------------
++
++
++def test_closed_allow_true() -> None:
++    cb = BrowserCircuitBreaker(threshold=1, cooldown_seconds=30)
++    assert cb.allow() is True
++    assert cb.state == BrowserHealthState.HEALTHY
++
++
++def test_open_allow_false() -> None:
++    cb = BrowserCircuitBreaker(threshold=1, cooldown_seconds=30)
++    _open_circuit(cb)
++    assert cb.allow(now=T0) is False
++    assert cb.state == BrowserHealthState.UNAVAILABLE
++
++
++def test_half_open_allow_false() -> None:
++    """After cooldown, allow() must still return False (callers need claim_trial)."""
++    cb = BrowserCircuitBreaker(threshold=1, cooldown_seconds=30)
++    half_open_at = _half_open_circuit(cb)
++    assert cb.allow(now=half_open_at) is False
++    assert cb.state == BrowserHealthState.DEGRADED
++
++
++def test_claim_trial_returns_none_when_healthy() -> None:
++    cb = BrowserCircuitBreaker(threshold=1, cooldown_seconds=30)
++    assert cb.claim_trial(now=T0) is None
++
++
++def test_claim_trial_returns_none_when_open() -> None:
++    cb = BrowserCircuitBreaker(threshold=1, cooldown_seconds=30)
++    _open_circuit(cb)
++    assert cb.claim_trial(now=T0) is None
++
++
++# ---------------------------------------------------------------------------
++# test_success_closes_circuit
++# ---------------------------------------------------------------------------
++
++
++def test_success_closes_circuit() -> None:
++    cb = BrowserCircuitBreaker(threshold=1, cooldown_seconds=30)
++    half_open_at = _half_open_circuit(cb)
++
++    token = cb.claim_trial(now=half_open_at)
++    assert token is not None, "Must receive a TrialToken in HALF_OPEN state"
++    assert isinstance(token, TrialToken)
++
++    cb.complete_trial(token, success=True, now=half_open_at)
++
++    assert cb.allow() is True
++    assert cb.state == BrowserHealthState.HEALTHY
++    snap = cb.snapshot()
++    assert snap["active_trial"] is None
++
++
++# ---------------------------------------------------------------------------
++# test_failure_reopens_and_resets_cooldown
++# ---------------------------------------------------------------------------
++
++
++def test_failure_reopens_and_resets_cooldown() -> None:
++    cb = BrowserCircuitBreaker(threshold=1, cooldown_seconds=30)
++    half_open_at = _half_open_circuit(cb)
++
++    token = cb.claim_trial(now=half_open_at)
++    assert token is not None
++
++    # complete_trial with success=False ÔåÆ must reopen with new cooldown
++    cb.complete_trial(token, success=False, now=half_open_at)
++
++    assert cb.state == BrowserHealthState.UNAVAILABLE
++    assert cb.allow(now=half_open_at) is False
++
++    # New cooldown restarted from half_open_at; original cooldown not yet elapsed.
++    still_open_at = half_open_at + timedelta(seconds=29)
++    assert cb.allow(now=still_open_at) is False
++
++    # After new cooldown elapses, half-open again.
++    new_half_open = half_open_at + timedelta(seconds=31)
++    assert cb.allow(now=new_half_open) is False  # allow False even in half-open
++    assert cb.state == BrowserHealthState.DEGRADED
++
++
++# ---------------------------------------------------------------------------
++# test_non_probe_fail_fast_does_not_wait
++# ---------------------------------------------------------------------------
++
++
++def test_non_probe_fail_fast_does_not_wait() -> None:
++    """In HALF_OPEN, second claim_trial() returns None immediately (no blocking)."""
++    cb = BrowserCircuitBreaker(threshold=1, cooldown_seconds=30)
++    half_open_at = _half_open_circuit(cb)
++
++    # First caller gets the probe token.
++    token1 = cb.claim_trial(now=half_open_at)
++    assert token1 is not None
++
++    # Second caller must receive None immediately ÔÇö no waiting.
++    token2 = cb.claim_trial(now=half_open_at)
++    assert token2 is None
++
++    # Third caller also None.
++    token3 = cb.claim_trial(now=half_open_at)
++    assert token3 is None
++
++    # Clean up probe.
++    cb.complete_trial(token1, success=True)
++
++
++# ---------------------------------------------------------------------------
++# test_probe_crash_does_not_stick_half_open  (fake clock)
++# ---------------------------------------------------------------------------
++
++
++def test_probe_crash_does_not_stick_half_open() -> None:
++    """A TrialToken that is never completed must not leave HALF_OPEN forever.
++
++    When the trial TTL expires, snapshot() / claim_trial() / allow() must
++    reap the stale token and reopen the circuit (UNAVAILABLE).
++    """
++    trial_ttl = 60
++    cb = BrowserCircuitBreaker(
++        threshold=1, cooldown_seconds=30, trial_ttl_seconds=trial_ttl
++    )
++    half_open_at = _half_open_circuit(cb)
++
++    # Claim probe token but never call complete_trial (simulates crash).
++    token = cb.claim_trial(now=half_open_at)
++    assert token is not None
++
++    # Before TTL expires: still DEGRADED with active trial.
++    before_expiry = half_open_at + timedelta(seconds=trial_ttl - 1)
++    assert cb.state == BrowserHealthState.DEGRADED
++    snap = cb.snapshot()
++    assert snap["active_trial"] is not None
++
++    # After TTL expires: circuit must auto-reopen to UNAVAILABLE.
++    after_expiry = half_open_at + timedelta(seconds=trial_ttl + 1)
++    # Trigger reap via allow() with fake clock.
++    assert cb.allow(now=after_expiry) is False
++    assert cb.state == BrowserHealthState.UNAVAILABLE
++    snap2 = cb.snapshot()
++    assert snap2["active_trial"] is None
++
++    # complete_trial with expired token is a no-op (already reaped).
++    cb.complete_trial(token, success=True, now=after_expiry)
++    assert cb.state == BrowserHealthState.UNAVAILABLE
++
++
++# ---------------------------------------------------------------------------
++# test_ten_callers_one_probe  (concurrency)
++# ---------------------------------------------------------------------------
++
++
++def test_ten_callers_one_probe() -> None:
++    """10 concurrent threads in HALF_OPEN ÔåÆ exactly 1 receives a TrialToken."""
++    cb = BrowserCircuitBreaker(threshold=1, cooldown_seconds=30)
++
++    # Open circuit then advance past cooldown using a shared fake time.
++    cb.record_launch_failure(now=T0)
++    half_open_at = T0 + timedelta(seconds=31)
++
++    tokens: list[TrialToken | None] = []
++    lock = threading.Lock()
++    barrier = threading.Barrier(10)
++
++    def _try_claim() -> None:
++        barrier.wait()  # All threads start simultaneously.
++        tok = cb.claim_trial(now=half_open_at)
++        with lock:
++            tokens.append(tok)
++
++    threads = [threading.Thread(target=_try_claim) for _ in range(10)]
++    for t in threads:
++        t.start()
++    for t in threads:
++        t.join()
++
++    granted = [t for t in tokens if t is not None]
++    assert len(granted) == 1, (
++        f"Expected exactly 1 probe token; got {len(granted)}: {granted}"
++    )
++    assert len(tokens) == 10
++    assert tokens.count(None) == 9
++
++    # Clean up.
++    cb.complete_trial(granted[0], success=True)
++    assert cb.state == BrowserHealthState.HEALTHY
++
++
++# ---------------------------------------------------------------------------
++# Snapshot / complete_trial idempotency
++# ---------------------------------------------------------------------------
++
++
++def test_complete_trial_stale_token_is_noop() -> None:
++    """Calling complete_trial with a token that has already been reaped is a no-op."""
++    trial_ttl = 10
++    cb = BrowserCircuitBreaker(
++        threshold=1, cooldown_seconds=30, trial_ttl_seconds=trial_ttl
++    )
++    half_open_at = _half_open_circuit(cb)
++    token = cb.claim_trial(now=half_open_at)
++    assert token is not None
++
++    # Force reap by advancing past TTL.
++    after_expiry = half_open_at + timedelta(seconds=trial_ttl + 1)
++    cb.allow(now=after_expiry)  # triggers reap
++    assert cb.state == BrowserHealthState.UNAVAILABLE
++
++    # complete_trial with stale token: must be no-op.
++    cb.complete_trial(token, success=True, now=after_expiry)
++    assert cb.state == BrowserHealthState.UNAVAILABLE  # not re-closed
++
++
++def test_snapshot_includes_trial_fields() -> None:
++    cb = BrowserCircuitBreaker(threshold=1, cooldown_seconds=30)
++    snap_healthy = cb.snapshot()
++    assert "active_trial" in snap_healthy
++    assert "active_trial_expires_at" in snap_healthy
++    assert snap_healthy["active_trial"] is None
++
++    half_open_at = _half_open_circuit(cb)
++    token = cb.claim_trial(now=half_open_at)
++    assert token is not None
++
++    snap_probe = cb.snapshot()
++    assert snap_probe["active_trial"] == token.token_id
++    assert snap_probe["active_trial_expires_at"] is not None
++
++    cb.complete_trial(token, success=True)
++
++
++def test_queue_codes_in_infrastructure_error_codes() -> None:
++    """Queue infra codes must be in BROWSER_INFRASTRUCTURE_ERROR_CODES."""
++    from scout_api.modules.crawler.core.browser_health import (
++        BROWSER_INFRASTRUCTURE_ERROR_CODES,
++    )
++
++    for code in ("BROWSER_QUEUE_SATURATED", "BROWSER_QUEUE_TIMEOUT", "BROWSER_JOB_CANCELLED"):
++        assert code in BROWSER_INFRASTRUCTURE_ERROR_CODES, (
++            f"{code} missing from BROWSER_INFRASTRUCTURE_ERROR_CODES"
++        )

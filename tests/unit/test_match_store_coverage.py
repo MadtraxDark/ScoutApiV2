@@ -224,7 +224,7 @@ def test_browser_infrastructure_error_fail_fast_not_no_match() -> None:
     search.is_search_supported.return_value = True
     search_calls: list[str] = []
 
-    def _search(store_key: str, query: str, *, limit: int = 5) -> list[SearchCandidate]:
+    def _search(store_key: str, query: str, *, limit: int = 5, **_kwargs: object) -> list[SearchCandidate]:
         del limit
         search_calls.append(f"{store_key}:{query}")
         raise RequestError(
@@ -326,7 +326,7 @@ def test_match_wave2_stores_run_concurrently(
     peak = 0
     lock = threading.Lock()
 
-    def _search(store_key: str, query: str, *, limit: int = 5) -> list[SearchCandidate]:
+    def _search(store_key: str, query: str, *, limit: int = 5, **_kwargs: object) -> list[SearchCandidate]:
         del query, limit
         nonlocal active, peak
         with lock:

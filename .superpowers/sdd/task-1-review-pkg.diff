@@ -1,0 +1,1048 @@
+﻿ .env.example                                       |   9 +
+ src/scout_api/core/config.py                       |  11 +
+ .../modules/crawler/core/browser_scheduler.py      | 380 +++++++++++++++++++++
+ src/scout_api/modules/crawler/core/browser_slot.py |  64 ++++
+ .../modules/crawler/core/failure_domains.py        |  47 +++
+ .../modules/crawler/services/html_fetcher.py       |  89 ++++-
+ .../crawler/services/product_scrape_service.py     |   4 +
+ tests/unit/test_browser_scheduler.py               | 254 ++++++++++++++
+ 8 files changed, 857 insertions(+), 1 deletion(-)
+---
+
+diff --git a/.env.example b/.env.example
+index 7d2f74d..6a053f7 100644
+--- a/.env.example
++++ b/.env.example
+@@ -135,12 +135,21 @@ BROWSER_CIRCUIT_FAILURE_THRESHOLD=1
+ BROWSER_CIRCUIT_COOLDOWN_SECONDS=60
+ # Keep one Camoufox persistent context warm across fetches (ADR 0032).
+ # AliExpress still uses a fresh temp profile per lookup.
+ # Profile subdirs per locale avoid cookie mix when fingerprint changes.
+ CAMOUFOX_WARM_REUSE=true
+ CAMOUFOX_WARM_MAX_FETCHES=40
++# --- BrowserScheduler (Phase 1 / C1 hardening) ---
++# Feature flag ÔÇö set false to roll back to legacy lock-only path.
++CAMOUFOX_BROWSER_SCHEDULER_ENABLED=true
++# Concurrent Camoufox slots. Default=1; do NOT increase without benchmark (C1ÔåÆC2ÔåÆC3).
++CAMOUFOX_BROWSER_CAPACITY=1
++# Max callers waiting in queue. Excess ÔåÆ BROWSER_QUEUE_SATURATED (immediate fail).
++CAMOUFOX_BROWSER_QUEUE_CAPACITY=32
++# Milliseconds a caller waits for a slot before BROWSER_QUEUE_TIMEOUT.
++CAMOUFOX_QUEUE_TIMEOUT_MS=60000
+ # Product Match: wave-2 store concurrency (Camoufox stays on owner thread).
+ MATCH_STORE_CONCURRENCY=3
+ # Shopee cost controls (DataImpulse bills primarily by GB transferred).
+ # once_per_session | always | never ÔÇö avoid paying for home before every PDP.
+ SHOPEE_WARMUP_POLICY=once_per_session
+ # Abort image/media/font on Shopee only (document/script/xhr/fetch stay).
+diff --git a/src/scout_api/core/config.py b/src/scout_api/core/config.py
+index b64f536..3e97759 100644
+--- a/src/scout_api/core/config.py
++++ b/src/scout_api/core/config.py
+@@ -95,12 +95,23 @@ class Settings(BaseSettings):
+     camoufox_user_data_dir: str | None = None
+     camoufox_disable_coop: bool = True
+     camoufox_warmup_origin: bool = True
+     # Keep Camoufox persistent context warm across fetches (ADR 0032).
+     camoufox_warm_reuse: bool = True
+     camoufox_warm_max_fetches: int = 40
++    # --- BrowserScheduler (Phase 1 / C1 hardening) ---
++    # Bounded FIFO queue replacing implicit unbounded _PlaywrightOwnerLoop queue.
++    # Feature flag: set false to fall back to legacy lock-only path (rollback).
++    camoufox_browser_scheduler_enabled: bool = True
++    # Number of concurrent Camoufox slots. Default=1; do NOT increase without
++    # benchmark evidence (C1 vs C2 vs C3). See docs/superpowers/plans/ÔÇª
++    camoufox_browser_capacity: int = 1
++    # Max callers waiting for a slot before queue saturation error.
++    camoufox_browser_queue_capacity: int = 32
++    # Milliseconds a caller waits in queue before BROWSER_QUEUE_TIMEOUT.
++    camoufox_queue_timeout_ms: int = 60_000
+     # Product Match: independent stores may overlap; Camoufox stays lock-serialized.
+     match_store_concurrency: int = 3
+     # Cost-aware Shopee controls (DataImpulse is billed primarily by GB).
+     shopee_warmup_policy: str = "once_per_session"
+     shopee_resource_blocking_enabled: bool = True
+     # Challenge / CAPTCHA resolution (ADR 0017). Default: offline amazoncaptcha.
+diff --git a/src/scout_api/modules/crawler/core/browser_scheduler.py b/src/scout_api/modules/crawler/core/browser_scheduler.py
+new file mode 100644
+index 0000000..7f5ffa5
+--- /dev/null
++++ b/src/scout_api/modules/crawler/core/browser_scheduler.py
+@@ -0,0 +1,380 @@
++"""BrowserScheduler ÔÇö bounded FIFO queue for Camoufox browser slots.
++
++Replaces the implicit unbounded serialization of _PlaywrightOwnerLoop with:
++- Explicit capacity (default 1)
++- Bounded queue with configurable max waiters
++- Per-waiter timeout (CAMOUFOX_QUEUE_TIMEOUT_MS)
++- FIFO slot assignment
++- Cancellation via threading.Event
++- Structured metrics: depth, active, wait_ms, timeout_count
++
++Design constraints (Phase 1 / C1):
++- capacity=1 is the only validated value; do NOT increase without benchmark.
++- slot-{id} profile directories are reserved for future C2+; C1 uses slot-0.
++- cancel_event must cause the job to leave the queue and never navigate.
++- Queue saturated raises RequestError(code="BROWSER_QUEUE_SATURATED") ÔÇö not a hang.
++
++Fairness: FIFO.  No priority queue. Budget controls (Match) handle monopolisation.
++"""
++
++from __future__ import annotations
++
++import logging
++import threading
++import time
++from collections import deque
++from dataclasses import dataclass
++
++# Re-export so callers can import BrowserSlotLease from this module.
++from scout_api.modules.crawler.core.browser_slot import BrowserSlotLease  # noqa: F401
++from scout_api.modules.crawler.core.exceptions import RequestError
++from scout_api.modules.crawler.core.failure_domains import FailureDomain, log_failure
++
++logger = logging.getLogger(__name__)
++
++
++@dataclass
++class _Waiter:
++    """Internal queue entry for a blocked acquire() call.
++
++    Invariant: slot_id is set (under self._lock) by _wake_next_unlocked()
++    BEFORE event.set() is called. This guarantees that when event.is_set()
++    is True, slot_id is already readable by the waiter thread.
++    """
++
++    event: threading.Event
++    slot_id: int | None = None      # None until pre-granted by _wake_next_unlocked()
++    enqueue_time: float = 0.0       # time.monotonic() when the waiter was enqueued
++
++
++class BrowserScheduler:
++    """Bounded FIFO scheduler for Camoufox browser slots.
++
++    Thread-safe. All state mutations are protected by self._lock.
++
++    Slot-ID invariant:
++        _active + len(_available_slots) == capacity at all times.
++    A slot_id is in exactly one of:
++        - active (in use by a caller holding a BrowserSlotLease)
++        - _available_slots (free pool)
++        - pre-granted to a _Waiter (slot_id set, event not yet consumed)
++    A _Waiter is in exactly one of:
++        - _waiters deque (not yet granted)
++        - removed from deque (pre-granted by release, or cancelled/timed-out)
++
++    Args:
++        capacity: Maximum concurrent browser slots (default 1; do not increase
++                  without benchmark evidence).
++        queue_capacity: Maximum number of callers waiting for a slot.
++                        0 means no queuing (immediate failure if all slots busy).
++        queue_timeout_ms: Milliseconds a caller waits before queue timeout.
++    """
++
++    _POLL_INTERVAL_S: float = 0.05  # 50 ms cancel/timeout resolution
++
++    def __init__(
++        self,
++        *,
++        capacity: int,
++        queue_capacity: int,
++        queue_timeout_ms: int,
++    ) -> None:
++        if capacity < 1:
++            raise ValueError("BrowserScheduler capacity must be >= 1")
++        self._capacity = capacity
++        self._queue_capacity = max(0, queue_capacity)
++        self._timeout_ms = max(0, queue_timeout_ms)
++
++        self._lock = threading.Lock()
++        self._active = 0
++        self._waiters: deque[_Waiter] = deque()
++        # Pool of available slot IDs (0 ÔÇª capacity-1).
++        self._available_slots: deque[int] = deque(range(capacity))
++
++        # Metrics (protected by _lock)
++        self._queue_timeout_count = 0
++        self._total_acquisitions = 0
++
++    # ------------------------------------------------------------------
++    # Public API
++    # ------------------------------------------------------------------
++
++    def acquire(
++        self,
++        *,
++        cancel_event: threading.Event | None = None,
++    ) -> BrowserSlotLease:
++        """Acquire a browser slot.
++
++        Blocks until a slot is available, the queue times out, or
++        cancel_event is set. The first available slot is always granted to
++        the longest-waiting caller (FIFO).
++
++        Args:
++            cancel_event: When set, the caller is removed from the queue
++                          immediately and RequestError(BROWSER_JOB_CANCELLED)
++                          is raised. The caller will never receive a slot after
++                          cancellation (even if one becomes available during the
++                          window between cancel and queue-removal).
++
++        Returns:
++            BrowserSlotLease with the assigned slot_id. Caller MUST pass this
++            to release() exactly once when the browser operation finishes.
++
++        Raises:
++            RequestError(BROWSER_QUEUE_SATURATED, retryable=False):
++                Queue is full; fails fast without waiting.
++            RequestError(BROWSER_QUEUE_TIMEOUT, retryable=True):
++                Waited longer than queue_timeout_ms without obtaining a slot.
++            RequestError(BROWSER_JOB_CANCELLED, retryable=False):
++                cancel_event was set while waiting.
++        """
++        # --- Fast path: slot available immediately (no queuing) ---
++        with self._lock:
++            slot_id = self._try_immediate_unlocked()
++            if slot_id is not None:
++                self._total_acquisitions += 1
++                logger.debug(
++                    "browser_slot_acquired_immediate",
++                    extra={
++                        "slot_id": slot_id,
++                        "active": self._active,
++                        "capacity": self._capacity,
++                    },
++                )
++                return BrowserSlotLease(slot_id=slot_id)
++
++            # --- Enqueue or fail fast ---
++            if len(self._waiters) >= self._queue_capacity:
++                log_failure(
++                    FailureDomain.BROWSER_INFRASTRUCTURE,
++                    event="browser_queue_saturated",
++                    extra={
++                        "browser_queue_depth": len(self._waiters),
++                        "browser_queue_capacity": self._queue_capacity,
++                        "browser_active_jobs": self._active,
++                        "browser_capacity": self._capacity,
++                    },
++                )
++                raise RequestError(
++                    "Fila do browser saturada: todos os slots ocupados e a "
++                    "fila de espera atingiu a capacidade m├íxima.",
++                    code="BROWSER_QUEUE_SATURATED",
++                    retryable=False,
++                )
++
++            waiter = _Waiter(event=threading.Event(), enqueue_time=time.monotonic())
++            self._waiters.append(waiter)
++            depth = len(self._waiters)
++
++        logger.debug(
++            "browser_slot_queued",
++            extra={
++                "depth": depth,
++                "queue_capacity": self._queue_capacity,
++                "active": self._active,
++            },
++        )
++
++        # --- Wait loop (no lock held here) ---
++        timeout_s = self._timeout_ms / 1000.0
++        deadline = time.monotonic() + timeout_s
++
++        while True:
++            remaining = deadline - time.monotonic()
++
++            # Check cancel before potentially blocking
++            if cancel_event is not None and cancel_event.is_set():
++                self._dequeue_on_cancel(waiter)
++                wait_ms = round((time.monotonic() - waiter.enqueue_time) * 1000, 1)
++                log_failure(
++                    FailureDomain.BROWSER_INFRASTRUCTURE,
++                    event="browser_job_cancelled",
++                    extra={
++                        "browser_queue_wait_ms": wait_ms,
++                        "browser_capacity": self._capacity,
++                    },
++                )
++                raise RequestError(
++                    "Job de browser cancelado enquanto aguardava na fila.",
++                    code="BROWSER_JOB_CANCELLED",
++                    retryable=False,
++                )
++
++            # Past deadline: try to dequeue ourselves
++            if remaining <= 0:
++                _timeout_count = 0
++                _active_snapshot = 0
++                with self._lock:
++                    try:
++                        self._waiters.remove(waiter)
++                        # Successfully removed ÔÇö genuine timeout
++                        self._queue_timeout_count += 1
++                        _timeout_count = self._queue_timeout_count
++                        _active_snapshot = self._active
++                    except ValueError:
++                        # Race: _wake_next_unlocked() dequeued and pre-granted us
++                        # just before we checked. slot_id is set (under lock).
++                        slot_id = waiter.slot_id
++                        assert slot_id is not None  # Invariant: set before event
++                        self._total_acquisitions += 1
++                        wait_ms = round(
++                            (time.monotonic() - waiter.enqueue_time) * 1000, 1
++                        )
++                        logger.debug(
++                            "browser_slot_acquired_race",
++                            extra={
++                                "slot_id": slot_id,
++                                "browser_queue_wait_ms": wait_ms,
++                            },
++                        )
++                        return BrowserSlotLease(slot_id=slot_id)
++                wait_ms = round((time.monotonic() - waiter.enqueue_time) * 1000, 1)
++                log_failure(
++                    FailureDomain.BROWSER_INFRASTRUCTURE,
++                    event="browser_queue_timeout",
++                    extra={
++                        "browser_queue_wait_ms": wait_ms,
++                        "browser_queue_timeout_count": _timeout_count,
++                        "browser_queue_capacity": self._queue_capacity,
++                        "browser_active_jobs": _active_snapshot,
++                        "browser_capacity": self._capacity,
++                    },
++                )
++                raise RequestError(
++                    f"Timeout aguardando slot do browser "
++                    f"({self._timeout_ms} ms esgotado).",
++                    code="BROWSER_QUEUE_TIMEOUT",
++                    retryable=True,
++                )
++
++            # Block for up to POLL_INTERVAL_S or until the event fires
++            slice_s = min(self._POLL_INTERVAL_S, remaining)
++            if waiter.event.wait(slice_s):
++                # Slot was pre-granted by _wake_next_unlocked().
++                # slot_id is set (was set before event.set(), both under lock).
++                slot_id = waiter.slot_id
++                assert slot_id is not None, (
++                    "BrowserScheduler invariant violated: "
++                    "slot_id must be set before event.set()"
++                )
++                self._total_acquisitions += 1
++                wait_ms = round(
++                    (time.monotonic() - waiter.enqueue_time) * 1000, 1
++                )
++                logger.debug(
++                    "browser_slot_acquired_from_queue",
++                    extra={
++                        "slot_id": slot_id,
++                        "active": self._active,
++                        "capacity": self._capacity,
++                        "browser_queue_wait_ms": wait_ms,
++                    },
++                )
++                return BrowserSlotLease(slot_id=slot_id)
++
++    def release(self, lease: BrowserSlotLease, *, poison: bool = False) -> None:
++        """Release a browser slot back to the scheduler.
++
++        Must be called exactly once per successful acquire(), even on error.
++
++        Args:
++            lease: The BrowserSlotLease returned by acquire().
++            poison: When True, marks the session as unhealthy (informational
++                    in C1; future: triggers browser session recycle).
++        """
++        with self._lock:
++            self._active -= 1
++            self._available_slots.append(lease.slot_id)
++            logger.debug(
++                "browser_slot_released",
++                extra={
++                    "slot_id": lease.slot_id,
++                    "poison": poison,
++                    "active": self._active,
++                    "capacity": self._capacity,
++                    "queue_depth": len(self._waiters),
++                },
++            )
++            self._wake_next_unlocked()
++
++    def snapshot(self) -> dict[str, object]:
++        """Return a point-in-time view of scheduler state for logging/metrics.
++
++        Includes canonical metric keys (browser_queue_*) alongside legacy keys
++        so structured logs can be filtered by either naming convention.
++        """
++        with self._lock:
++            depth = len(self._waiters)
++            return {
++                # Legacy keys (kept for backwards compatibility)
++                "depth": depth,
++                "capacity": self._capacity,
++                "active": self._active,
++                "waits": depth,
++                "queue_capacity": self._queue_capacity,
++                "queue_timeout_ms": self._timeout_ms,
++                "queue_timeout_count": self._queue_timeout_count,
++                "total_acquisitions": self._total_acquisitions,
++                # Canonical metric names (aligned with plan and log events)
++                "browser_queue_depth": depth,
++                "browser_queue_capacity": self._queue_capacity,
++                "browser_active_jobs": self._active,
++                "browser_capacity": self._capacity,
++                "browser_queue_timeout_count": self._queue_timeout_count,
++            }
++
++    # ------------------------------------------------------------------
++    # Internal helpers (all assume or acquire self._lock)
++    # ------------------------------------------------------------------
++
++    def _try_immediate_unlocked(self) -> int | None:
++        """Attempt an immediate slot acquisition. Caller must hold self._lock.
++
++        Returns the granted slot_id, or None if all slots are busy.
++        """
++        if self._active < self._capacity and self._available_slots:
++            self._active += 1
++            return self._available_slots.popleft()
++        return None
++
++    def _wake_next_unlocked(self) -> None:
++        """Signal the next waiting caller (FIFO). Caller must hold self._lock.
++
++        Pre-grants a slot: increments _active, pops a slot_id, and assigns
++        it to the waiter BEFORE setting the event. This preserves the
++        slot_id invariant (slot_id readable when event fires).
++        """
++        while self._waiters:
++            if not (self._available_slots and self._active < self._capacity):
++                break
++            w = self._waiters.popleft()
++            if w.event.is_set():
++                # Stale waiter (already cancelled/timed out but event fired
++                # spuriously ÔÇö defensive guard, should not normally occur).
++                continue
++            slot_id = self._available_slots.popleft()
++            self._active += 1
++            # CRITICAL: set slot_id BEFORE event.set() so the waiter thread
++            # can read slot_id as soon as event.is_set() returns True.
++            w.slot_id = slot_id
++            w.event.set()
++            return  # Signal exactly one waiter per release (FIFO)
++
++    def _dequeue_on_cancel(self, waiter: _Waiter) -> None:
++        """Remove waiter from queue on cancellation.
++
++        If the slot was already pre-granted (race: release ran first), the
++        pre-granted slot is returned to the pool so the next waiter can use it.
++        """
++        with self._lock:
++            try:
++                self._waiters.remove(waiter)
++                # Still in queue: not yet granted. Nothing extra to release.
++            except ValueError:
++                # Already dequeued by _wake_next_unlocked() (pre-granted).
++                # We must release the slot we are not going to consume.
++                if waiter.slot_id is not None:
++                    self._active -= 1
++                    self._available_slots.append(waiter.slot_id)
++                    self._wake_next_unlocked()
+diff --git a/src/scout_api/modules/crawler/core/browser_slot.py b/src/scout_api/modules/crawler/core/browser_slot.py
+new file mode 100644
+index 0000000..5550707
+--- /dev/null
++++ b/src/scout_api/modules/crawler/core/browser_slot.py
+@@ -0,0 +1,64 @@
++"""Browser slot identity for diagnostics and ownership tracking.
++
++Each active Camoufox session is bound to exactly one BrowserSlot. Slot
++state is in-memory only; persistence is optional and out of scope for C1.
++
++Capacity=1 always uses slot-0. When capacity>1 is introduced (after
++benchmark), each slot gets its own profile directory (slot-{id}) so Firefox
++profile locks never clash across concurrent owners.
++"""
++
++from __future__ import annotations
++
++from dataclasses import dataclass
++from datetime import datetime
++from pathlib import Path
++
++
++@dataclass
++class BrowserSlot:
++    """Runtime identity + metadata for a single Camoufox browser slot.
++
++    States:
++        idle        ÔÇö session exists but no active fetch
++        busy        ÔÇö fetch in progress
++        recycling   ÔÇö session being replaced (max_fetches reached or poison)
++        poisoned    ÔÇö session unusable; must be closed and recreated
++        closed      ÔÇö session terminated; slot may be reassigned
++    """
++
++    slot_id: int
++    profile_path: Path
++    owner: str | None = None
++    state: str = "idle"  # idle|busy|recycling|poisoned|closed
++    started_at: datetime | None = None
++    last_used_at: datetime | None = None
++    fetch_count: int = 0
++    health: str = "healthy"
++
++    def as_dict(self) -> dict[str, object]:
++        """Return a log-safe snapshot of this slot's identity."""
++        return {
++            "slot_id": self.slot_id,
++            "profile_path": str(self.profile_path),
++            "owner": self.owner,
++            "state": self.state,
++            "started_at": self.started_at.isoformat() if self.started_at else None,
++            "last_used_at": (
++                self.last_used_at.isoformat() if self.last_used_at else None
++            ),
++            "fetch_count": self.fetch_count,
++            "health": self.health,
++        }
++
++
++@dataclass
++class BrowserSlotLease:
++    """Handle returned by BrowserScheduler.acquire().
++
++    Callers must pass this to BrowserScheduler.release() when the browser
++    operation completes (whether success or error). Never share a lease
++    across threads.
++    """
++
++    slot_id: int
+diff --git a/src/scout_api/modules/crawler/core/failure_domains.py b/src/scout_api/modules/crawler/core/failure_domains.py
+new file mode 100644
+index 0000000..87adb42
+--- /dev/null
++++ b/src/scout_api/modules/crawler/core/failure_domains.py
+@@ -0,0 +1,47 @@
++"""Failure domain taxonomy for browser/store observability.
++
++Identifies the structural layer of a crawler failure so logs and metrics
++can be attributed correctly: infrastructure (browser launch, profile I/O,
++queue saturation) vs. store capability (WAF, auth gate, parse error) vs.
++individual operation (single navigation timeout, parse miss).
++"""
++
++from __future__ import annotations
++
++import logging
++from enum import StrEnum
++
++logger = logging.getLogger(__name__)
++
++
++class FailureDomain(StrEnum):
++    BROWSER_INFRASTRUCTURE = "browser_infrastructure"
++    STORE_CAPABILITY = "store_capability"
++    OPERATION = "operation"
++
++
++def log_failure(
++    domain: FailureDomain,
++    *,
++    event: str,
++    store: str | None = None,
++    capability: str | None = None,
++    operation: str | None = None,
++    slot_id: int | None = None,
++    exc: BaseException | None = None,
++    level: int = logging.WARNING,
++    extra: dict[str, object] | None = None,
++) -> None:
++    """Emit a structured log entry tagged with the failure domain."""
++    payload: dict[str, object] = {"failure_domain": domain.value}
++    if store is not None:
++        payload["store"] = store
++    if capability is not None:
++        payload["capability"] = capability
++    if operation is not None:
++        payload["operation"] = operation
++    if slot_id is not None:
++        payload["slot_id"] = slot_id
++    if extra:
++        payload.update(extra)
++    logger.log(level, event, extra=payload, exc_info=exc is not None)
+diff --git a/src/scout_api/modules/crawler/services/html_fetcher.py b/src/scout_api/modules/crawler/services/html_fetcher.py
+index b618ab6..12c95bd 100644
+--- a/src/scout_api/modules/crawler/services/html_fetcher.py
++++ b/src/scout_api/modules/crawler/services/html_fetcher.py
+@@ -907,12 +907,15 @@ class CamoufoxHtmlFetcher:
+         early_stop_on_shopee_get_pc: bool = True,
+         fetch_strategy: str = "camoufox",
+         browser_factory: BrowserFactory | None = None,
+         challenge_resolver: Any | None = None,
+         warm_reuse: bool = True,
+         warm_max_fetches: int = 40,
++        # BrowserScheduler (Phase 1 / C1 hardening)
++        scheduler: Any | None = None,
++        scheduler_enabled: bool = True,
+     ) -> None:
+         self._headless = headless
+         self._humanize = humanize
+         self._timeout_ms = timeout_ms
+         self._launch_timeout_ms = max(5_000, launch_timeout_ms)
+         self._settle_ms = settle_ms
+@@ -938,12 +941,15 @@ class CamoufoxHtmlFetcher:
+         self._warm_session: _WarmBrowserSession | None = None
+         self._active_fingerprint: str | None = None
+         self._browser_launches = 0
+         self._browser_reuses = 0
+         self._browser_launch_failures = 0
+         self._browser_circuit_open_hits = 0
++        # BrowserScheduler: bounded FIFO queue (Phase 1 / C1 hardening)
++        self._scheduler = scheduler
++        self._scheduler_enabled = scheduler_enabled and scheduler is not None
+ 
+     @property
+     def proxy_url(self) -> str | None:
+         return self._proxy_url
+ 
+     @property
+@@ -976,13 +982,53 @@ class CamoufoxHtmlFetcher:
+         def _close() -> None:
+             with self._lock:
+                 self._close_warm_session_unlocked()
+ 
+         self._owner.call(_close)
+ 
+-    def fetch(self, url: str) -> HtmlResponse:
++    def fetch(
++        self,
++        url: str,
++        *,
++        cancel_event: threading.Event | None = None,
++    ) -> HtmlResponse:
++        """Fetch URL with Camoufox, gated by BrowserScheduler when enabled.
++
++        If the scheduler is enabled, acquire() is called BEFORE dispatching to
++        the owner thread. This replaces the implicit unbounded queue of
++        _PlaywrightOwnerLoop with an explicit bounded FIFO queue with timeout
++        and cancellation support. Navigation/selectors/Camoufox kwargs are
++        unchanged.
++
++        Args:
++            url: Target product URL.
++            cancel_event: When set, the pending queue entry is removed and
++                          RequestError(BROWSER_JOB_CANCELLED) is raised.
++                          Threaded directly to BrowserScheduler.acquire().
++                          Has no effect when the scheduler is disabled.
++        """
++        if self._scheduler_enabled and self._scheduler is not None:
++            lease = self._scheduler.acquire(cancel_event=cancel_event)
++            store_cfg = resolve_store_config(url)
++            store_key = store_cfg.key if store_cfg is not None else "unknown"
++            logger.debug(
++                "browser_slot_fetch_start",
++                extra={"slot_id": lease.slot_id, "url": url, "store": store_key},
++            )
++            try:
++                return self._fetch_via_owner(url)
++            finally:
++                self._scheduler.release(lease)
++                logger.debug(
++                    "browser_slot_fetch_end",
++                    extra={"slot_id": lease.slot_id, "url": url, "store": store_key},
++                )
++        return self._fetch_via_owner(url)
++
++    def _fetch_via_owner(self, url: str) -> HtmlResponse:
++        """Dispatch fetch to the owner thread (Playwright sync API)."""
+         def _fetch() -> HtmlResponse:
+             with self._lock:
+                 return self._fetch_locked(url)
+ 
+         result = self._owner.call(_fetch)
+         assert isinstance(result, HtmlResponse)
+@@ -2116,12 +2162,17 @@ def build_html_fetcher(
+     auth_bypass_enabled: bool = True,
+     auth_bypass_max_attempts: int = 2,
+     amazon_auth_email: str | None = None,
+     amazon_auth_password: str | None = None,
+     shopee_auth_email: str | None = None,
+     shopee_auth_password: str | None = None,
++    # BrowserScheduler (Phase 1 / C1 hardening)
++    camoufox_browser_scheduler_enabled: bool = True,
++    camoufox_browser_capacity: int = 1,
++    camoufox_browser_queue_capacity: int = 32,
++    camoufox_queue_timeout_ms: int = 60_000,
+ ) -> HtmlFetcher:
+     """Build the shared store-aware fetcher (direct + optional proxied Camoufox)."""
+     from .challenge_resolution import (
+         ChallengeResolver,
+         StoreAuthCredentials,
+         build_image_captcha_solver,
+@@ -2161,47 +2212,83 @@ def build_html_fetcher(
+         Path(camoufox_user_data_dir)
+         if camoufox_user_data_dir
+         else default_user_data_dir()
+     )
+     direct_dir, proxy_dir = profile_dirs_for_base(base_dir)
+ 
++    # BrowserScheduler: bounded FIFO queue (Phase 1 / C1 hardening).
++    # Each CamoufoxHtmlFetcher instance (direct / proxied) gets its own
++    # scheduler so they queue independently (direct doesn't block proxy).
++    _scheduler: Any = None
++    if camoufox_browser_scheduler_enabled:
++        from scout_api.modules.crawler.core.browser_scheduler import BrowserScheduler
++
++        _scheduler = BrowserScheduler(
++            capacity=max(1, camoufox_browser_capacity),
++            queue_capacity=max(0, camoufox_browser_queue_capacity),
++            queue_timeout_ms=max(0, camoufox_queue_timeout_ms),
++        )
++        logger.info(
++            "browser_scheduler_created",
++            extra={
++                "capacity": camoufox_browser_capacity,
++                "queue_capacity": camoufox_browser_queue_capacity,
++                "queue_timeout_ms": camoufox_queue_timeout_ms,
++            },
++        )
++
+     common: dict[str, Any] = {
+         "headless": camoufox_headless,
+         "humanize": camoufox_humanize,
+         "timeout_ms": camoufox_timeout_ms,
+         "launch_timeout_ms": camoufox_launch_timeout_ms,
+         "settle_ms": camoufox_settle_ms,
+         "max_settle_attempts": camoufox_max_settle_attempts,
+         "disable_coop": camoufox_disable_coop,
+         "warmup_origin": camoufox_warmup_origin,
+         "challenge_resolver": challenge_resolver,
+         "warm_reuse": camoufox_warm_reuse,
+         "warm_max_fetches": camoufox_warm_max_fetches,
++        "scheduler_enabled": camoufox_browser_scheduler_enabled,
+     }
+     direct = CamoufoxHtmlFetcher(
+         **common,
+         proxy_url=None,
+         user_data_dir=direct_dir,
+         warmup_policy="once_per_session",
+         early_stop_on_shopee_get_pc=True,
+         fetch_strategy="camoufox-direct",
++        scheduler=_scheduler,
+     )
+     proxied: CamoufoxHtmlFetcher | None = None
+     if camoufox_proxy_url:
++        # Proxied fetcher gets its own independent scheduler instance.
++        _proxy_scheduler: Any = None
++        if camoufox_browser_scheduler_enabled:
++            from scout_api.modules.crawler.core.browser_scheduler import (
++                BrowserScheduler,
++            )
++
++            _proxy_scheduler = BrowserScheduler(
++                capacity=max(1, camoufox_browser_capacity),
++                queue_capacity=max(0, camoufox_browser_queue_capacity),
++                queue_timeout_ms=max(0, camoufox_queue_timeout_ms),
++            )
+         proxied = CamoufoxHtmlFetcher(
+             **common,
+             proxy_url=camoufox_proxy_url,
+             user_data_dir=proxy_dir,
+             warmup_policy=shopee_warmup_policy,
+             block_resource_types=(
+                 PROXY_COST_BLOCKED_RESOURCE_TYPES
+                 if shopee_resource_blocking_enabled
+                 else ()
+             ),
+             early_stop_on_shopee_get_pc=True,
+             fetch_strategy="camoufox-proxy",
++            scheduler=_proxy_scheduler,
+         )
+     browser = StoreAwareHtmlFetcher(direct=direct, proxied=proxied, http=http)
+     # Amazon HTTP leg only (non-Amazon never hits this fetcher).
+     amazon_http = UrllibHtmlFetcher(
+         user_agent=_AMAZON_HTTP_USER_AGENT,
+         timeout=urllib_timeout,
+diff --git a/src/scout_api/modules/crawler/services/product_scrape_service.py b/src/scout_api/modules/crawler/services/product_scrape_service.py
+index c7c14f8..d3aea01 100644
+--- a/src/scout_api/modules/crawler/services/product_scrape_service.py
++++ b/src/scout_api/modules/crawler/services/product_scrape_service.py
+@@ -48,12 +48,16 @@ def get_shared_html_fetcher() -> HtmlFetcher:
+         auth_bypass_enabled=settings.auth_bypass_enabled,
+         auth_bypass_max_attempts=settings.auth_bypass_max_attempts,
+         amazon_auth_email=settings.amazon_auth_email,
+         amazon_auth_password=settings.amazon_auth_password,
+         shopee_auth_email=settings.shopee_auth_email,
+         shopee_auth_password=settings.shopee_auth_password,
++        camoufox_browser_scheduler_enabled=settings.camoufox_browser_scheduler_enabled,
++        camoufox_browser_capacity=settings.camoufox_browser_capacity,
++        camoufox_browser_queue_capacity=settings.camoufox_browser_queue_capacity,
++        camoufox_queue_timeout_ms=settings.camoufox_queue_timeout_ms,
+     )
+ 
+ 
+ @lru_cache
+ def get_shared_scrape_guard() -> ScrapeGuard:
+     settings = get_settings()
+diff --git a/tests/unit/test_browser_scheduler.py b/tests/unit/test_browser_scheduler.py
+new file mode 100644
+index 0000000..c2dfa19
+--- /dev/null
++++ b/tests/unit/test_browser_scheduler.py
+@@ -0,0 +1,254 @@
++"""TDD ÔÇö BrowserScheduler: bounded queue, FIFO, cancel-while-queued, saturation.
++
++Ordem TDD:
++ 1. Escrever testes (RED) ÔÇö m├│dulo ainda n├úo existe
++ 2. Implementar BrowserScheduler (GREEN)
++ 3. Verificar que todos os testes passam
++"""
++
++from __future__ import annotations
++
++import threading
++import time
++
++import pytest
++
++from scout_api.modules.crawler.core.browser_scheduler import (
++    BrowserScheduler,
++    BrowserSlotLease,
++)
++from scout_api.modules.crawler.core.exceptions import RequestError
++
++
++def _sched(
++    capacity: int = 1,
++    queue_capacity: int = 32,
++    timeout_ms: int = 5_000,
++) -> BrowserScheduler:
++    return BrowserScheduler(
++        capacity=capacity,
++        queue_capacity=queue_capacity,
++        queue_timeout_ms=timeout_ms,
++    )
++
++
++# ---------------------------------------------------------------------------
++# Teste 1: capacity=1; segundo job entra na fila e aguarda
++# ---------------------------------------------------------------------------
++
++def test_capacity_one_second_job_waits_or_queues() -> None:
++    """capacity=1 ÔåÆ segundo acquire bloqueia at├® o primeiro ser liberado."""
++    sched = _sched(capacity=1)
++    lease1 = sched.acquire()
++    assert isinstance(lease1, BrowserSlotLease)
++
++    acquired = threading.Event()
++    done = threading.Event()
++
++    def worker() -> None:
++        lease = sched.acquire()
++        acquired.set()
++        sched.release(lease)
++        done.set()
++
++    t = threading.Thread(target=worker, daemon=True)
++    t.start()
++
++    # Segundo job ainda est├í esperando
++    time.sleep(0.1)
++    assert not acquired.is_set(), "Segundo job n├úo deveria ter o slot ainda"
++
++    # Libera o primeiro ÔåÆ segundo job deve obter o slot
++    sched.release(lease1)
++    assert acquired.wait(timeout=3.0), "Segundo job deveria ter obtido o slot"
++    done.wait(timeout=3.0)
++    t.join(timeout=3.0)
++
++
++# ---------------------------------------------------------------------------
++# Teste 2: fila saturada ÔåÆ falha controlada, n├úo trava
++# ---------------------------------------------------------------------------
++
++def test_queue_saturated_fails_fast() -> None:
++    """capacity=1, queue_capacity=1; terceiro acquire ÔåÆ RequestError imediato."""
++    sched = _sched(capacity=1, queue_capacity=1)
++
++    lease1 = sched.acquire()  # Ocupa o slot
++
++    cancel_t1 = threading.Event()
++    t1_queued = threading.Event()
++
++    def worker1() -> None:
++        t1_queued.set()
++        try:
++            lease = sched.acquire(cancel_event=cancel_t1)
++            sched.release(lease)
++        except RequestError:
++            pass
++
++    t1 = threading.Thread(target=worker1, daemon=True)
++    t1.start()
++    t1_queued.wait(timeout=1.0)
++    time.sleep(0.05)  # Garante que t1 est├í na fila
++
++    # Terceiro acquire com fila cheia deve falhar imediatamente
++    with pytest.raises(RequestError) as exc_info:
++        sched.acquire()
++    assert exc_info.value.code == "BROWSER_QUEUE_SATURATED"
++    assert exc_info.value.retryable is False
++
++    # Limpeza
++    cancel_t1.set()
++    sched.release(lease1)
++    t1.join(timeout=3.0)
++
++
++# ---------------------------------------------------------------------------
++# Teste 3: cancelamento enquanto enfileirado ÔåÆ nunca navega
++# ---------------------------------------------------------------------------
++
++def test_cancel_while_queued_does_not_get_slot() -> None:
++    """Job com cancel_event na fila ÔåÆ sai da fila sem navegar."""
++    sched = _sched(capacity=1, timeout_ms=10_000)
++
++    lease1 = sched.acquire()
++    cancel_event = threading.Event()
++    result: dict[str, object] = {"got_slot": False, "error": None}
++
++    def worker() -> None:
++        try:
++            lease = sched.acquire(cancel_event=cancel_event)
++            result["got_slot"] = True
++            sched.release(lease)
++        except RequestError as exc:
++            result["error"] = exc.code
++
++    t = threading.Thread(target=worker, daemon=True)
++    t.start()
++
++    time.sleep(0.1)  # Garante que o worker est├í na fila
++    cancel_event.set()
++    t.join(timeout=3.0)
++
++    assert not result["got_slot"], "Job cancelado n├úo deve ter obtido o slot"
++    assert result["error"] == "BROWSER_JOB_CANCELLED", (
++        f"Esperava BROWSER_JOB_CANCELLED, obteve {result['error']!r}"
++    )
++
++    # Slot deve estar dispon├¡vel ap├│s cancelamento
++    sched.release(lease1)
++    # Slot deve ter voltado ao pool
++    snapshot = sched.snapshot()
++    assert snapshot["active"] == 0
++
++
++# ---------------------------------------------------------------------------
++# Teste 4: fairness FIFO ÔÇö tr├¬s waiters obt├¬m slot na ordem de enqueue
++# ---------------------------------------------------------------------------
++
++def test_fifo_order() -> None:
++    """Tr├¬s waiters; slot ├® concedido na ordem de enqueue (FIFO)."""
++    sched = _sched(capacity=1, queue_capacity=10, timeout_ms=10_000)
++    results: list[int] = []
++    holder_lease = sched.acquire()  # Segura o slot
++
++    # Cada thread aguarda seu "start_event" antes de chamar acquire
++    start_events = [threading.Event() for _ in range(3)]
++
++    def worker(n: int, start_event: threading.Event) -> None:
++        start_event.wait()
++        lease = sched.acquire()
++        results.append(n)
++        time.sleep(0.01)  # Segura o slot brevemente
++        sched.release(lease)
++
++    threads = [
++        threading.Thread(target=worker, args=(i, start_events[i]), daemon=True)
++        for i in range(3)
++    ]
++    for t in threads:
++        t.start()
++
++    # Sinaliza em ordem com pequeno intervalo para garantir ordem de enqueue
++    for evt in start_events:
++        evt.set()
++        time.sleep(0.03)  # Suficiente para entrar na fila antes do pr├│ximo
++
++    time.sleep(0.05)  # Garante que todos est├úo na fila
++
++    sched.release(holder_lease)
++
++    for t in threads:
++        t.join(timeout=10.0)
++
++    assert results == [0, 1, 2], f"Ordem FIFO violada: {results}"
++
++
++# ---------------------------------------------------------------------------
++# Teste 5: snapshot() retorna m├®tricas esperadas
++# ---------------------------------------------------------------------------
++
++def test_snapshot_reflects_state() -> None:
++    """snapshot() deve refletir depth, capacity, active, queue_capacity."""
++    sched = _sched(capacity=2, queue_capacity=5)
++    snap = sched.snapshot()
++    assert snap["capacity"] == 2
++    assert snap["active"] == 0
++    assert snap["depth"] == 0
++    assert snap["queue_capacity"] == 5
++
++    lease1 = sched.acquire()
++    snap2 = sched.snapshot()
++    assert snap2["active"] == 1
++
++    sched.release(lease1)
++    snap3 = sched.snapshot()
++    assert snap3["active"] == 0
++
++
++# ---------------------------------------------------------------------------
++# Teste 6: slot_id ├® um int e ├® distinto por slot ativo
++# ---------------------------------------------------------------------------
++
++def test_slot_id_assigned() -> None:
++    """BrowserSlotLease.slot_id deve ser int >= 0."""
++    sched = _sched(capacity=1)
++    lease = sched.acquire()
++    assert isinstance(lease.slot_id, int)
++    assert lease.slot_id >= 0
++    sched.release(lease)
++
++
++# ---------------------------------------------------------------------------
++# Teste 7: BROWSER_QUEUE_TIMEOUT ÔÇö caller aguarda al├®m do limite
++# ---------------------------------------------------------------------------
++
++def test_queue_timeout() -> None:
++    """Caller que aguarda al├®m de queue_timeout_ms recebe BROWSER_QUEUE_TIMEOUT."""
++    sched = BrowserScheduler(capacity=1, queue_capacity=5, queue_timeout_ms=120)
++    lease1 = sched.acquire()  # Segura o ├║nico slot
++
++    result: dict[str, object] = {"error": None}
++
++    def worker() -> None:
++        try:
++            lease = sched.acquire()
++            sched.release(lease)
++        except RequestError as exc:
++            result["error"] = exc.code
++
++    t = threading.Thread(target=worker, daemon=True)
++    t.start()
++    t.join(timeout=5.0)  # Muito al├®m dos 120 ms de timeout
++
++    assert result["error"] == "BROWSER_QUEUE_TIMEOUT", (
++        f"Esperava BROWSER_QUEUE_TIMEOUT, obteve {result['error']!r}"
++    )
++    assert sched.snapshot()["browser_queue_timeout_count"] == 1, (
++        "Contador de timeouts deveria ser 1"
++    )
++    assert sched.snapshot()["queue_timeout_count"] == 1, (
++        "Chave legada queue_timeout_count tamb├®m deve ser 1"
++    )
++
++    sched.release(lease1)

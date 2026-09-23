@@ -1553,7 +1553,7 @@ def test_match_respects_scrape_budget_across_queries() -> None:
     search = MagicMock()
     search.is_search_supported.return_value = True
 
-    def _search(store_key: str, query: str, *, limit: int = 5) -> list[SearchCandidate]:
+    def _search(store_key: str, query: str, *, limit: int = 5, **_kwargs: object) -> list[SearchCandidate]:
         del store_key, query
         return [
             SearchCandidate(

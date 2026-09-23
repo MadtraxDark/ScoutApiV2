@@ -98,8 +98,36 @@ class Settings(BaseSettings):
     # Keep Camoufox persistent context warm across fetches (ADR 0032).
     camoufox_warm_reuse: bool = True
     camoufox_warm_max_fetches: int = 40
+    # --- BrowserScheduler (Phase 1 / C1 hardening) ---
+    # Bounded FIFO queue replacing implicit unbounded _PlaywrightOwnerLoop queue.
+    # Feature flag: set false to fall back to legacy lock-only path (rollback).
+    camoufox_browser_scheduler_enabled: bool = True
+    # Number of concurrent Camoufox slots. Default=1; do NOT increase without
+    # benchmark evidence (C1 vs C2 vs C3). See docs/superpowers/plans/…
+    camoufox_browser_capacity: int = 1
+    # Max callers waiting for a slot before queue saturation error.
+    camoufox_browser_queue_capacity: int = 32
+    # Milliseconds a caller waits in queue before BROWSER_QUEUE_TIMEOUT.
+    camoufox_queue_timeout_ms: int = 60_000
+    # --- ProfileLock (Phase 4 / cross-process profile ownership) ---
+    # Mode: "redis" (default, recommended) | "file" (fcntl, bind-mount proof required)
+    #       | "off" (emergency bypass only — logs WARN on every acquire).
+    # "redis" requires REDIS_URL. Falls back to no-op if Redis unavailable (fail-open).
+    camoufox_profile_lock: str = "redis"
+    # TTL (milliseconds) for Redis-backed profile lease.
+    # Crash-safety backstop: lock auto-expires after this interval if holder dies.
+    # Must exceed typical browser session lifetime (launch + N fetches).
+    camoufox_profile_lock_ttl_ms: int = 10 * 60 * 1000  # 10 minutes
+    # Milliseconds caller waits for a profile lock before PROFILE_LOCK_TIMEOUT.
+    camoufox_profile_lock_timeout_ms: int = 30_000
     # Product Match: independent stores may overlap; Camoufox stays lock-serialized.
     match_store_concurrency: int = 3
+    # Retry / attempt budgets per store per Match run (Phase 3 / spec §2).
+    # match_search_query_budget: MAX queries — progressive stop, not mandatory count.
+    # Never hardcode these defaults elsewhere — only here and .env.example.
+    match_search_query_budget: int = 5
+    match_external_attempt_budget: int = 12
+    match_browser_navigation_budget: int = 8
     # Cost-aware Shopee controls (DataImpulse is billed primarily by GB).
     shopee_warmup_policy: str = "once_per_session"
     shopee_resource_blocking_enabled: bool = True
@@ -165,6 +193,23 @@ class Settings(BaseSettings):
     # Periodic reconcile of exhausted stale leases (beyond claim sweep).
     match_run_recovery_interval_seconds: float = 30.0
     match_run_max_attempts: int = 3
+    # --- Store + capability circuit breaker (Phase 11) ---
+    # Process-local circuit per (store_key, capability).
+    # Set false to disable entirely (rollback path).
+    store_capability_circuit_enabled: bool = True
+    # Consecutive upstream-blocking failures before circuit opens.
+    store_capability_circuit_failure_threshold: int = 3
+    # Seconds the circuit stays OPEN before transitioning to HALF_OPEN (probe).
+    store_capability_circuit_cooldown_seconds: int = 120
+
+    # --- Visão VIP Strategy A (searchProducts Server Action) ---
+    # When true, Match tries HTTP searchProducts before browser SERP.
+    # Action ID is deploy-coupled: leave visaovip_search_action_id empty to
+    # auto-discover from Camoufox-hydrated SERP chunks (process cache).
+    visaovip_search_action_enabled: bool = True
+    # Optional bootstrap Next-Action id (hex40+). Empty = auto-discover.
+    # On 404/UNAVAILABLE the process cache is invalidated and rediscovered.
+    visaovip_search_action_id: str = ""
 
     @field_validator("debug", mode="before")
     @classmethod

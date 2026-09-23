@@ -3,8 +3,18 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 
+from scout_api.core.config import get_settings
 from scout_api.modules.crawler.core.exceptions import ParseError, RequestError
+from scout_api.modules.crawler.core.failure_domains import FailureDomain, log_failure
+from scout_api.modules.crawler.core.store_capability_health import (
+    CapabilityTrialToken,
+    get_store_capability_circuit,
+    is_store_search_trip_failure,
+    reset_store_capability_circuits_for_tests as _reset_circuits,  # noqa: F401
+    store_capability_unavailable_error,
+)
 from scout_api.modules.crawler.services.amazon_http_first_fetcher import (
     is_amazon_store_url,
 )
@@ -17,6 +27,7 @@ from scout_api.modules.crawler.services.html_fetcher import (
 from scout_api.modules.crawler.services.product_scrape_service import (
     get_shared_html_fetcher,
 )
+from scout_api.modules.crawler.services.store_aware_fetcher import find_browser_post
 from scout_api.modules.matching.identity import (
     enrich_candidate_title,
     rank_candidates_for_query,
@@ -28,6 +39,25 @@ from scout_api.modules.matching.search_adapters.registry import (
 from scout_api.modules.matching.search_candidate import SearchCandidate
 
 logger = logging.getLogger(__name__)
+
+
+def _dedup_candidates_by_product_id(
+    candidates: list[SearchCandidate],
+    *,
+    limit: int,
+) -> list[SearchCandidate]:
+    """Deduplicate SearchCandidates by product_id (first occurrence wins)."""
+    seen: set[str] = set()
+    result: list[SearchCandidate] = []
+    for c in candidates:
+        key = (c.product_id or "").strip()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        result.append(c)
+        if len(result) >= limit:
+            break
+    return result
 
 
 class StoreSearchService:
@@ -42,6 +72,7 @@ class StoreSearchService:
         query: str,
         *,
         limit: int = 5,
+        on_browser_nav_used: Callable[[], object] | None = None,
     ) -> list[SearchCandidate]:
         adapter = resolve_search_adapter(store_key)
         request = adapter.build_search_request(query)
@@ -57,16 +88,199 @@ class StoreSearchService:
                 "url": fetch_url,
             },
         )
-        # Shared HtmlFetcher stack; prefer_browser is an adapter policy signal
-        # (logged / isolatable from PDP). Camoufox already covers SERP stores
-        # that need hydration — no second browser pool.
-        response = self._fetcher.fetch(fetch_url)
+
+        # ---------------------------------------------------------------
+        # Store + capability circuit check (Phase 11)
+        # ---------------------------------------------------------------
+        settings = get_settings()
+        trial_token: CapabilityTrialToken | None = None
+        if settings.store_capability_circuit_enabled:
+            circuit = get_store_capability_circuit(store_key, "search")
+            if not circuit.allow():
+                trial_token = circuit.claim_trial()
+                if trial_token is None:
+                    log_failure(
+                        FailureDomain.STORE_CAPABILITY,
+                        event="store_search_circuit_open_skip",
+                        store=store_key,
+                        capability="search",
+                    )
+                    raise store_capability_unavailable_error(
+                        store_key, "search", url=fetch_url
+                    )
+                logger.info(
+                    "store_search_circuit_probe_start",
+                    extra={
+                        "store": store_key,
+                        "capability": "search",
+                        "token_id": trial_token.token_id,
+                    },
+                )
+
+        try:
+            result = self._search_inner(
+                store_key,
+                query,
+                limit=limit,
+                fetch_url=fetch_url,
+                request=request,
+                on_browser_nav_used=on_browser_nav_used,
+            )
+        except BaseException as exc:
+            if settings.store_capability_circuit_enabled:
+                circuit = get_store_capability_circuit(store_key, "search")
+                if is_store_search_trip_failure(exc):
+                    if trial_token is not None:
+                        circuit.complete_trial(trial_token, success=False)
+                    else:
+                        circuit.record_failure()
+                    log_failure(
+                        FailureDomain.STORE_CAPABILITY,
+                        event="store_search_circuit_failure",
+                        store=store_key,
+                        capability="search",
+                        exc=exc,
+                        extra=circuit.snapshot(),
+                    )
+                elif trial_token is not None:
+                    # Non-tripping error during probe — release trial without success.
+                    circuit.complete_trial(trial_token, success=False)
+            raise
+        else:
+            if settings.store_capability_circuit_enabled:
+                circuit = get_store_capability_circuit(store_key, "search")
+                if trial_token is not None:
+                    circuit.complete_trial(trial_token, success=True)
+                else:
+                    circuit.record_success()
+        return result
+
+    def _search_inner(
+        self,
+        store_key: str,
+        query: str,
+        *,
+        limit: int,
+        fetch_url: str,
+        request: object,
+        on_browser_nav_used: Callable[[], object] | None,
+    ) -> list[SearchCandidate]:
+        adapter = resolve_search_adapter(store_key)
+
+        # ---------------------------------------------------------------
+        # Strategy A→B chain (Visão VIP — adapters with try_strategy_a)
+        # Action ID is deploy-coupled: Settings bootstrap OR process cache
+        # OR discover from Camoufox-hydrated SERP HTML (chunk scan).
+        # ---------------------------------------------------------------
+        discovery_response = None
+        if hasattr(adapter, "try_strategy_a"):
+            settings = get_settings()
+            if settings.visaovip_search_action_enabled:
+                from scout_api.modules.matching.search_adapters.paraguay import (
+                    visaovip_action_strategy as vv_action,
+                )
+                from scout_api.modules.matching.search_adapters.paraguay.visaovip_action_strategy import (
+                    StrategyResult,
+                )
+
+                action_id = vv_action.resolve_action_id(
+                    bootstrap_id=settings.visaovip_search_action_id or None,
+                )
+                if not action_id:
+                    logger.info(
+                        "visaovip_action_id_discovery_fetch",
+                        extra={"store": store_key, "url": fetch_url},
+                    )
+                    discovery_response = self._fetcher.fetch(fetch_url)
+                    if on_browser_nav_used is not None and request.prefer_browser:
+                        on_browser_nav_used()
+                    action_id = vv_action.resolve_action_id(
+                        serp_html=discovery_response.text or "",
+                    )
+                    if not action_id:
+                        logger.info(
+                            "visaovip_action_id_discovery_miss",
+                            extra={"store": store_key},
+                        )
+
+                if action_id:
+                    post_fn = None
+                    browser_post = find_browser_post(self._fetcher)
+                    if browser_post is not None:
+
+                        def post_fn(
+                            post_url: str,
+                            headers: dict[str, str],
+                            data: bytes,
+                            *,
+                            _post=browser_post,
+                        ) -> tuple[int, str]:
+                            # Cloudflare clears bare httpx; reuse Camoufox session.
+                            return _post(post_url, headers=headers, data=data)
+
+                    a_result, a_candidates = adapter.try_strategy_a(
+                        query,
+                        action_id=action_id,
+                        enabled=True,
+                        post_fn=post_fn,
+                    )
+                    logger.info(
+                        "visaovip_strategy_a_result",
+                        extra={
+                            "store": store_key,
+                            "result": str(a_result),
+                            "candidates": len(a_candidates or []),
+                        },
+                    )
+                    if a_result == StrategyResult.SUCCESS and a_candidates:
+                        enriched_a = [enrich_candidate_title(c) for c in a_candidates]
+                        ranked_a = rank_candidates_for_query(list(enriched_a), query)
+                        return _dedup_candidates_by_product_id(ranked_a, limit=limit)
+                    if a_result == StrategyResult.NO_RESULTS:
+                        logger.info(
+                            "visaovip_strategy_a_no_results",
+                            extra={"store": store_key, "query": query},
+                        )
+                        return []
+                    if a_result == StrategyResult.UNAVAILABLE:
+                        vv_action.invalidate_cached_action_id(reason="unavailable")
+                    logger.info(
+                        "visaovip_strategy_a_fallback_to_b",
+                        extra={"store": store_key, "result": str(a_result)},
+                    )
+
+        # ---------------------------------------------------------------
+        # Strategy B: browser SERP fetch (shared HtmlFetcher / Camoufox)
+        # Reuse discovery SERP when we already paid for that navigation.
+        # ---------------------------------------------------------------
+        if discovery_response is not None:
+            response = discovery_response
+        else:
+            response = self._fetcher.fetch(fetch_url)
+            if on_browser_nav_used is not None and request.prefer_browser:
+                on_browser_nav_used()
+
+        # Opportunistic cache fill for later queries in this process.
+        if hasattr(adapter, "try_strategy_a"):
+            settings = get_settings()
+            if settings.visaovip_search_action_enabled:
+                from scout_api.modules.matching.search_adapters.paraguay import (
+                    visaovip_action_strategy as vv_action,
+                )
+
+                if not vv_action.get_cached_action_id():
+                    if vv_action.resolve_action_id(serp_html=response.text or ""):
+                        logger.info(
+                            "visaovip_action_id_learned_from_serp_b",
+                            extra={"store": store_key},
+                        )
+
         text = response.text or ""
         page_url = str(response.url or fetch_url)
         if is_challenge_page(text) or is_amazon_robot_check(text):
             raise RequestError(
-                "Busca bloqueada por challenge/CAPTCHA na loja",
-                code="UPSTREAM_BLOCKED",
+                "Busca bloqueada por WAF/challenge na loja",
+                code="UPSTREAM_WAF_BLOCKED",
                 url=page_url,
             )
         if is_auth_wall_page(text, url=page_url):
@@ -101,7 +315,7 @@ class StoreSearchService:
             if classification == "incomplete":
                 raise RequestError(
                     "SERP incompleta ou bloqueada (sem resultados parseáveis)",
-                    code="UPSTREAM_BLOCKED",
+                    code="SEARCH_INCOMPLETE_RESPONSE",
                     url=page_url,
                 )
 

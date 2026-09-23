@@ -88,7 +88,35 @@
 - Default Camoufox + Proxy Cost Mode (`FALLBACK`) for general store fetch
 - **PDP:** initial HTML already carries the RSC product payload; plain HTTP
   with a normal UA returns the flight data (HTTP-first is sufficient for offer)
-- **SERP:** shell HTTP often incomplete → Camoufox settle still required
+- **SERP Strategy B (current default):** `prefer_browser=True`; Camoufox
+  settles the Next.js RSC shell and yields `/prod/` card links.
+  - Plain HTTP returns a ~5.8 KB Cloudflare shell (no card links) — do not use.
+  - Hydration settle_ms (default) is sufficient for most queries (B650M, GPU,
+    CPU, SSD). **Samsung Galaxy S25 Ultra category (smartphones) exhibits
+    `incomplete_hydrate`** — shell (~114 KB) loads but RSC never populates
+    `/prod/` cards within settle_ms (see Known Limitations).
+- **SERP Strategy A (`VISAOVIP_SEARCH_ACTION_ENABLED`, default true):**
+  HTTP POST to the `searchProducts` Next.js Server Action endpoint.
+  Returns JSON directly (no RSC hydration wait) → preferred path when the
+  action ID is available; especially useful when Strategy B hits
+  `incomplete_hydrate` (e.g. some smartphone SERPs).
+  - **Constraint:** the `Next-Action` header ID is **deploy-coupled** — it
+    changes on every Next.js build/deploy of Visão VIP. Do not hardcode
+    permanently.
+  - **Discovery (production):** `StoreSearchService` resolves ID via
+    optional `VISAOVIP_SEARCH_ACTION_ID` bootstrap → process cache →
+    Camoufox-hydrated SERP HTML chunk scan
+    (`discover_action_id_from_serp_html`). On `404`/`UNAVAILABLE` the cache
+    is invalidated and the next call rediscovers. Discovery SERP navigation
+    is reused as Strategy B when A fails.
+  - Implementation: `search_adapters/paraguay/visaovip_action_strategy.py`
+    + `VisaoVipSearchAdapter.try_strategy_a()`.
+  - **POST path:** bare `httpx` and Playwright `APIRequestContext` are
+    Cloudflare-403'd (TLS fingerprint). Production uses
+    `CamoufoxHtmlFetcher.browser_post` → in-page `fetch()` on a warm Camoufox
+    page (cookies + browser TLS) after discovery SERP hydration. Without a
+    hydrated session, A returns `BLOCKED` and falls back to Strategy B.
+  - Kill switch: `VISAOVIP_SEARCH_ACTION_ENABLED=false`.
 
 ## Search vs PDP (do not conflate)
 
@@ -137,6 +165,18 @@ Fixing PDP pricing must not change Search query generation or matcher thresholds
 - Frontend BR price cards (Pix / cartão) may show empty Pix when `pix_price`
   is correctly null; primary USD may appear under a “cartão” label depending
   on UI mapping — that is presentation, not a store Pix field
+- **Samsung Galaxy S25 Ultra SERP `incomplete_hydrate` (probe 2026-09-23):**
+  the `/busca/termo/samsung-galaxy-s25-ultra/` SERP loads the Next.js shell
+  (~114 KB DOM) but the RSC client-side hydration never populates `/prod/` cards
+  within the configured settle_ms. Root cause not fully confirmed; leading
+  hypotheses: (1) smartphone category uses a slower RSC variant; (2) the S25
+  Ultra is not in Visao VIP’s catalogue (genuine empty without “nenhum resultado”
+  marker); (3) Cloudflare asymmetric throttling for high-commerciality queries.
+  **Strategy B (browser SERP) returns 0 candidates for this query.**
+  **Strategy A (Server Action)** is the preferred path: ID is auto-discovered
+  from Camoufox-hydrated SERP chunks (process cache; kill switch
+  `VISAOVIP_SEARCH_ACTION_ENABLED=false`). Circuit protection prevents retries
+  beyond budget when A and B both fail.
 
 ## Tests / fixtures
 

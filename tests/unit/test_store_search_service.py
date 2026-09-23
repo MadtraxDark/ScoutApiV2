@@ -21,7 +21,8 @@ def _html(url: str, body: str) -> HtmlResponse:
     return HtmlResponse(url=url, body=body.encode("utf-8"), encoding="utf-8")
 
 
-def test_visaovip_incomplete_shell_is_upstream_blocked() -> None:
+def test_visaovip_incomplete_shell_is_search_incomplete_response() -> None:
+    """Incomplete SERP shell emits SEARCH_INCOMPLETE_RESPONSE (Task 10 taxonomy)."""
     fetcher = MagicMock()
     fetcher.fetch.return_value = _html(
         "https://www.visaovip.com/busca/termo/ASUS-TUF/",
@@ -30,10 +31,12 @@ def test_visaovip_incomplete_shell_is_upstream_blocked() -> None:
     service = StoreSearchService(fetcher=fetcher)
     with pytest.raises(RequestError) as exc:
         service.search("visaovip", "ASUS TUF")
-    assert exc.value.code == "UPSTREAM_BLOCKED"
+    # New preferred taxonomy code (UPSTREAM_BLOCKED was legacy alias).
+    assert exc.value.code == "SEARCH_INCOMPLETE_RESPONSE"
 
 
-def test_amazon_incomplete_shell_is_upstream_blocked() -> None:
+def test_amazon_incomplete_shell_is_search_incomplete_response() -> None:
+    """Incomplete SERP shell emits SEARCH_INCOMPLETE_RESPONSE (Task 10 taxonomy)."""
     fetcher = MagicMock()
     fetcher.fetch.return_value = _html(
         "https://www.amazon.com.br/s?k=test",
@@ -42,7 +45,8 @@ def test_amazon_incomplete_shell_is_upstream_blocked() -> None:
     service = StoreSearchService(fetcher=fetcher)
     with pytest.raises(RequestError) as exc:
         service.search("amazon_br", "test")
-    assert exc.value.code == "UPSTREAM_BLOCKED"
+    # New preferred taxonomy code (UPSTREAM_BLOCKED was legacy alias).
+    assert exc.value.code == "SEARCH_INCOMPLETE_RESPONSE"
 
 
 def test_visaovip_classify_genuine_empty() -> None:

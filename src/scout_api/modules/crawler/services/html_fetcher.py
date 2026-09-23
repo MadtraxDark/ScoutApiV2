@@ -910,6 +910,9 @@ class CamoufoxHtmlFetcher:
         challenge_resolver: Any | None = None,
         warm_reuse: bool = True,
         warm_max_fetches: int = 40,
+        # BrowserScheduler (Phase 1 / C1 hardening)
+        scheduler: Any | None = None,
+        scheduler_enabled: bool = True,
     ) -> None:
         self._headless = headless
         self._humanize = humanize
@@ -941,6 +944,9 @@ class CamoufoxHtmlFetcher:
         self._browser_reuses = 0
         self._browser_launch_failures = 0
         self._browser_circuit_open_hits = 0
+        # BrowserScheduler: bounded FIFO queue (Phase 1 / C1 hardening)
+        self._scheduler = scheduler
+        self._scheduler_enabled = scheduler_enabled and scheduler is not None
 
     @property
     def proxy_url(self) -> str | None:
@@ -979,7 +985,128 @@ class CamoufoxHtmlFetcher:
 
         self._owner.call(_close)
 
-    def fetch(self, url: str) -> HtmlResponse:
+    def fetch(
+        self,
+        url: str,
+        *,
+        cancel_event: threading.Event | None = None,
+    ) -> HtmlResponse:
+        """Fetch URL with Camoufox, gated by BrowserScheduler when enabled.
+
+        If the scheduler is enabled, acquire() is called BEFORE dispatching to
+        the owner thread. This replaces the implicit unbounded queue of
+        _PlaywrightOwnerLoop with an explicit bounded FIFO queue with timeout
+        and cancellation support. Navigation/selectors/Camoufox kwargs are
+        unchanged.
+
+        Args:
+            url: Target product URL.
+            cancel_event: When set, the pending queue entry is removed and
+                          RequestError(BROWSER_JOB_CANCELLED) is raised.
+                          Threaded directly to BrowserScheduler.acquire().
+                          Has no effect when the scheduler is disabled.
+        """
+        if self._scheduler_enabled and self._scheduler is not None:
+            lease = self._scheduler.acquire(cancel_event=cancel_event)
+            store_cfg = resolve_store_config(url)
+            store_key = store_cfg.key if store_cfg is not None else "unknown"
+            logger.debug(
+                "browser_slot_fetch_start",
+                extra={"slot_id": lease.slot_id, "url": url, "store": store_key},
+            )
+            try:
+                return self._fetch_via_owner(url)
+            finally:
+                self._scheduler.release(lease)
+                logger.debug(
+                    "browser_slot_fetch_end",
+                    extra={"slot_id": lease.slot_id, "url": url, "store": store_key},
+                )
+        return self._fetch_via_owner(url)
+
+    def browser_post(
+        self,
+        url: str,
+        *,
+        headers: dict[str, str],
+        data: bytes,
+        timeout_ms: int | None = None,
+        cancel_event: threading.Event | None = None,
+    ) -> tuple[int, str]:
+        """POST using the warm Camoufox context (cookies / CF clearance).
+
+        Used by Visão VIP Strategy A: bare ``httpx`` is Cloudflare-403'd, but
+        the same Server Action succeeds when issued from the browser session
+        that already hydrated the SERP. Does not change navigation/selectors.
+        """
+
+        def _post() -> tuple[int, str]:
+            with self._lock:
+                browser, _reused = self._acquire_browser(url)
+                # Cloudflare JA3-blocks Playwright APIRequestContext even with
+                # shared cookies. In-page fetch() uses Camoufox TLS + cookies.
+                page = self._new_page(browser)
+                try:
+                    parsed = urlparse(url)
+                    origin = f"{parsed.scheme}://{parsed.netloc}"
+                    land = headers.get("Referer") or f"{origin}/"
+                    timeout = float(
+                        timeout_ms if timeout_ms is not None else self._timeout_ms
+                    )
+                    page.goto(land, wait_until="domcontentloaded", timeout=timeout)
+                    body_text = (
+                        data.decode("utf-8")
+                        if isinstance(data, (bytes, bytearray))
+                        else str(data)
+                    )
+                    result = page.evaluate(
+                        """async ({url, headers, body}) => {
+                            const resp = await fetch(url, {
+                                method: 'POST',
+                                headers,
+                                body,
+                                credentials: 'include',
+                            });
+                            const text = await resp.text();
+                            return {status: resp.status, text};
+                        }""",
+                        {
+                            "url": url,
+                            "headers": dict(headers),
+                            "body": body_text,
+                        },
+                    )
+                    if not isinstance(result, dict):
+                        raise RequestError(
+                            "browser_post evaluate retornou shape inesperado",
+                            code="BROWSER_INFRASTRUCTURE_UNAVAILABLE",
+                            url=url,
+                            retryable=False,
+                        )
+                    status = int(result.get("status") or 0)
+                    text = result.get("text") or ""
+                    return status, str(text)
+                finally:
+                    closer = getattr(page, "close", None)
+                    if callable(closer):
+                        try:
+                            closer()
+                        except Exception:
+                            logger.debug(
+                                "browser_post_page_close_failed",
+                                exc_info=True,
+                            )
+
+        if self._scheduler_enabled and self._scheduler is not None:
+            lease = self._scheduler.acquire(cancel_event=cancel_event)
+            try:
+                return self._owner.call(_post)
+            finally:
+                self._scheduler.release(lease)
+        return self._owner.call(_post)
+
+    def _fetch_via_owner(self, url: str) -> HtmlResponse:
+        """Dispatch fetch to the owner thread (Playwright sync API)."""
         def _fetch() -> HtmlResponse:
             with self._lock:
                 return self._fetch_locked(url)
@@ -1015,23 +1142,35 @@ class CamoufoxHtmlFetcher:
     def _acquire_browser(self, url: str) -> tuple[Any, bool]:
         """Return ``(browser, reused)``. Caller must not close a reused browser."""
         from scout_api.modules.crawler.core.browser_health import (
+            TrialToken,
             browser_unavailable_error,
             get_browser_circuit,
         )
 
         circuit = get_browser_circuit()
+        trial_token: TrialToken | None = None
+
         if not circuit.allow():
-            self._browser_circuit_open_hits += 1
-            store_cfg = resolve_store_config(url)
-            logger.warning(
-                "camoufox_circuit_open_skip",
-                extra={
-                    "store": store_cfg.key if store_cfg is not None else None,
-                    "url": url,
-                    **circuit.snapshot(),
-                },
+            # Circuit is OPEN or HALF_OPEN — try to claim the probe slot.
+            trial_token = circuit.claim_trial()
+            if trial_token is None:
+                # Either still OPEN (cooldown not elapsed) or another probe is
+                # already in progress.  Fail-fast without waiting.
+                self._browser_circuit_open_hits += 1
+                store_cfg = resolve_store_config(url)
+                logger.warning(
+                    "camoufox_circuit_open_skip",
+                    extra={
+                        "store": store_cfg.key if store_cfg is not None else None,
+                        "url": url,
+                        **circuit.snapshot(),
+                    },
+                )
+                raise browser_unavailable_error(url=url)
+            logger.info(
+                "camoufox_circuit_probe_start",
+                extra={"url": url, "token_id": trial_token.token_id},
             )
-            raise browser_unavailable_error(url=url)
 
         launch_kwargs = self._launch_kwargs(url=url)
         fingerprint = self._warm_fingerprint(launch_kwargs)
@@ -1051,18 +1190,25 @@ class CamoufoxHtmlFetcher:
                 # Any failure during context enter is structural launch failure
                 # (Playwright TimeoutError often lacks "launch" in the message).
                 self._browser_launch_failures += 1
-                circuit.record_launch_failure()
+                if trial_token is not None:
+                    circuit.complete_trial(trial_token, success=False)
+                else:
+                    circuit.record_launch_failure()
                 logger.warning(
                     "camoufox_launch_failed",
                     extra={
                         "url": url,
                         "fingerprint": fingerprint,
                         "exc_type": type(exc).__name__,
+                        "probe": trial_token is not None,
                         **circuit.snapshot(),
                     },
                 )
                 raise
-            circuit.record_success()
+            if trial_token is not None:
+                circuit.complete_trial(trial_token, success=True)
+            else:
+                circuit.record_success()
             self._warm_session = _WarmBrowserSession(
                 cm=timed,
                 browser=browser,
@@ -1078,9 +1224,13 @@ class CamoufoxHtmlFetcher:
                     "launches": self._browser_launches,
                     "fingerprint": fingerprint,
                     "launch_timeout_ms": self._launch_timeout_ms,
+                    "probe": trial_token is not None,
                 },
             )
             return browser, False
+        # Warm session reuse — browser is already running; complete any active probe.
+        if trial_token is not None:
+            circuit.complete_trial(trial_token, success=True)
         session.fetch_count += 1
         self._browser_reuses += 1
         store_cfg = resolve_store_config(url)
@@ -1119,14 +1269,23 @@ class CamoufoxHtmlFetcher:
                 get_browser_circuit,
             )
 
+            from scout_api.modules.crawler.core.browser_health import TrialToken  # noqa: F401 (local re-import for oneshot path)
+
             circuit = get_browser_circuit()
+            oneshot_trial: TrialToken | None = None
             if oneshot:
                 # Playwright Sync cannot nest a second Camoufox context on the
                 # owner thread while a warm session still holds the driver loop
                 # (AliExpress oneshot during Match wave-2 → Sync-in-asyncio).
                 if not circuit.allow():
-                    self._browser_circuit_open_hits += 1
-                    raise browser_unavailable_error(url=url)
+                    oneshot_trial = circuit.claim_trial()
+                    if oneshot_trial is None:
+                        self._browser_circuit_open_hits += 1
+                        raise browser_unavailable_error(url=url)
+                    logger.info(
+                        "camoufox_circuit_probe_start",
+                        extra={"url": url, "oneshot": True, "token_id": oneshot_trial.token_id},
+                    )
                 if self._warm_session is not None:
                     logger.info(
                         "camoufox_warm_drop_for_oneshot",
@@ -1138,18 +1297,25 @@ class CamoufoxHtmlFetcher:
                     browser = browser_cm.__enter__()
                 except Exception as exc:
                     self._browser_launch_failures += 1
-                    circuit.record_launch_failure()
+                    if oneshot_trial is not None:
+                        circuit.complete_trial(oneshot_trial, success=False)
+                    else:
+                        circuit.record_launch_failure()
                     logger.warning(
                         "camoufox_launch_failed",
                         extra={
                             "url": url,
                             "oneshot": True,
                             "exc_type": type(exc).__name__,
+                            "probe": oneshot_trial is not None,
                             **circuit.snapshot(),
                         },
                     )
                     raise
-                circuit.record_success()
+                if oneshot_trial is not None:
+                    circuit.complete_trial(oneshot_trial, success=True)
+                else:
+                    circuit.record_success()
                 self._browser_launches += 1
             else:
                 browser, reused = self._acquire_browser(url)
@@ -2091,6 +2257,56 @@ def profile_dirs_for_base(base: Path) -> tuple[Path, Path]:
     return Path(f"{base}-direct"), base
 
 
+def camoufox_profiles_root(base: Path) -> Path:
+    """Root directory containing ``slot-{n}`` dirs for cross-process ProfileLock."""
+    if base.name in ("default", "direct"):
+        return base.parent
+    return base.parent
+
+
+def _build_browser_scheduler(
+    *,
+    enabled: bool,
+    capacity: int,
+    queue_capacity: int,
+    queue_timeout_ms: int,
+    profile_lock_mode: str,
+    profile_lock_ttl_ms: int,
+    profile_lock_timeout_ms: int,
+    profile_base_path: Path,
+    redis_gateway: Any | None,
+) -> Any | None:
+    if not enabled:
+        return None
+    from scout_api.modules.crawler.core.browser_scheduler import BrowserScheduler
+    from scout_api.modules.crawler.core.profile_lock import build_profile_lock
+
+    profile_lock = build_profile_lock(
+        profile_lock_mode,
+        redis_gateway,
+        redis_ttl_ms=profile_lock_ttl_ms,
+    )
+    scheduler = BrowserScheduler(
+        capacity=max(1, capacity),
+        queue_capacity=max(0, queue_capacity),
+        queue_timeout_ms=max(0, queue_timeout_ms),
+        profile_lock=profile_lock,
+        profile_base_path=profile_base_path,
+        profile_lock_timeout_ms=max(1_000, int(profile_lock_timeout_ms)),
+    )
+    logger.info(
+        "browser_scheduler_created",
+        extra={
+            "capacity": capacity,
+            "queue_capacity": queue_capacity,
+            "queue_timeout_ms": queue_timeout_ms,
+            "profile_lock_mode": (profile_lock_mode or "off").strip().lower(),
+            "profile_base_path": str(profile_base_path),
+        },
+    )
+    return scheduler
+
+
 def build_html_fetcher(
     *,
     camoufox_enabled: bool,
@@ -2119,6 +2335,16 @@ def build_html_fetcher(
     amazon_auth_password: str | None = None,
     shopee_auth_email: str | None = None,
     shopee_auth_password: str | None = None,
+    # BrowserScheduler (Phase 1 / C1 hardening)
+    camoufox_browser_scheduler_enabled: bool = True,
+    camoufox_browser_capacity: int = 1,
+    camoufox_browser_queue_capacity: int = 32,
+    camoufox_queue_timeout_ms: int = 60_000,
+    # ProfileLock (Phase 4 / cross-process profile ownership)
+    camoufox_profile_lock: str = "redis",
+    camoufox_profile_lock_ttl_ms: int = 10 * 60 * 1000,
+    camoufox_profile_lock_timeout_ms: int = 30_000,
+    redis_gateway: Any | None = None,
 ) -> HtmlFetcher:
     """Build the shared store-aware fetcher (direct + optional proxied Camoufox)."""
     from .challenge_resolution import (
@@ -2163,6 +2389,24 @@ def build_html_fetcher(
         else default_user_data_dir()
     )
     direct_dir, proxy_dir = profile_dirs_for_base(base_dir)
+    profiles_root = camoufox_profiles_root(base_dir)
+
+    _sched_common = {
+        "enabled": camoufox_browser_scheduler_enabled,
+        "capacity": camoufox_browser_capacity,
+        "queue_capacity": camoufox_browser_queue_capacity,
+        "queue_timeout_ms": camoufox_queue_timeout_ms,
+        "profile_lock_mode": camoufox_profile_lock,
+        "profile_lock_ttl_ms": camoufox_profile_lock_ttl_ms,
+        "profile_lock_timeout_ms": camoufox_profile_lock_timeout_ms,
+        "profile_base_path": profiles_root,
+        "redis_gateway": redis_gateway,
+    }
+
+    # BrowserScheduler: bounded FIFO queue (Phase 1 / C1 hardening).
+    # Each CamoufoxHtmlFetcher instance (direct / proxied) gets its own
+    # scheduler so they queue independently (direct doesn't block proxy).
+    _scheduler = _build_browser_scheduler(**_sched_common)
 
     common: dict[str, Any] = {
         "headless": camoufox_headless,
@@ -2176,6 +2420,7 @@ def build_html_fetcher(
         "challenge_resolver": challenge_resolver,
         "warm_reuse": camoufox_warm_reuse,
         "warm_max_fetches": camoufox_warm_max_fetches,
+        "scheduler_enabled": camoufox_browser_scheduler_enabled,
     }
     direct = CamoufoxHtmlFetcher(
         **common,
@@ -2184,9 +2429,12 @@ def build_html_fetcher(
         warmup_policy="once_per_session",
         early_stop_on_shopee_get_pc=True,
         fetch_strategy="camoufox-direct",
+        scheduler=_scheduler,
     )
     proxied: CamoufoxHtmlFetcher | None = None
     if camoufox_proxy_url:
+        # Proxied fetcher gets its own independent scheduler instance.
+        _proxy_scheduler = _build_browser_scheduler(**_sched_common)
         proxied = CamoufoxHtmlFetcher(
             **common,
             proxy_url=camoufox_proxy_url,
@@ -2199,6 +2447,7 @@ def build_html_fetcher(
             ),
             early_stop_on_shopee_get_pc=True,
             fetch_strategy="camoufox-proxy",
+            scheduler=_proxy_scheduler,
         )
     browser = StoreAwareHtmlFetcher(direct=direct, proxied=proxied, http=http)
     # Amazon HTTP leg only (non-Amazon never hits this fetcher).

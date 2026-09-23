@@ -1,0 +1,484 @@
+{
+  "capacity": 3,
+  "date": "2026-09-23",
+  "measurement_meta": {
+    "container": "docker compose run --rm --no-deps api",
+    "isolated_profiles": true,
+    "profile_root": "/tmp/scout-bench-camoufox-capacity",
+    "note": "Capacity C3 bench — Task 5"
+  },
+  "layer1": {
+    "capacity": 3,
+    "layer": "layer1",
+    "url": "https://example.com/",
+    "profile_root": "/tmp/scout-bench-camoufox-capacity/layer1",
+    "iterations": 10,
+    "elapsed_s": 13.233,
+    "throughput_rps": 2.2671,
+    "nav_wall_ms_p50": 803.3,
+    "nav_wall_ms_p95": 4327.0,
+    "nav_wall_ms_max": 5105.1,
+    "total_fetches": 30,
+    "total_ok": 30,
+    "total_errors": 0,
+    "launch_failures": 0,
+    "circuit_open_hits": 0,
+    "rss_kb_start": 67984,
+    "rss_kb_end": 144580,
+    "rss_kb_peak": 144536,
+    "cpu_delta_s": 3.526,
+    "firefox_processes_start": 0,
+    "firefox_processes_peak": 0,
+    "slot_stats": [
+      {
+        "slot_id": 2,
+        "profile_dir": "/tmp/scout-bench-camoufox-capacity/layer1/slot-2",
+        "browser_launches": 1,
+        "browser_reuses": 9,
+        "browser_launch_failures": 0,
+        "circuit_open_hits": 0,
+        "fetch_count": 10,
+        "ok_count": 10
+      },
+      {
+        "slot_id": 1,
+        "profile_dir": "/tmp/scout-bench-camoufox-capacity/layer1/slot-1",
+        "browser_launches": 1,
+        "browser_reuses": 9,
+        "browser_launch_failures": 0,
+        "circuit_open_hits": 0,
+        "fetch_count": 10,
+        "ok_count": 10
+      },
+      {
+        "slot_id": 0,
+        "profile_dir": "/tmp/scout-bench-camoufox-capacity/layer1/slot-0",
+        "browser_launches": 1,
+        "browser_reuses": 9,
+        "browser_launch_failures": 0,
+        "circuit_open_hits": 0,
+        "fetch_count": 10,
+        "ok_count": 10
+      }
+    ],
+    "fetch_samples": [
+      {
+        "iteration": 1,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 5105.1,
+        "error": null,
+        "rss_kb": 143424
+      },
+      {
+        "iteration": 2,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 784.9,
+        "error": null,
+        "rss_kb": 143532
+      },
+      {
+        "iteration": 3,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 796.7,
+        "error": null,
+        "rss_kb": 144476
+      },
+      {
+        "iteration": 4,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 801.2,
+        "error": null,
+        "rss_kb": 144496
+      },
+      {
+        "iteration": 5,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 792.7,
+        "error": null,
+        "rss_kb": 144500
+      },
+      {
+        "iteration": 6,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 805.7,
+        "error": null,
+        "rss_kb": 144504
+      },
+      {
+        "iteration": 7,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 802.4,
+        "error": null,
+        "rss_kb": 144524
+      },
+      {
+        "iteration": 8,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 834.2,
+        "error": null,
+        "rss_kb": 144528
+      },
+      {
+        "iteration": 9,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 870.8,
+        "error": null,
+        "rss_kb": 144532
+      },
+      {
+        "iteration": 10,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 778.8,
+        "error": null,
+        "rss_kb": 144536
+      },
+      {
+        "iteration": 11,
+        "slot_id": 1,
+        "ok": true,
+        "wall_ms": 4604.7,
+        "error": null,
+        "rss_kb": 143392
+      },
+      {
+        "iteration": 12,
+        "slot_id": 1,
+        "ok": true,
+        "wall_ms": 804.2,
+        "error": null,
+        "rss_kb": 143456
+      },
+      {
+        "iteration": 13,
+        "slot_id": 1,
+        "ok": true,
+        "wall_ms": 784.0,
+        "error": null,
+        "rss_kb": 144476
+      },
+      {
+        "iteration": 14,
+        "slot_id": 1,
+        "ok": true,
+        "wall_ms": 788.0,
+        "error": null,
+        "rss_kb": 144488
+      },
+      {
+        "iteration": 15,
+        "slot_id": 1,
+        "ok": true,
+        "wall_ms": 798.0,
+        "error": null,
+        "rss_kb": 144496
+      },
+      {
+        "iteration": 16,
+        "slot_id": 1,
+        "ok": true,
+        "wall_ms": 809.5,
+        "error": null,
+        "rss_kb": 144500
+      },
+      {
+        "iteration": 17,
+        "slot_id": 1,
+        "ok": true,
+        "wall_ms": 786.9,
+        "error": null,
+        "rss_kb": 144512
+      },
+      {
+        "iteration": 18,
+        "slot_id": 1,
+        "ok": true,
+        "wall_ms": 793.4,
+        "error": null,
+        "rss_kb": 144528
+      },
+      {
+        "iteration": 19,
+        "slot_id": 1,
+        "ok": true,
+        "wall_ms": 979.9,
+        "error": null,
+        "rss_kb": 144528
+      },
+      {
+        "iteration": 20,
+        "slot_id": 1,
+        "ok": true,
+        "wall_ms": 800.5,
+        "error": null,
+        "rss_kb": 144532
+      },
+      {
+        "iteration": 21,
+        "slot_id": 2,
+        "ok": true,
+        "wall_ms": 3987.5,
+        "error": null,
+        "rss_kb": 143352
+      },
+      {
+        "iteration": 22,
+        "slot_id": 2,
+        "ok": true,
+        "wall_ms": 830.9,
+        "error": null,
+        "rss_kb": 143400
+      },
+      {
+        "iteration": 23,
+        "slot_id": 2,
+        "ok": true,
+        "wall_ms": 806.7,
+        "error": null,
+        "rss_kb": 143484
+      },
+      {
+        "iteration": 24,
+        "slot_id": 2,
+        "ok": true,
+        "wall_ms": 789.9,
+        "error": null,
+        "rss_kb": 144476
+      },
+      {
+        "iteration": 25,
+        "slot_id": 2,
+        "ok": true,
+        "wall_ms": 799.0,
+        "error": null,
+        "rss_kb": 144492
+      },
+      {
+        "iteration": 26,
+        "slot_id": 2,
+        "ok": true,
+        "wall_ms": 806.9,
+        "error": null,
+        "rss_kb": 144500
+      },
+      {
+        "iteration": 27,
+        "slot_id": 2,
+        "ok": true,
+        "wall_ms": 807.4,
+        "error": null,
+        "rss_kb": 144504
+      },
+      {
+        "iteration": 28,
+        "slot_id": 2,
+        "ok": true,
+        "wall_ms": 824.7,
+        "error": null,
+        "rss_kb": 144520
+      },
+      {
+        "iteration": 29,
+        "slot_id": 2,
+        "ok": true,
+        "wall_ms": 862.3,
+        "error": null,
+        "rss_kb": 144528
+      },
+      {
+        "iteration": 30,
+        "slot_id": 2,
+        "ok": true,
+        "wall_ms": 797.9,
+        "error": null,
+        "rss_kb": 144532
+      }
+    ]
+  },
+  "layer2": {
+    "capacity": 3,
+    "layer": "layer2",
+    "url": "https://www.visaovip.com/busca/termo/notebook/",
+    "profile_root": "/tmp/scout-bench-camoufox-capacity/layer2",
+    "iterations": 5,
+    "elapsed_s": 22.712,
+    "throughput_rps": 0.6604,
+    "nav_wall_ms_p50": 3297.5,
+    "nav_wall_ms_p95": 6323.6,
+    "nav_wall_ms_max": 6611.0,
+    "total_fetches": 15,
+    "total_ok": 15,
+    "total_errors": 0,
+    "launch_failures": 0,
+    "circuit_open_hits": 0,
+    "rss_kb_start": 144580,
+    "rss_kb_end": 210932,
+    "rss_kb_peak": 210956,
+    "cpu_delta_s": 3.592,
+    "firefox_processes_start": 0,
+    "firefox_processes_peak": 0,
+    "slot_stats": [
+      {
+        "slot_id": 1,
+        "profile_dir": "/tmp/scout-bench-camoufox-capacity/layer2/slot-1",
+        "browser_launches": 1,
+        "browser_reuses": 4,
+        "browser_launch_failures": 0,
+        "circuit_open_hits": 0,
+        "fetch_count": 5,
+        "ok_count": 5
+      },
+      {
+        "slot_id": 0,
+        "profile_dir": "/tmp/scout-bench-camoufox-capacity/layer2/slot-0",
+        "browser_launches": 1,
+        "browser_reuses": 4,
+        "browser_launch_failures": 0,
+        "circuit_open_hits": 0,
+        "fetch_count": 5,
+        "ok_count": 5
+      },
+      {
+        "slot_id": 2,
+        "profile_dir": "/tmp/scout-bench-camoufox-capacity/layer2/slot-2",
+        "browser_launches": 1,
+        "browser_reuses": 4,
+        "browser_launch_failures": 0,
+        "circuit_open_hits": 0,
+        "fetch_count": 5,
+        "ok_count": 5
+      }
+    ],
+    "fetch_samples": [
+      {
+        "iteration": 1,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 5045.7,
+        "error": null,
+        "rss_kb": 175988
+      },
+      {
+        "iteration": 2,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 2733.9,
+        "error": null,
+        "rss_kb": 190836
+      },
+      {
+        "iteration": 3,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 6183.4,
+        "error": null,
+        "rss_kb": 205236
+      },
+      {
+        "iteration": 4,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 3172.4,
+        "error": null,
+        "rss_kb": 210156
+      },
+      {
+        "iteration": 5,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 3861.5,
+        "error": null,
+        "rss_kb": 210948
+      },
+      {
+        "iteration": 6,
+        "slot_id": 1,
+        "ok": true,
+        "wall_ms": 6611.0,
+        "error": null,
+        "rss_kb": 189480
+      },
+      {
+        "iteration": 7,
+        "slot_id": 1,
+        "ok": true,
+        "wall_ms": 3297.5,
+        "error": null,
+        "rss_kb": 196512
+      },
+      {
+        "iteration": 8,
+        "slot_id": 1,
+        "ok": true,
+        "wall_ms": 2645.6,
+        "error": null,
+        "rss_kb": 201676
+      },
+      {
+        "iteration": 9,
+        "slot_id": 1,
+        "ok": true,
+        "wall_ms": 2254.7,
+        "error": null,
+        "rss_kb": 209680
+      },
+      {
+        "iteration": 10,
+        "slot_id": 1,
+        "ok": true,
+        "wall_ms": 3259.7,
+        "error": null,
+        "rss_kb": 210244
+      },
+      {
+        "iteration": 11,
+        "slot_id": 2,
+        "ok": true,
+        "wall_ms": 5486.2,
+        "error": null,
+        "rss_kb": 181628
+      },
+      {
+        "iteration": 12,
+        "slot_id": 2,
+        "ok": true,
+        "wall_ms": 2445.1,
+        "error": null,
+        "rss_kb": 193504
+      },
+      {
+        "iteration": 13,
+        "slot_id": 2,
+        "ok": true,
+        "wall_ms": 6200.5,
+        "error": null,
+        "rss_kb": 205272
+      },
+      {
+        "iteration": 14,
+        "slot_id": 2,
+        "ok": true,
+        "wall_ms": 3046.3,
+        "error": null,
+        "rss_kb": 210216
+      },
+      {
+        "iteration": 15,
+        "slot_id": 2,
+        "ok": true,
+        "wall_ms": 4614.8,
+        "error": null,
+        "rss_kb": 210956
+      }
+    ]
+  }
+}

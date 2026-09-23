@@ -87,6 +87,14 @@ Itens resolvidos **não** ficam no índice ativo.
 
 *(pendências ativas: 2)*
 
+Resolvida em 2026-09-23:
+
+- PENDING-018 Visão VIP Strategy A ID discovery — arquivo apagado; discovery
+  automática no `StoreSearchService` (bootstrap → cache → chunk scan),
+  `VISAOVIP_SEARCH_ACTION_ENABLED=true` por default, invalidação em 404;
+  POST via `browser_post` (in-page `fetch` no Camoufox — httpx /
+  APIRequestContext = CF 403)
+
 Nota 2026-09-22: Shopee/ML estão com `match_enabled=false` no Match automático
 (PENDING-017). PENDING-016 permanece relevante para quando forem reativadas.
 

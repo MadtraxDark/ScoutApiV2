@@ -1,0 +1,34 @@
+{
+  "capacity": 1,
+  "url": "https://example.com/",
+  "profile_dir": "/tmp/scout-bench-camoufox-capacity/slot-0",
+  "iterations": 10,
+  "browser_launches": 1,
+  "browser_reuses": 9,
+  "browser_launch_failures": 0,
+  "fetch_samples": [
+    {"iteration": 1, "ok": true, "wall_ms": 5462.9, "error": null, "rss_kb": 138232},
+    {"iteration": 2, "ok": true, "wall_ms": 878.7, "error": null, "rss_kb": 138296},
+    {"iteration": 3, "ok": true, "wall_ms": 808.4, "error": null, "rss_kb": 138312},
+    {"iteration": 4, "ok": true, "wall_ms": 789.1, "error": null, "rss_kb": 138344},
+    {"iteration": 5, "ok": true, "wall_ms": 796.9, "error": null, "rss_kb": 138388},
+    {"iteration": 6, "ok": true, "wall_ms": 784.2, "error": null, "rss_kb": 138392},
+    {"iteration": 7, "ok": true, "wall_ms": 834.2, "error": null, "rss_kb": 138404},
+    {"iteration": 8, "ok": true, "wall_ms": 811.2, "error": null, "rss_kb": 138412},
+    {"iteration": 9, "ok": true, "wall_ms": 848.8, "error": null, "rss_kb": 138436},
+    {"iteration": 10, "ok": true, "wall_ms": 786.0, "error": null, "rss_kb": 138488}
+  ],
+  "nav_wall_ms_p50": 809.8,
+  "nav_wall_ms_p95": 3400.0,
+  "nav_wall_ms_max": 5462.9,
+  "rss_kb_start": 68020,
+  "rss_kb_end": 138556,
+  "rss_kb_peak_sample": 138488,
+  "capacity_stub_note": null,
+  "measurement_meta": {
+    "date": "2026-09-23",
+    "container": "docker compose run --rm --no-deps api (scripts/src bind-mounted)",
+    "isolated_profile": true,
+    "note": "C1 current warm-reuse behavior; not shared ./data/camoufox-profiles"
+  }
+}

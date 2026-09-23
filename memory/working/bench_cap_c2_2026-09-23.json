@@ -1,0 +1,344 @@
+{
+  "capacity": 2,
+  "date": "2026-09-23",
+  "measurement_meta": {
+    "container": "docker compose run --rm --no-deps api",
+    "isolated_profiles": true,
+    "profile_root": "/tmp/scout-bench-camoufox-capacity",
+    "note": "Capacity C2 bench — Task 5"
+  },
+  "layer1": {
+    "capacity": 2,
+    "layer": "layer1",
+    "url": "https://example.com/",
+    "profile_root": "/tmp/scout-bench-camoufox-capacity/layer1",
+    "iterations": 10,
+    "elapsed_s": 12.419,
+    "throughput_rps": 1.6104,
+    "nav_wall_ms_p50": 811.1,
+    "nav_wall_ms_p95": 3843.0,
+    "nav_wall_ms_max": 4396.0,
+    "total_fetches": 20,
+    "total_ok": 20,
+    "total_errors": 0,
+    "launch_failures": 0,
+    "circuit_open_hits": 0,
+    "rss_kb_start": 67892,
+    "rss_kb_end": 142008,
+    "rss_kb_peak": 142024,
+    "cpu_delta_s": 3.278,
+    "firefox_processes_start": 0,
+    "firefox_processes_peak": 0,
+    "slot_stats": [
+      {
+        "slot_id": 0,
+        "profile_dir": "/tmp/scout-bench-camoufox-capacity/layer1/slot-0",
+        "browser_launches": 1,
+        "browser_reuses": 9,
+        "browser_launch_failures": 0,
+        "circuit_open_hits": 0,
+        "fetch_count": 10,
+        "ok_count": 10
+      },
+      {
+        "slot_id": 1,
+        "profile_dir": "/tmp/scout-bench-camoufox-capacity/layer1/slot-1",
+        "browser_launches": 1,
+        "browser_reuses": 9,
+        "browser_launch_failures": 0,
+        "circuit_open_hits": 0,
+        "fetch_count": 10,
+        "ok_count": 10
+      }
+    ],
+    "fetch_samples": [
+      {
+        "iteration": 1,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 3813.9,
+        "error": null,
+        "rss_kb": 140988
+      },
+      {
+        "iteration": 2,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 828.0,
+        "error": null,
+        "rss_kb": 141024
+      },
+      {
+        "iteration": 3,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 808.2,
+        "error": null,
+        "rss_kb": 141048
+      },
+      {
+        "iteration": 4,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 803.6,
+        "error": null,
+        "rss_kb": 141056
+      },
+      {
+        "iteration": 5,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 792.2,
+        "error": null,
+        "rss_kb": 141064
+      },
+      {
+        "iteration": 6,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 812.6,
+        "error": null,
+        "rss_kb": 141080
+      },
+      {
+        "iteration": 7,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 794.1,
+        "error": null,
+        "rss_kb": 142008
+      },
+      {
+        "iteration": 8,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 816.9,
+        "error": null,
+        "rss_kb": 142016
+      },
+      {
+        "iteration": 9,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 870.1,
+        "error": null,
+        "rss_kb": 142024
+      },
+      {
+        "iteration": 10,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 795.2,
+        "error": null,
+        "rss_kb": 142024
+      },
+      {
+        "iteration": 11,
+        "slot_id": 1,
+        "ok": true,
+        "wall_ms": 4396.0,
+        "error": null,
+        "rss_kb": 141012
+      },
+      {
+        "iteration": 12,
+        "slot_id": 1,
+        "ok": true,
+        "wall_ms": 795.5,
+        "error": null,
+        "rss_kb": 141032
+      },
+      {
+        "iteration": 13,
+        "slot_id": 1,
+        "ok": true,
+        "wall_ms": 793.8,
+        "error": null,
+        "rss_kb": 141052
+      },
+      {
+        "iteration": 14,
+        "slot_id": 1,
+        "ok": true,
+        "wall_ms": 809.6,
+        "error": null,
+        "rss_kb": 141064
+      },
+      {
+        "iteration": 15,
+        "slot_id": 1,
+        "ok": true,
+        "wall_ms": 803.7,
+        "error": null,
+        "rss_kb": 141076
+      },
+      {
+        "iteration": 16,
+        "slot_id": 1,
+        "ok": true,
+        "wall_ms": 792.3,
+        "error": null,
+        "rss_kb": 141080
+      },
+      {
+        "iteration": 17,
+        "slot_id": 1,
+        "ok": true,
+        "wall_ms": 814.8,
+        "error": null,
+        "rss_kb": 142008
+      },
+      {
+        "iteration": 18,
+        "slot_id": 1,
+        "ok": true,
+        "wall_ms": 823.7,
+        "error": null,
+        "rss_kb": 142020
+      },
+      {
+        "iteration": 19,
+        "slot_id": 1,
+        "ok": true,
+        "wall_ms": 945.0,
+        "error": null,
+        "rss_kb": 142024
+      },
+      {
+        "iteration": 20,
+        "slot_id": 1,
+        "ok": true,
+        "wall_ms": 858.7,
+        "error": null,
+        "rss_kb": 142024
+      }
+    ]
+  },
+  "layer2": {
+    "capacity": 2,
+    "layer": "layer2",
+    "url": "https://www.visaovip.com/busca/termo/notebook/",
+    "profile_root": "/tmp/scout-bench-camoufox-capacity/layer2",
+    "iterations": 5,
+    "elapsed_s": 22.367,
+    "throughput_rps": 0.4024,
+    "nav_wall_ms_p50": 3320.7,
+    "nav_wall_ms_p95": 6008.9,
+    "nav_wall_ms_max": 6573.8,
+    "total_fetches": 10,
+    "total_ok": 9,
+    "total_errors": 1,
+    "launch_failures": 0,
+    "circuit_open_hits": 0,
+    "rss_kb_start": 142008,
+    "rss_kb_end": 185236,
+    "rss_kb_peak": 185252,
+    "cpu_delta_s": 2.105,
+    "firefox_processes_start": 0,
+    "firefox_processes_peak": 0,
+    "slot_stats": [
+      {
+        "slot_id": 0,
+        "profile_dir": "/tmp/scout-bench-camoufox-capacity/layer2/slot-0",
+        "browser_launches": 1,
+        "browser_reuses": 4,
+        "browser_launch_failures": 0,
+        "circuit_open_hits": 0,
+        "fetch_count": 5,
+        "ok_count": 5
+      },
+      {
+        "slot_id": 1,
+        "profile_dir": "/tmp/scout-bench-camoufox-capacity/layer2/slot-1",
+        "browser_launches": 2,
+        "browser_reuses": 3,
+        "browser_launch_failures": 0,
+        "circuit_open_hits": 0,
+        "fetch_count": 5,
+        "ok_count": 4
+      }
+    ],
+    "fetch_samples": [
+      {
+        "iteration": 1,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 5161.5,
+        "error": null,
+        "rss_kb": 164532
+      },
+      {
+        "iteration": 2,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 6573.8,
+        "error": null,
+        "rss_kb": 170236
+      },
+      {
+        "iteration": 3,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 2098.5,
+        "error": null,
+        "rss_kb": 178696
+      },
+      {
+        "iteration": 4,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 3239.7,
+        "error": null,
+        "rss_kb": 184788
+      },
+      {
+        "iteration": 5,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 2989.8,
+        "error": null,
+        "rss_kb": 185248
+      },
+      {
+        "iteration": 6,
+        "slot_id": 1,
+        "ok": true,
+        "wall_ms": 4972.1,
+        "error": null,
+        "rss_kb": 162732
+      },
+      {
+        "iteration": 7,
+        "slot_id": 1,
+        "ok": false,
+        "wall_ms": 6572.8,
+        "error": "RequestError: Falha ao renderizar a página: Page.content: Unable to retrieve content because the page is navigating and changing the content.",
+        "rss_kb": 169240
+      },
+      {
+        "iteration": 8,
+        "slot_id": 1,
+        "ok": true,
+        "wall_ms": 3893.0,
+        "error": null,
+        "rss_kb": 183012
+      },
+      {
+        "iteration": 9,
+        "slot_id": 1,
+        "ok": true,
+        "wall_ms": 3320.7,
+        "error": null,
+        "rss_kb": 184856
+      },
+      {
+        "iteration": 10,
+        "slot_id": 1,
+        "ok": true,
+        "wall_ms": 3048.3,
+        "error": null,
+        "rss_kb": 185252
+      }
+    ]
+  }
+}

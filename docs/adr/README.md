@@ -59,6 +59,7 @@ Política de quando criar/atualizar docs:
 | [0033](0033-product-match-progressive-search-identity.md) | Progressive search a partir de ProductIdentity (não título bruto) | Accepted |
 | [0037](0037-camoufox-launch-health-match-fail-fast.md) | Launch timeout + circuit de browser + ERROR≠NO_MATCH | Accepted |
 | [0038](0038-pdp-search-capability-split.md) | Separar Store Search de Product Page Scraping | Accepted |
+| [0039](0039-bounded-browser-scheduler-capacity-c1.md) | BrowserScheduler + bounded queue + ProfileLock + claim_trial — capacity C1 | Accepted |
 
 ## Quando criar ADR
 

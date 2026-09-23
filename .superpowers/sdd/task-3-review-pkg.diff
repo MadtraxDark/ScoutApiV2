@@ -1,0 +1,594 @@
+﻿ .env.example                                       |  16 ++
+ src/scout_api/core/config.py                       |  17 ++
+ src/scout_api/modules/matching/attempt_budget.py   | 103 +++++++++
+ .../modules/matching/product_match_service.py      |  49 +++++
+ .../modules/matching/store_search_service.py       |   7 +
+ tests/unit/test_attempt_budget.py                  | 233 +++++++++++++++++++++
+ 6 files changed, 425 insertions(+)
+diff --git a/.env.example b/.env.example
+index 7d2f74d..5623f06 100644
+--- a/.env.example
++++ b/.env.example
+@@ -137,8 +137,17 @@ BROWSER_CIRCUIT_COOLDOWN_SECONDS=60
+ # AliExpress still uses a fresh temp profile per lookup.
+ # Profile subdirs per locale avoid cookie mix when fingerprint changes.
+ CAMOUFOX_WARM_REUSE=true
+ CAMOUFOX_WARM_MAX_FETCHES=40
++# --- BrowserScheduler (Phase 1 / C1 hardening) ---
++# Feature flag ÔÇö set false to roll back to legacy lock-only path.
++CAMOUFOX_BROWSER_SCHEDULER_ENABLED=true
++# Concurrent Camoufox slots. Default=1; do NOT increase without benchmark (C1ÔåÆC2ÔåÆC3).
++CAMOUFOX_BROWSER_CAPACITY=1
++# Max callers waiting in queue. Excess ÔåÆ BROWSER_QUEUE_SATURATED (immediate fail).
++CAMOUFOX_BROWSER_QUEUE_CAPACITY=32
++# Milliseconds a caller waits for a slot before BROWSER_QUEUE_TIMEOUT.
++CAMOUFOX_QUEUE_TIMEOUT_MS=60000
+ # Product Match: wave-2 store concurrency (Camoufox stays on owner thread).
+ MATCH_STORE_CONCURRENCY=3
+ # Shopee cost controls (DataImpulse bills primarily by GB transferred).
+ # once_per_session | always | never ÔÇö avoid paying for home before every PDP.
+@@ -220,8 +229,15 @@ MATCH_RUN_LEASE_SECONDS=600
+ MATCH_RUN_HEARTBEAT_INTERVAL_SECONDS=120
+ MATCH_RUN_RECOVERY_INTERVAL_SECONDS=30
+ MATCH_RUN_MAX_ATTEMPTS=3
+ 
++# --- Product Match attempt budgets per store (Phase 3) ---
++# MATCH_SEARCH_QUERY_BUDGET: MAX distinct queries per store ÔÇö progressive stop.
++# Raise via env to widen search; lower to cut latency. Never hardcode 5 elsewhere.
++MATCH_SEARCH_QUERY_BUDGET=5
++MATCH_EXTERNAL_ATTEMPT_BUDGET=12
++MATCH_BROWSER_NAVIGATION_BUDGET=8
++
+ # --- Persistent offer monitoring (ADR 0030) ---
+ # Clock lives in PostgreSQL (store_listings.next_check_at). Worker is a
+ # separate process ÔÇö do not rely on FastAPI lifespan for durability.
+ OFFER_REFRESH_INTERVAL_HOURS=12
+diff --git a/src/scout_api/core/config.py b/src/scout_api/core/config.py
+index b64f536..e7d898b 100644
+--- a/src/scout_api/core/config.py
++++ b/src/scout_api/core/config.py
+@@ -97,10 +97,27 @@ class Settings(BaseSettings):
+     camoufox_warmup_origin: bool = True
+     # Keep Camoufox persistent context warm across fetches (ADR 0032).
+     camoufox_warm_reuse: bool = True
+     camoufox_warm_max_fetches: int = 40
++    # --- BrowserScheduler (Phase 1 / C1 hardening) ---
++    # Bounded FIFO queue replacing implicit unbounded _PlaywrightOwnerLoop queue.
++    # Feature flag: set false to fall back to legacy lock-only path (rollback).
++    camoufox_browser_scheduler_enabled: bool = True
++    # Number of concurrent Camoufox slots. Default=1; do NOT increase without
++    # benchmark evidence (C1 vs C2 vs C3). See docs/superpowers/plans/ÔÇª
++    camoufox_browser_capacity: int = 1
++    # Max callers waiting for a slot before queue saturation error.
++    camoufox_browser_queue_capacity: int = 32
++    # Milliseconds a caller waits in queue before BROWSER_QUEUE_TIMEOUT.
++    camoufox_queue_timeout_ms: int = 60_000
+     # Product Match: independent stores may overlap; Camoufox stays lock-serialized.
+     match_store_concurrency: int = 3
++    # Retry / attempt budgets per store per Match run (Phase 3 / spec ┬º2).
++    # match_search_query_budget: MAX queries ÔÇö progressive stop, not mandatory count.
++    # Never hardcode these defaults elsewhere ÔÇö only here and .env.example.
++    match_search_query_budget: int = 5
++    match_external_attempt_budget: int = 12
++    match_browser_navigation_budget: int = 8
+     # Cost-aware Shopee controls (DataImpulse is billed primarily by GB).
+     shopee_warmup_policy: str = "once_per_session"
+     shopee_resource_blocking_enabled: bool = True
+     # Challenge / CAPTCHA resolution (ADR 0017). Default: offline amazoncaptcha.
+diff --git a/src/scout_api/modules/matching/attempt_budget.py b/src/scout_api/modules/matching/attempt_budget.py
+new file mode 100644
+index 0000000..28c9019
+--- /dev/null
++++ b/src/scout_api/modules/matching/attempt_budget.py
+@@ -0,0 +1,103 @@
++"""Per-store attempt budget tracking for Product Match progressive search.
++
++Semantics (approved spec ┬º2 ÔÇö Budget):
++
++- ``queries_budget``: MAX queries per store per MatchRun ÔÇö progressive stop,
++  not a mandatory count.  ``begin_query()`` returns False once the ceiling is
++  reached; the caller must stop issuing further queries.
++- ``external_attempt_budget``: upstream requests that actually left the
++  process (non-cached SERP fetches + candidate PDP fetches).
++  Cache/dedup hits do NOT consume this budget (use ``skip_cached()``).
++- ``browser_navigation_budget``: real Camoufox navigations.
++- Strategy A+B in the same query counts as ONE ``begin_query()`` call; each
++  strategy that issues a network request counts as a separate
++  ``record_external()`` call.
++- ``stopped_reason``: first exhaustion reason is preserved (never overwritten).
++
++Observability fields logged per-store at the end of a Match run::
++
++    queries_used / queries_budget / external_attempts / external_attempt_budget /
++    browser_navigations / browser_navigation_budget / stopped_reason
++"""
++
++from __future__ import annotations
++
++from dataclasses import dataclass
++
++
++@dataclass
++class StoreAttemptBudget:
++    """Track and enforce attempt budgets for one store within a Match run."""
++
++    queries_budget: int
++    external_attempt_budget: int
++    browser_navigation_budget: int
++    queries_used: int = 0
++    external_attempts: int = 0
++    browser_navigations: int = 0
++    stopped_reason: str | None = None
++
++    # ------------------------------------------------------------------
++    # Query gate ÔÇö call once per *distinct* (non-deduped) query.
++    # ------------------------------------------------------------------
++
++    def begin_query(self) -> bool:
++        """Try to start a new progressive query.
++
++        Returns False when the query budget has been reached; the caller must
++        stop issuing further queries.  Increments ``queries_used`` on success.
++        The first exhaustion reason is captured in ``stopped_reason``.
++        """
++        if self.queries_used >= self.queries_budget:
++            if self.stopped_reason is None:
++                self.stopped_reason = "query_budget"
++            return False
++        self.queries_used += 1
++        return True
++
++    # ------------------------------------------------------------------
++    # External request gate ÔÇö call before each non-cached upstream fetch.
++    # ------------------------------------------------------------------
++
++    def record_external(self) -> bool:
++        """Record one upstream (external) request attempt.
++
++        Returns False when the external-attempt budget is exhausted; the
++        caller should skip the request.  Increments ``external_attempts`` on
++        success.
++        """
++        if self.external_attempts >= self.external_attempt_budget:
++            if self.stopped_reason is None:
++                self.stopped_reason = "external_attempt_budget"
++            return False
++        self.external_attempts += 1
++        return True
++
++    # ------------------------------------------------------------------
++    # Browser navigation gate ÔÇö call when Camoufox performs a navigation.
++    # ------------------------------------------------------------------
++
++    def record_browser_nav(self) -> bool:
++        """Record one real Camoufox browser navigation.
++
++        Returns False when the browser-navigation budget is exhausted.
++        Increments ``browser_navigations`` on success.
++
++        Note: at SERP level this is called via the ``on_browser_nav_used``
++        hook in ``StoreSearchService.search()``.  Candidate-level browser
++        nav tracking requires deeper wiring into ``ProductScrapeService``
++        (out of scope for this task).
++        """
++        if self.browser_navigations >= self.browser_navigation_budget:
++            if self.stopped_reason is None:
++                self.stopped_reason = "browser_nav_budget"
++            return False
++        self.browser_navigations += 1
++        return True
++
++    # ------------------------------------------------------------------
++    # Cache/dedup ÔÇö explicit no-op to document intent at call sites.
++    # ------------------------------------------------------------------
++
++    def skip_cached(self) -> None:
++        """Signal a cache or dedup hit ÔÇö no external or browser nav consumed."""
+diff --git a/src/scout_api/modules/matching/product_match_service.py b/src/scout_api/modules/matching/product_match_service.py
+index 01e19de..9f48cf9 100644
+--- a/src/scout_api/modules/matching/product_match_service.py
++++ b/src/scout_api/modules/matching/product_match_service.py
+@@ -38,8 +38,9 @@ from scout_api.modules.crawler.services.product_scrape_service import (
+ )
+ from scout_api.modules.crawler.stores import STORE_CONFIGS, store_display_name
+ from scout_api.modules.matching.eligibility import eligible_match_store_keys
+ from scout_api.modules.matching.engine import MatchingEngine
++from scout_api.modules.matching.attempt_budget import StoreAttemptBudget
+ from scout_api.modules.matching.gtin_learning import (
+     TrustedGtin,
+     identity_with_gtin,
+     resolve_trusted_gtin,
+@@ -361,8 +362,15 @@ class ProductMatchService:
+             display_name = _store_label(store_key)
+             with state_lock:
+                 local_queries = list(queries)
+                 local_identity = ref_identity
++            # --- Phase 3: per-store attempt budget ---
++            settings = get_settings()
++            budget = StoreAttemptBudget(
++                queries_budget=settings.match_search_query_budget,
++                external_attempt_budget=settings.match_external_attempt_budget,
++                browser_navigation_budget=settings.match_browser_navigation_budget,
++            )
+             emit(
+                 type="store_started",
+                 store=store_key,
+                 display_name=display_name,
+@@ -431,8 +439,20 @@ class ProductMatchService:
+                     )
+                     continue
+                 if qkey:
+                     seen_query_keys.add(qkey)
++                # --- Phase 3: query budget gate (after dedup, so deduped
++                # queries do not consume the budget) ---
++                if not budget.begin_query():
++                    logger.info(
++                        "match_query_budget_cap",
++                        extra={
++                            "store": store_key,
++                            "queries_used": budget.queries_used,
++                            "queries_budget": budget.queries_budget,
++                        },
++                    )
++                    break
+                 emit(
+                     type="searching",
+                     store=store_key,
+                     display_name=display_name,
+@@ -447,13 +467,22 @@ class ProductMatchService:
+                     with state_lock:
+                         cached_candidates = search_cache.get(cache_key)
+                     if cached_candidates is not None:
+                         candidates = list(cached_candidates)
++                        budget.skip_cached()
+                     else:
++                        # --- Phase 3: external attempt gate for SERP fetch ---
++                        if not budget.record_external():
++                            logger.info(
++                                "match_external_budget_cap",
++                                extra={"store": store_key, "phase": "serp"},
++                            )
++                            break
+                         candidates = self._search.search(
+                             store_key,
+                             query,
+                             limit=max_candidates_per_store,
++                            on_browser_nav_used=budget.record_browser_nav,
+                         )
+                         with state_lock:
+                             search_cache[cache_key] = list(candidates)
+                     search_ms = (time.perf_counter() - search_t0) * 1000
+@@ -522,8 +551,9 @@ class ProductMatchService:
+                         "candidates": len(candidates),
+                         "search_ms": round(search_ms, 1),
+                     },
+                 )
++                _budget_stop_candidates = False
+                 for candidate in candidates:
+                     if scrapes_done >= max_candidates_per_store:
+                         logger.info(
+                             "match_scrape_budget_cap",
+@@ -563,9 +593,18 @@ class ProductMatchService:
+                         duplicate_skips += 1
+                         product = cached_product
+                         scrape_error = None
+                         scrape_ms = 0.0
++                        budget.skip_cached()
+                     else:
++                        # --- Phase 3: external attempt gate for candidate scrape ---
++                        if not budget.record_external():
++                            logger.info(
++                                "match_external_budget_cap",
++                                extra={"store": store_key, "phase": "candidate_scrape"},
++                            )
++                            _budget_stop_candidates = True
++                            break
+                         emit(
+                             type="scraping_candidate",
+                             store=store_key,
+                             display_name=display_name,
+@@ -675,8 +714,10 @@ class ProductMatchService:
+                         break
+ 
+                 if store_matched:
+                     break
++                if _budget_stop_candidates:
++                    break
+                 if scrapes_done >= max_candidates_per_store:
+                     break
+                 if last_error is not None and is_browser_infrastructure_error(
+                     last_error.code
+@@ -694,8 +735,16 @@ class ProductMatchService:
+                 "scrapes": scrapes_done,
+                 "matched": store_matched,
+                 "queries_skipped": queries_skipped,
+                 "duplicate_skips": duplicate_skips,
++                # Phase 3: attempt budget observability
++                "queries_used": budget.queries_used,
++                "queries_budget": budget.queries_budget,
++                "external_attempts": budget.external_attempts,
++                "external_attempt_budget": budget.external_attempt_budget,
++                "browser_navigations": budget.browser_navigations,
++                "browser_navigation_budget": budget.browser_navigation_budget,
++                "stopped_reason": budget.stopped_reason,
+             }
+             with state_lock:
+                 store_stage_ms[store_key] = store_timing
+             logger.info("match_store_timing", extra=store_timing)
+diff --git a/src/scout_api/modules/matching/store_search_service.py b/src/scout_api/modules/matching/store_search_service.py
+index 7ad63b2..c629f0a 100644
+--- a/src/scout_api/modules/matching/store_search_service.py
++++ b/src/scout_api/modules/matching/store_search_service.py
+@@ -2,8 +2,9 @@
+ 
+ from __future__ import annotations
+ 
+ import logging
++from collections.abc import Callable
+ 
+ from scout_api.modules.crawler.core.exceptions import ParseError, RequestError
+ from scout_api.modules.crawler.services.amazon_http_first_fetcher import (
+     is_amazon_store_url,
+@@ -41,8 +42,9 @@ class StoreSearchService:
+         store_key: str,
+         query: str,
+         *,
+         limit: int = 5,
++        on_browser_nav_used: Callable[[], object] | None = None,
+     ) -> list[SearchCandidate]:
+         adapter = resolve_search_adapter(store_key)
+         request = adapter.build_search_request(query)
+         fetch_url = request.url
+@@ -60,8 +62,13 @@ class StoreSearchService:
+         # Shared HtmlFetcher stack; prefer_browser is an adapter policy signal
+         # (logged / isolatable from PDP). Camoufox already covers SERP stores
+         # that need hydration ÔÇö no second browser pool.
+         response = self._fetcher.fetch(fetch_url)
++        # Emit browser-nav hook when the adapter's policy signal indicates a
++        # Camoufox navigation was expected.  Used by StoreAttemptBudget in the
++        # Match store loop for observability / budget tracking (Phase 3).
++        if on_browser_nav_used is not None and request.prefer_browser:
++            on_browser_nav_used()
+         text = response.text or ""
+         page_url = str(response.url or fetch_url)
+         if is_challenge_page(text) or is_amazon_robot_check(text):
+             raise RequestError(
+diff --git a/tests/unit/test_attempt_budget.py b/tests/unit/test_attempt_budget.py
+new file mode 100644
+index 0000000..71a0e63
+--- /dev/null
++++ b/tests/unit/test_attempt_budget.py
+@@ -0,0 +1,233 @@
++"""Unit tests for StoreAttemptBudget ÔÇö Phase 3 retry/attempt budgets.
++
++Covers: progressive stop; cache hit no external consumed; strategy A+B = 1
++query; exhaustion sets stopped_reason; first reason preserved; budget wiring.
++"""
++
++from __future__ import annotations
++
++import pytest
++
++from scout_api.modules.matching.attempt_budget import StoreAttemptBudget
++
++
++# ---------------------------------------------------------------------------
++# Helpers
++# ---------------------------------------------------------------------------
++
++
++def make_budget(
++    *,
++    queries: int = 5,
++    external: int = 12,
++    browser: int = 8,
++) -> StoreAttemptBudget:
++    return StoreAttemptBudget(
++        queries_budget=queries,
++        external_attempt_budget=external,
++        browser_navigation_budget=browser,
++    )
++
++
++# ---------------------------------------------------------------------------
++# begin_query ÔÇö query budget gate
++# ---------------------------------------------------------------------------
++
++
++class TestBeginQuery:
++    def test_allows_exactly_budget_queries(self) -> None:
++        b = make_budget(queries=3)
++        assert b.begin_query() is True
++        assert b.begin_query() is True
++        assert b.begin_query() is True
++        # 4th call exceeds budget
++        assert b.begin_query() is False
++
++    def test_progressive_stop_sets_reason(self) -> None:
++        b = make_budget(queries=1)
++        b.begin_query()   # uses the only slot
++        result = b.begin_query()
++        assert result is False
++        assert b.stopped_reason == "query_budget"
++
++    def test_zero_budget_stops_immediately(self) -> None:
++        b = make_budget(queries=0)
++        assert b.begin_query() is False
++        assert b.stopped_reason == "query_budget"
++
++    def test_queries_used_increments_on_success(self) -> None:
++        b = make_budget(queries=5)
++        b.begin_query()
++        b.begin_query()
++        assert b.queries_used == 2
++
++    def test_queries_used_does_not_increment_on_exhaustion(self) -> None:
++        b = make_budget(queries=2)
++        b.begin_query()
++        b.begin_query()
++        b.begin_query()  # False; should not increment
++        assert b.queries_used == 2
++
++
++# ---------------------------------------------------------------------------
++# record_external ÔÇö external attempt budget gate
++# ---------------------------------------------------------------------------
++
++
++class TestRecordExternal:
++    def test_allows_up_to_budget(self) -> None:
++        b = make_budget(external=2)
++        assert b.record_external() is True
++        assert b.record_external() is True
++        assert b.record_external() is False
++
++    def test_exhaustion_sets_reason(self) -> None:
++        b = make_budget(external=1)
++        b.record_external()
++        b.record_external()
++        assert b.stopped_reason == "external_attempt_budget"
++
++    def test_external_attempts_increments(self) -> None:
++        b = make_budget(external=10)
++        b.record_external()
++        b.record_external()
++        assert b.external_attempts == 2
++
++    def test_zero_external_budget(self) -> None:
++        b = make_budget(external=0)
++        assert b.record_external() is False
++        assert b.stopped_reason == "external_attempt_budget"
++
++
++# ---------------------------------------------------------------------------
++# record_browser_nav ÔÇö browser navigation budget gate
++# ---------------------------------------------------------------------------
++
++
++class TestRecordBrowserNav:
++    def test_allows_up_to_budget(self) -> None:
++        b = make_budget(browser=2)
++        assert b.record_browser_nav() is True
++        assert b.record_browser_nav() is True
++        assert b.record_browser_nav() is False
++
++    def test_exhaustion_sets_reason(self) -> None:
++        b = make_budget(browser=1)
++        b.record_browser_nav()
++        b.record_browser_nav()
++        assert b.stopped_reason == "browser_nav_budget"
++
++    def test_browser_navigations_increments(self) -> None:
++        b = make_budget(browser=5)
++        b.record_browser_nav()
++        b.record_browser_nav()
++        assert b.browser_navigations == 2
++
++
++# ---------------------------------------------------------------------------
++# skip_cached ÔÇö cache/dedup hits consume nothing
++# ---------------------------------------------------------------------------
++
++
++class TestSkipCached:
++    def test_cache_hit_does_not_consume_external(self) -> None:
++        b = make_budget(queries=5, external=1, browser=1)
++        for _ in range(5):
++            b.skip_cached()
++        assert b.external_attempts == 0
++        assert b.browser_navigations == 0
++        assert b.stopped_reason is None
++
++    def test_cache_hit_does_not_affect_queries_used(self) -> None:
++        b = make_budget(queries=3)
++        b.skip_cached()
++        b.skip_cached()
++        # Queries used should still be 0 (no begin_query called)
++        assert b.queries_used == 0
++
++
++# ---------------------------------------------------------------------------
++# A+B strategy ÔÇö 1 begin_query, 2 record_external calls
++# ---------------------------------------------------------------------------
++
++
++class TestStrategyABOnOneQuery:
++    def test_ab_counts_as_one_query_two_externals(self) -> None:
++        """Strategy A+B under one query counts as 1 query; 2 external attempts."""
++        b = make_budget(queries=1, external=2, browser=2)
++        # Single begin_query for A+B
++        assert b.begin_query() is True    # 1 query used
++        assert b.record_external() is True   # Strategy A external
++        assert b.record_external() is True   # Strategy B external
++        # No more queries available
++        assert b.begin_query() is False
++        assert b.queries_used == 1
++        assert b.external_attempts == 2
++
++    def test_ab_with_browser_nav_on_each(self) -> None:
++        b = make_budget(queries=1, external=4, browser=2)
++        b.begin_query()
++        b.record_external()
++        b.record_browser_nav()  # A navigated
++        b.record_external()
++        b.record_browser_nav()  # B navigated
++        assert b.queries_used == 1
++        assert b.external_attempts == 2
++        assert b.browser_navigations == 2
++
++
++# ---------------------------------------------------------------------------
++# stopped_reason preservation ÔÇö first reason wins
++# ---------------------------------------------------------------------------
++
++
++class TestStoppedReasonPreservation:
++    def test_first_reason_not_overwritten(self) -> None:
++        """Once stopped_reason is set, subsequent exhaustions do not change it."""
++        b = make_budget(queries=1, external=0, browser=0)
++        b.begin_query()       # uses query slot
++        b.begin_query()       # triggers query_budget
++        b.record_external()   # would trigger external_attempt_budget ÔÇö ignored
++        b.record_browser_nav()  # would trigger browser_nav_budget ÔÇö ignored
++        assert b.stopped_reason == "query_budget"
++
++    def test_external_reason_preserved_over_browser_nav(self) -> None:
++        b = make_budget(queries=10, external=1, browser=0)
++        b.record_external()     # uses slot
++        b.record_external()     # triggers external_attempt_budget
++        b.record_browser_nav()  # would trigger browser_nav_budget ÔÇö ignored
++        assert b.stopped_reason == "external_attempt_budget"
++
++
++# ---------------------------------------------------------------------------
++# Settings integration ÔÇö defaults surfaced via config
++# ---------------------------------------------------------------------------
++
++
++def test_settings_have_correct_budget_defaults() -> None:
++    """Config defaults match spec: query=5, external=12, browser=8."""
++    from scout_api.core.config import Settings
++
++    s = Settings()
++    assert s.match_search_query_budget == 5
++    assert s.match_external_attempt_budget == 12
++    assert s.match_browser_navigation_budget == 8
++
++
++def test_budget_from_settings() -> None:
++    """StoreAttemptBudget constructed from settings has expected defaults."""
++    from scout_api.core.config import Settings
++
++    s = Settings()
++    b = StoreAttemptBudget(
++        queries_budget=s.match_search_query_budget,
++        external_attempt_budget=s.match_external_attempt_budget,
++        browser_navigation_budget=s.match_browser_navigation_budget,
++    )
++    assert b.queries_budget == 5
++    assert b.external_attempt_budget == 12
++    assert b.browser_navigation_budget == 8
++    assert b.queries_used == 0
++    assert b.external_attempts == 0
++    assert b.browser_navigations == 0
++    assert b.stopped_reason is None

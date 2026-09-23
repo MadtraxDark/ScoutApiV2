@@ -14,6 +14,12 @@ from scout_api.modules.matching.search_adapters.base import (
     EmptySearchClassification,
     SearchRequest,
 )
+from scout_api.modules.matching.search_adapters.paraguay import (
+    visaovip_action_strategy as _vv_action,  # strategy A helpers
+)
+from scout_api.modules.matching.search_adapters.paraguay.visaovip_action_strategy import (  # noqa: E501
+    StrategyResult,
+)
 from scout_api.modules.matching.search_candidate import SearchCandidate
 
 _PRODUCT_PATH_ID = re.compile(r"/prod/.+/(\d+)/?$", re.IGNORECASE)
@@ -107,6 +113,50 @@ class VisaoVipSearchAdapter:
         if "/prod/" not in folded:
             return "incomplete"
         return "unknown"
+
+    # ------------------------------------------------------------------
+    # Strategy A — searchProducts Server Action (HTTP POST)
+    # ------------------------------------------------------------------
+
+    def try_strategy_a(
+        self,
+        query: str,
+        *,
+        action_id: str,
+        enabled: bool = False,
+        timeout: float = 20.0,
+        post_fn: object | None = None,
+    ) -> tuple[StrategyResult, list[SearchCandidate] | None]:
+        """Attempt candidate discovery via the searchProducts Server Action.
+
+        Args:
+            query: Search query string.
+            action_id: Fresh Next-Action header value (deploy-coupled;
+                       must be discovered per session via browser intercept).
+            enabled: Feature gate — must be True to attempt the POST.
+                     Default False (flag VISAOVIP_SEARCH_ACTION_ENABLED).
+            timeout: HTTP timeout in seconds (httpx fallback path).
+            post_fn: Optional browser-backed POST ``(url, headers, data) ->
+                     (status, text)`` so Cloudflare clearance cookies apply.
+
+        Returns:
+            (StrategyResult, candidates_or_None).
+            UNAVAILABLE if disabled.
+            INVALID_RESPONSE / BLOCKED → caller should fall back to Strategy B.
+        """
+        if not enabled:
+            return StrategyResult.UNAVAILABLE, None
+
+        slug = self._search_term_slug(query)
+        if not slug:
+            return StrategyResult.UNAVAILABLE, None
+
+        return _vv_action.call_search_products(
+            slug,
+            action_id,
+            timeout=timeout,
+            post_fn=post_fn,
+        )
 
     @staticmethod
     def _search_term_slug(query: str) -> str:

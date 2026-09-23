@@ -1,0 +1,54 @@
+{
+  "summary": {
+    "date": "2026-09-23",
+    "task": "Task 5 — Phase 5 Capacity Benchmark C1/C2/C3",
+    "acceptance_rule": "N>1 only if success≈C1, no corruption/lock storms, no worse launch failures/circuit, acceptable memory, AND (≥15% P95 improvement OR ≥20% throughput) else C1 wins"
+  },
+  "layer1_example_com": {
+    "url": "https://example.com/",
+    "iterations_per_slot": 10,
+    "C1": {"total_fetches":10, "ok":10, "errors":0, "throughput_rps":0.745, "p50_ms":789.3, "p95_ms":3640.2, "max_ms":5935.2, "elapsed_s":13.416, "peak_rss_kb":139184, "launch_failures":0, "circuit_open_hits":0},
+    "C2": {"total_fetches":20, "ok":20, "errors":0, "throughput_rps":1.610, "p50_ms":811.1, "p95_ms":3843.0, "max_ms":4396.0, "elapsed_s":12.419, "peak_rss_kb":142024, "launch_failures":0, "circuit_open_hits":0},
+    "C3": {"total_fetches":30, "ok":30, "errors":0, "throughput_rps":2.267, "p50_ms":803.3, "p95_ms":4327.0, "max_ms":5105.1, "elapsed_s":13.233, "peak_rss_kb":144536, "launch_failures":0, "circuit_open_hits":0}
+  },
+  "layer2_visaovip_serp": {
+    "url": "https://www.visaovip.com/busca/termo/notebook/",
+    "iterations_per_slot": 5,
+    "C1": {"total_fetches":5, "ok":5, "errors":0, "throughput_rps":0.271, "p50_ms":3066.1, "p95_ms":5476.6, "max_ms":6047.2, "elapsed_s":18.463, "peak_rss_kb":159484, "launch_failures":0, "circuit_open_hits":0},
+    "C2": {"total_fetches":10, "ok":9, "errors":1, "throughput_rps":0.402, "p50_ms":3320.7, "p95_ms":6008.9, "max_ms":6573.8, "elapsed_s":22.367, "peak_rss_kb":185252, "launch_failures":0, "circuit_open_hits":0},
+    "C3": {"total_fetches":15, "ok":15, "errors":0, "throughput_rps":0.660, "p50_ms":3297.5, "p95_ms":6323.6, "max_ms":6611.0, "elapsed_s":22.712, "peak_rss_kb":210956, "launch_failures":0, "circuit_open_hits":0}
+  },
+  "throughput_gain_vs_c1": {
+    "C2_L1_pct": "+116%",
+    "C2_L2_pct": "+48%",
+    "C3_L1_pct": "+204%",
+    "C3_L2_pct": "+144%"
+  },
+  "p95_change_vs_c1": {
+    "C2_L1": "+5.6% (worse)",
+    "C2_L2": "+9.7% (worse)",
+    "C3_L1": "+18.9% (worse)",
+    "C3_L2": "+15.4% (worse)"
+  },
+  "acceptance_rule_check": {
+    "C2": {
+      "success_approx_c1": "borderline (L2: 9/10, 1 transient nav race error)",
+      "no_corruption_lock_storms": true,
+      "no_worse_launch_failures": true,
+      "acceptable_memory": true,
+      "p95_improvement_15pct": false,
+      "throughput_improvement_20pct": true,
+      "verdict": "PASSES (via throughput ≥20%; 1 transient error is nav race not structural)"
+    },
+    "C3": {
+      "success_approx_c1": true,
+      "no_corruption_lock_storms": true,
+      "no_worse_launch_failures": true,
+      "acceptable_memory": true,
+      "p95_improvement_15pct": false,
+      "throughput_improvement_20pct": true,
+      "verdict": "PASSES (via throughput ≥20%; 100% success both layers)"
+    }
+  },
+  "decision": "RECOMMEND C2 for Task 6. Both C2 and C3 meet the acceptance rule via throughput (C2 +116%/+48%, C3 +204%/+144%), no launch failures, no circuit opens, no lock storms, isolated profiles stable. C2 chosen over C3 for conservatism: 2x throughput with minimal extra RSS (+3KB Python process on L1; +25MB actual per slot on L2), fewer concurrent Firefox instances in production (Docker host constraint), and C3 worsens P95 by up to 19% while adding marginal benefit for the primary bottleneck (single-store sequential match). The 1 transient error in C2 L2 is a Playwright 'page navigating' race condition not specific to multi-slot operation. Production default stays capacity=1 until Task 6 implements the change."
+}

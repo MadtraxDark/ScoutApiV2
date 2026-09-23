@@ -1,0 +1,40 @@
+# Browser Scheduler — bounded capacity + failure domains + multi-strategy fallback
+
+Política permanente. Detalhes técnicos: ADR 0039 + ADR 0037.
+
+## Invariantes de capacidade
+
+- `CAMOUFOX_BROWSER_CAPACITY=1` é o único valor validado em produção (**C1**).
+- Não aumente a capacidade sem benchmark com `BrowserScheduler` de produção,
+  N ≥ 20 fetches por loja real anti-bot e `success_rate ≥ C1` + `P95 não piora ≥15%`.
+- Fila saturada → `RequestError(code="BROWSER_QUEUE_SATURATED")` — nunca hang.
+- `CAMOUFOX_QUEUE_MAX_WAITERS` limita a fila de espera; rejeitar excesso é correto.
+
+## ProfileLock
+
+- Dois processos (api / monitor / match-runner) **nunca** podem abrir o mesmo
+  diretório de perfil Camoufox simultaneamente.
+- Lock: Redis primary (`fcntl` fallback local; `NullProfileLock` com WARN se
+  ambos indisponíveis).
+- Não remova o `ProfileLock` sem substituir por mecanismo equivalente.
+
+## Failure domains (circuit por store)
+
+- `BrowserCircuitBreaker` opera por store key, não globalmente.
+- Falha de launch/infra (`BROWSER_LAUNCH_FAILED`) → circuit abre; não mapeia para
+  `NO_MATCH` nem `UPSTREAM_BLOCKED` de conteúdo — são categorias distintas.
+- Estado HALF_OPEN: `claim_trial()` garante singleflight atômico (≤ 1 caller
+  prova por vez). Non-probe callers: FAIL-FAST imediato.
+
+## Multi-strategy com fallback nativo
+
+Quando uma loja suporta ≥ 2 estratégias de SERP (ex.: Visão VIP Strategy A +
+Strategy B):
+
+- Strategy A (mais leve / mais confiável) tenta primeiro.
+- Strategy B (browser SERP) é o fallback quando A falha ou está desabilitada.
+- Ambas as estratégias de uma query contam como 1 `begin_query()` no
+  `StoreAttemptBudget`; cada request upstream conta separadamente.
+- Não implemente lógica SERP dentro do spider PDP (ADR 0038).
+- Discovery de ID deploy-coupled (ex.: `Next-Action` da Visão VIP) deve ser
+  refrescado por sessão — nunca hardcode permanente (ver `docs/crawler/stores/visaovip.md`).

@@ -24,6 +24,7 @@ from .store_resolver import resolve_store_spider
 @lru_cache
 def get_shared_html_fetcher() -> HtmlFetcher:
     settings = get_settings()
+    redis_gateway = build_redis_gateway(settings)
     return build_html_fetcher(
         camoufox_enabled=settings.camoufox_enabled,
         user_agent=settings.scraper_user_agent,
@@ -51,6 +52,14 @@ def get_shared_html_fetcher() -> HtmlFetcher:
         amazon_auth_password=settings.amazon_auth_password,
         shopee_auth_email=settings.shopee_auth_email,
         shopee_auth_password=settings.shopee_auth_password,
+        camoufox_browser_scheduler_enabled=settings.camoufox_browser_scheduler_enabled,
+        camoufox_browser_capacity=settings.camoufox_browser_capacity,
+        camoufox_browser_queue_capacity=settings.camoufox_browser_queue_capacity,
+        camoufox_queue_timeout_ms=settings.camoufox_queue_timeout_ms,
+        camoufox_profile_lock=settings.camoufox_profile_lock,
+        camoufox_profile_lock_ttl_ms=settings.camoufox_profile_lock_ttl_ms,
+        camoufox_profile_lock_timeout_ms=settings.camoufox_profile_lock_timeout_ms,
+        redis_gateway=redis_gateway,
     )
 
 

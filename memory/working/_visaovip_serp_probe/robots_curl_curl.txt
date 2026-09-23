@@ -1,0 +1,9 @@
+# *
+User-agent: *
+Allow: /
+
+# Host
+Host: https://www.visaovip.com
+
+# Sitemaps
+Sitemap: https://www.visaovip.com/sitemap.xml

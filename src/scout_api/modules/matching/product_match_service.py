@@ -39,6 +39,7 @@ from scout_api.modules.crawler.services.product_scrape_service import (
 from scout_api.modules.crawler.stores import STORE_CONFIGS, store_display_name
 from scout_api.modules.matching.eligibility import eligible_match_store_keys
 from scout_api.modules.matching.engine import MatchingEngine
+from scout_api.modules.matching.attempt_budget import StoreAttemptBudget
 from scout_api.modules.matching.gtin_learning import (
     TrustedGtin,
     identity_with_gtin,
@@ -362,6 +363,13 @@ class ProductMatchService:
             with state_lock:
                 local_queries = list(queries)
                 local_identity = ref_identity
+            # --- Phase 3: per-store attempt budget ---
+            settings = get_settings()
+            budget = StoreAttemptBudget(
+                queries_budget=settings.match_search_query_budget,
+                external_attempt_budget=settings.match_external_attempt_budget,
+                browser_navigation_budget=settings.match_browser_navigation_budget,
+            )
             emit(
                 type="store_started",
                 store=store_key,
@@ -432,6 +440,18 @@ class ProductMatchService:
                     continue
                 if qkey:
                     seen_query_keys.add(qkey)
+                # --- Phase 3: query budget gate (after dedup, so deduped
+                # queries do not consume the budget) ---
+                if not budget.begin_query():
+                    logger.info(
+                        "match_query_budget_cap",
+                        extra={
+                            "store": store_key,
+                            "queries_used": budget.queries_used,
+                            "queries_budget": budget.queries_budget,
+                        },
+                    )
+                    break
                 emit(
                     type="searching",
                     store=store_key,
@@ -448,11 +468,20 @@ class ProductMatchService:
                         cached_candidates = search_cache.get(cache_key)
                     if cached_candidates is not None:
                         candidates = list(cached_candidates)
+                        budget.skip_cached()
                     else:
+                        # --- Phase 3: external attempt gate for SERP fetch ---
+                        if not budget.record_external():
+                            logger.info(
+                                "match_external_budget_cap",
+                                extra={"store": store_key, "phase": "serp"},
+                            )
+                            break
                         candidates = self._search.search(
                             store_key,
                             query,
                             limit=max_candidates_per_store,
+                            on_browser_nav_used=budget.record_browser_nav,
                         )
                         with state_lock:
                             search_cache[cache_key] = list(candidates)
@@ -475,10 +504,15 @@ class ProductMatchService:
                         code=exc.code,
                         message=str(exc),
                     )
-                    # SEARCH_UNSUPPORTED and structural browser infra must not
-                    # keep spending queries (ERROR, never silent NO_MATCH).
-                    if exc.code == "SEARCH_UNSUPPORTED" or is_browser_infrastructure_error(
-                        exc.code
+                    # SEARCH_UNSUPPORTED, WAF/incomplete SERP and structural
+                    # browser infra must not keep spending queries (ERROR,
+                    # never silent NO_MATCH). WAF/SERP codes indicate the
+                    # entire SERP is blocked — retrying other queries won't
+                    # help.
+                    if (
+                        exc.code == "SEARCH_UNSUPPORTED"
+                        or exc.code in {"UPSTREAM_WAF_BLOCKED", "SEARCH_INCOMPLETE_RESPONSE"}
+                        or is_browser_infrastructure_error(exc.code)
                     ):
                         break
                     continue
@@ -523,6 +557,7 @@ class ProductMatchService:
                         "search_ms": round(search_ms, 1),
                     },
                 )
+                _budget_stop_candidates = False
                 for candidate in candidates:
                     if scrapes_done >= max_candidates_per_store:
                         logger.info(
@@ -564,7 +599,16 @@ class ProductMatchService:
                         product = cached_product
                         scrape_error = None
                         scrape_ms = 0.0
+                        budget.skip_cached()
                     else:
+                        # --- Phase 3: external attempt gate for candidate scrape ---
+                        if not budget.record_external():
+                            logger.info(
+                                "match_external_budget_cap",
+                                extra={"store": store_key, "phase": "candidate_scrape"},
+                            )
+                            _budget_stop_candidates = True
+                            break
                         emit(
                             type="scraping_candidate",
                             store=store_key,
@@ -676,6 +720,8 @@ class ProductMatchService:
 
                 if store_matched:
                     break
+                if _budget_stop_candidates:
+                    break
                 if scrapes_done >= max_candidates_per_store:
                     break
                 if last_error is not None and is_browser_infrastructure_error(
@@ -695,6 +741,14 @@ class ProductMatchService:
                 "matched": store_matched,
                 "queries_skipped": queries_skipped,
                 "duplicate_skips": duplicate_skips,
+                # Phase 3: attempt budget observability
+                "queries_used": budget.queries_used,
+                "queries_budget": budget.queries_budget,
+                "external_attempts": budget.external_attempts,
+                "external_attempt_budget": budget.external_attempt_budget,
+                "browser_navigations": budget.browser_navigations,
+                "browser_navigation_budget": budget.browser_navigation_budget,
+                "stopped_reason": budget.stopped_reason,
             }
             with state_lock:
                 store_stage_ms[store_key] = store_timing

@@ -30,6 +30,12 @@
   (`available=false` / preço fabricado). `UPSTREAM_BLOCKED` só após esgotar
   tentativas de resolução. Ver `.cursor/rules/captcha-challenge-resolution.mdc`,
   `.cursor/rules/auth-wall-resolution.mdc`, ADR 0017 e ADR 0018.
+- **Concorrência de browser limitada (crítico):** `CAMOUFOX_BROWSER_CAPACITY=1` é o único valor
+  validado em produção. Não aumente a capacidade sem benchmark com harness de produção (`BrowserScheduler`)
+  e evidência de `success_rate ≥ C1` **e** `P95 não piora ≥15%` em loja real anti-bot. A infraestrutura
+  `BrowserScheduler` + `ProfileLock` + `claim_trial` protege slots isolados; fila saturada emite
+  `BROWSER_QUEUE_SATURATED` em vez de hang. ADR 0032 (pool N browsers rejeitado) **permanece Accepted**;
+  ADR 0039 documenta a decisão C1 e as condições para reabertura de C2+.
 - **Proxy Cost Mode (crítico):** proxy pago deve ser evitado sempre que possível. Todas as lojas tentam acesso direto primeiro; proxy só como fallback após bloqueio classificado (`UPSTREAM_BLOCKED`). Com proxy ativo, tráfego mínimo obrigatório (sem imagens/vídeos/fontes/PDFs; ignorar `include_images=true`; só texto/JSON essencial). Ver `.cursor/rules/proxy-cost-mode.mdc` e ADR 0014.
 - **Scraper/Camoufox imutáveis por padrão:** sem pedido explícito, não altere fetch, navegação, waits, fingerprint, proxies, retries, lifecycle do browser nem o fluxo operacional do Camoufox. Só é livre alterar extração, parsing, normalização, validação e shape dos dados coletados. Exceções: Proxy Cost Mode; **resolução obrigatória de challenge/CAPTCHA** (ADR 0017); **auth bypass / login wall** (ADR 0018).
 - **Auth bypass (crítico):** login wall / soft-auth / session-gate que impede

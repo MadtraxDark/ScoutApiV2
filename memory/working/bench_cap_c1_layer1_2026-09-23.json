@@ -1,0 +1,127 @@
+{
+  "capacity": 1,
+  "date": "2026-09-23",
+  "measurement_meta": {
+    "container": "docker compose run --rm --no-deps api",
+    "isolated_profiles": true,
+    "profile_root": "/tmp/scout-bench-camoufox-capacity",
+    "note": "Capacity C1 bench — Task 5"
+  },
+  "layer1": {
+    "capacity": 1,
+    "layer": "layer1",
+    "url": "https://example.com/",
+    "profile_root": "/tmp/scout-bench-camoufox-capacity/layer1",
+    "iterations": 10,
+    "elapsed_s": 13.416,
+    "throughput_rps": 0.7454,
+    "nav_wall_ms_p50": 789.3,
+    "nav_wall_ms_p95": 3640.2,
+    "nav_wall_ms_max": 5935.2,
+    "total_fetches": 10,
+    "total_ok": 10,
+    "total_errors": 0,
+    "launch_failures": 0,
+    "circuit_open_hits": 0,
+    "rss_kb_start": 68048,
+    "rss_kb_end": 139268,
+    "rss_kb_peak": 139184,
+    "cpu_delta_s": 3.31,
+    "firefox_processes_start": 0,
+    "firefox_processes_peak": 0,
+    "slot_stats": [
+      {
+        "slot_id": 0,
+        "profile_dir": "/tmp/scout-bench-camoufox-capacity/layer1/slot-0",
+        "browser_launches": 1,
+        "browser_reuses": 9,
+        "browser_launch_failures": 0,
+        "circuit_open_hits": 0,
+        "fetch_count": 10,
+        "ok_count": 10
+      }
+    ],
+    "fetch_samples": [
+      {
+        "iteration": 1,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 5935.2,
+        "error": null,
+        "rss_kb": 138832
+      },
+      {
+        "iteration": 2,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 799.5,
+        "error": null,
+        "rss_kb": 138904
+      },
+      {
+        "iteration": 3,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 780.8,
+        "error": null,
+        "rss_kb": 138920
+      },
+      {
+        "iteration": 4,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 785.8,
+        "error": null,
+        "rss_kb": 138944
+      },
+      {
+        "iteration": 5,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 807.6,
+        "error": null,
+        "rss_kb": 138980
+      },
+      {
+        "iteration": 6,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 789.6,
+        "error": null,
+        "rss_kb": 138984
+      },
+      {
+        "iteration": 7,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 789.0,
+        "error": null,
+        "rss_kb": 139016
+      },
+      {
+        "iteration": 8,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 777.6,
+        "error": null,
+        "rss_kb": 139068
+      },
+      {
+        "iteration": 9,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 835.2,
+        "error": null,
+        "rss_kb": 139128
+      },
+      {
+        "iteration": 10,
+        "slot_id": 0,
+        "ok": true,
+        "wall_ms": 782.7,
+        "error": null,
+        "rss_kb": 139184
+      }
+    ]
+  }
+}

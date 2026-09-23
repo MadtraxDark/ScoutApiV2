@@ -36,15 +36,26 @@ class RequestError(CrawlerError):
 
 
 # Proxy Cost Mode FALLBACK may retry these after a direct failure.
+# New preferred SERP-specific codes are included so proxy fallback still
+# triggers when they are emitted instead of the legacy UPSTREAM_BLOCKED.
 PROXY_FALLBACK_ERROR_CODES: frozenset[str] = frozenset(
-    {"UPSTREAM_BLOCKED", "AUTH_REQUIRED"}
+    {
+        "UPSTREAM_BLOCKED",        # legacy — alias; still recognised on read
+        "UPSTREAM_WAF_BLOCKED",    # preferred: WAF/challenge blocks SERP fetch
+        "SEARCH_INCOMPLETE_RESPONSE",  # preferred: SERP arrived but unparseable
+        "AUTH_REQUIRED",
+    }
 )
 
-# Structural Camoufox launch / circuit — never Product Match NO_MATCH.
+# Structural Camoufox launch / circuit / queue — never Product Match NO_MATCH.
+# Keep in sync with browser_health.BROWSER_INFRASTRUCTURE_ERROR_CODES.
 BROWSER_INFRASTRUCTURE_ERROR_CODES: frozenset[str] = frozenset(
     {
         "BROWSER_LAUNCH_ERROR",
         "BROWSER_INFRASTRUCTURE_UNAVAILABLE",
+        "BROWSER_QUEUE_SATURATED",
+        "BROWSER_QUEUE_TIMEOUT",
+        "BROWSER_JOB_CANCELLED",
     }
 )
 

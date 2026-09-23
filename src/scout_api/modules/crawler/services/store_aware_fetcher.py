@@ -38,6 +38,26 @@ class StoreAwareHtmlFetcher:
         self._proxied = proxied
         self._http = http
 
+    def browser_post(
+        self,
+        url: str,
+        *,
+        headers: dict[str, str],
+        data: bytes,
+        timeout_ms: int | None = None,
+    ) -> tuple[int, str]:
+        """Delegate Server Action POSTs to the direct Camoufox session."""
+        direct = self._direct
+        post = getattr(direct, "browser_post", None)
+        if post is None:
+            raise RequestError(
+                "Fetcher direto sem browser_post para Server Action",
+                code="BROWSER_INFRASTRUCTURE_UNAVAILABLE",
+                url=url,
+                retryable=False,
+            )
+        return post(url, headers=headers, data=data, timeout_ms=timeout_ms)
+
     @property
     def direct(self) -> HtmlFetcher:
         return self._direct
@@ -128,3 +148,28 @@ class StoreAwareHtmlFetcher:
 
 def is_proxied_camoufox(fetcher: HtmlFetcher) -> bool:
     return isinstance(fetcher, CamoufoxHtmlFetcher) and bool(fetcher.proxy_url)
+
+
+def find_browser_post(fetcher: object) -> Any | None:
+    """Walk http-first wrappers to a Camoufox/StoreAware ``browser_post``.
+
+    Shared stack is typically
+    ``Kabum → Pichau → ML → Amazon → StoreAware → Camoufox``. Only the
+    browser layers implement Server Action POST with CF cookies.
+    """
+    seen: set[int] = set()
+    cur: object | None = fetcher
+    # Bound depth: real stack is ~5 wrappers; guards MagicMock auto-attrs.
+    for _ in range(16):
+        if cur is None or id(cur) in seen:
+            break
+        seen.add(id(cur))
+        if hasattr(type(cur), "browser_post"):
+            return cur.browser_post  # type: ignore[no-any-return]
+        nxt = getattr(cur, "_browser", None)
+        if nxt is None:
+            nxt = getattr(cur, "_direct", None)
+        if nxt is cur:
+            break
+        cur = nxt
+    return None
