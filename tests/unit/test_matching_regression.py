@@ -1710,6 +1710,32 @@ def test_storage_conflict_not_relaxed_by_broad_retrieval() -> None:
     assert any(r.code == "variant_mismatch" for r in score.reasons)
 
 
+def test_bare_titanium_finish_not_conflict_with_titanio_preto() -> None:
+    """Bare 'Titânio' on Amazon is missing hue, not a conflict with Titânio Preto."""
+    from scout_api.modules.matching.identity import variants_equal
+
+    assert variants_equal("color", "titanio preto", "titanio")
+    assert variants_equal("color", "titanio preto", "titanium")
+    assert not variants_equal("color", "titanio preto", "titanio branco")
+
+    score = MatchingEngine().score(
+        _identity(
+            brand="samsung",
+            model="galaxys25ultra",
+            title="Samsung Galaxy S25 Ultra 256GB Titânio Preto",
+            variant_attrs={"storage": "256gb", "color": "titanio preto"},
+        ),
+        _identity(
+            brand="samsung",
+            model="galaxys25ultra",
+            title="Samsung Celular Galaxy S25 Ultra 5G, 256GB, 12GB RAM",
+            variant_attrs={"storage": "256gb", "color": "titanio"},
+        ),
+    )
+    assert score.decision != "reject"
+    assert not any(r.code == "variant_mismatch" for r in score.reasons)
+
+
 def test_missing_ram_battery_is_not_conflict() -> None:
     score = MatchingEngine().score(
         _identity(

@@ -15,6 +15,7 @@ from scout_api.core.config import Settings, get_settings
 from scout_api.core.database import get_session_factory
 from scout_api.core.performance import OperationCategory, timed
 from scout_api.modules.crawler.core.exceptions import ParseError, RequestError
+from scout_api.modules.matching.identity import identity_reference_item
 from scout_api.modules.matching.match_run_claim import (
     claim_due_match_runs,
     heartbeat_claim,
@@ -22,12 +23,12 @@ from scout_api.modules.matching.match_run_claim import (
     utcnow,
 )
 from scout_api.modules.matching.match_run_service import MatchRunService
-from scout_api.modules.matching.models import ProductMatchRun
+from scout_api.modules.matching.models import CanonicalProduct, ProductMatchRun
 from scout_api.modules.matching.product_match_service import (
     MatchStoreOutcome,
     ProductMatchService,
 )
-from scout_api.modules.matching.schemas import MatchRequest
+from scout_api.modules.matching.schemas import MatchRequest, MatchResponse
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +66,63 @@ def _fail_stale_exhausted(
     return True
 
 
+def _reference_from_canonical(product: CanonicalProduct) -> object:
+    """Build identity-only reference when live reference scrape fails."""
+    attrs = dict(product.attributes or {})
+    variant = attrs.get("variant")
+    category = attrs.get("category")
+    return identity_reference_item(
+        product.title or "",
+        brand=product.brand,
+        model=product.model,
+        variant=str(variant) if variant else None,
+        category=str(category) if category else None,
+    )
+
+
+def _execute_match_for_run(
+    session: Session,
+    *,
+    run_id: object,
+    product_id: object,
+    reference_url: str,
+    on_store_outcome: Any,
+) -> MatchResponse:
+    """Scrape reference URL; on failure, fall back to canonical identity."""
+    match_service = ProductMatchService(session=session)
+    request = MatchRequest(
+        reference_url=reference_url,  # type: ignore[arg-type]
+        canonical_product_id=product_id,  # type: ignore[arg-type]
+        persist=True,
+        include_review=True,
+        include_images=False,
+    )
+    try:
+        return match_service.match(request, on_store_outcome=on_store_outcome)
+    except RequestError as exc:
+        product = session.get(CanonicalProduct, product_id)
+        title = (product.title or "").strip() if product is not None else ""
+        if not title:
+            raise
+        logger.warning(
+            "match_run_reference_fallback",
+            extra={
+                "run_id": str(run_id),
+                "product_id": str(product_id),
+                "code": exc.code,
+            },
+        )
+        reference = _reference_from_canonical(product)
+        return match_service.match_from_item(
+            reference,  # type: ignore[arg-type]
+            persist=True,
+            include_review=True,
+            include_images=False,
+            canonical_product_id=product_id,  # type: ignore[arg-type]
+            on_store_outcome=on_store_outcome,
+        )
+
+
 def process_claimed_run(
     session: Session,
     run: ProductMatchRun,
@@ -75,15 +133,15 @@ def process_claimed_run(
     """Execute one claimed match run; never raises — status is persisted."""
     run_id = run.id
     product_id = run.product_id
+    reference_url = run.reference_url
     started = utcnow()
     service = MatchRunService(session)
-    match_service = ProductMatchService(session=session)
 
     if _fail_stale_exhausted(session, run, settings=settings):
         session.flush()
         return run
 
-    if not run.reference_url:
+    if not reference_url:
         service.finalize_failed(
             run,
             code="REFERENCE_URL_MISSING",
@@ -91,6 +149,15 @@ def process_claimed_run(
         )
         session.flush()
         return run
+
+    # Claim already committed in sweep_once. Touch activity in a short
+    # transaction, then RELEASE the row lock before the long match.
+    # Holding product_match_runs locked during Camoufox/search blocks
+    # on_store_outcome + heartbeat (statement_timeout → INTERNAL_ERROR).
+    run.status = "running"
+    run.last_activity_at = utcnow()
+    session.commit()
+    session.expunge_all()
 
     stop_heartbeat = threading.Event()
 
@@ -121,35 +188,40 @@ def process_claimed_run(
 
     def on_store_outcome(outcome: MatchStoreOutcome) -> None:
         with outcome_lock:
-            factory = get_session_factory()
-            with factory() as store_session:
-                row = store_session.get(ProductMatchRun, run_id)
-                if row is None:
-                    return
-                MatchRunService(store_session).apply_store_outcome(
-                    row,
-                    store=outcome.store,
-                    display_name=outcome.display_name,
-                    status=outcome.status,
-                    duration_ms=outcome.duration_ms,
-                    queries=list(outcome.queries),
-                    candidates_found=outcome.candidates_found,
-                    candidates_evaluated=outcome.candidates_evaluated,
-                    matched_url=outcome.matched_url,
-                    matched_title=outcome.matched_title,
-                    matched_price=outcome.matched_price,
-                    matched_currency=outcome.matched_currency,
-                    matched_confidence=outcome.matched_confidence,
-                    matched_reasons=list(outcome.matched_reasons),
-                    error_code=outcome.error_code,
-                    error_message=outcome.error_message,
-                    search_duration_ms=outcome.search_duration_ms,
-                    candidate_fetch_duration_ms=outcome.candidate_fetch_duration_ms,
-                    candidates=[dict(c) for c in outcome.candidates],
+            try:
+                factory = get_session_factory()
+                with factory() as store_session:
+                    row = store_session.get(ProductMatchRun, run_id)
+                    if row is None:
+                        return
+                    MatchRunService(store_session).apply_store_outcome(
+                        row,
+                        store=outcome.store,
+                        display_name=outcome.display_name,
+                        status=outcome.status,
+                        duration_ms=outcome.duration_ms,
+                        queries=list(outcome.queries),
+                        candidates_found=outcome.candidates_found,
+                        candidates_evaluated=outcome.candidates_evaluated,
+                        matched_url=outcome.matched_url,
+                        matched_title=outcome.matched_title,
+                        matched_price=outcome.matched_price,
+                        matched_currency=outcome.matched_currency,
+                        matched_confidence=outcome.matched_confidence,
+                        matched_reasons=list(outcome.matched_reasons),
+                        error_code=outcome.error_code,
+                        error_message=outcome.error_message,
+                        search_duration_ms=outcome.search_duration_ms,
+                        candidate_fetch_duration_ms=outcome.candidate_fetch_duration_ms,
+                        candidates=[dict(c) for c in outcome.candidates],
+                    )
+                    store_session.commit()
+            except Exception:  # noqa: BLE001
+                logger.exception(
+                    "match_run_store_outcome_failed run_id=%s store=%s",
+                    run_id,
+                    outcome.store,
                 )
-                # Keep aggregate counters on the worker session's run too.
-                session.expire_all()
-                store_session.commit()
 
     try:
         with timed(
@@ -157,24 +229,14 @@ def process_claimed_run(
             category=OperationCategory.PRODUCT_MATCH,
             context={"run_id": str(run_id), "product_id": str(product_id)},
         ):
-            request = MatchRequest(
-                reference_url=run.reference_url,  # type: ignore[arg-type]
-                canonical_product_id=product_id,
-                persist=True,
-                include_review=True,
-                include_images=False,
-            )
-            # Refresh local row after claim.
-            run.status = "running"
-            run.last_activity_at = utcnow()
-            session.flush()
-
-            response = match_service.match(
-                request,
+            response = _execute_match_for_run(
+                session,
+                run_id=run_id,
+                product_id=product_id,
+                reference_url=reference_url,
                 on_store_outcome=on_store_outcome,
             )
 
-        # Reload aggregates from DB (store outcomes used separate sessions).
         session.expire_all()
         fresh = session.get(ProductMatchRun, run_id)
         if fresh is None:
@@ -208,22 +270,27 @@ def process_claimed_run(
         )
         return fresh
     except RequestError as exc:
-        fresh = session.get(ProductMatchRun, run_id) or run
+        fresh = session.get(ProductMatchRun, run_id)
+        if fresh is None:
+            return run
         service.finalize_failed(
             fresh, code=exc.code or "REQUEST_ERROR", message=str(exc)
         )
         return fresh
     except ParseError as exc:
-        fresh = session.get(ProductMatchRun, run_id) or run
+        fresh = session.get(ProductMatchRun, run_id)
+        if fresh is None:
+            return run
         service.finalize_failed(fresh, code="PARSE_ERROR", message=str(exc))
         return fresh
-    except Exception as exc:  # noqa: BLE001
+    except Exception:  # noqa: BLE001
         logger.exception("match_run_failed run_id=%s", run_id)
-        fresh = session.get(ProductMatchRun, run_id) or run
+        fresh = session.get(ProductMatchRun, run_id)
+        if fresh is None:
+            return run
         service.finalize_failed(
             fresh, code="INTERNAL_ERROR", message="Falha interna no Product Match"
         )
-        logger.debug("match_run_internal_error detail=%s", type(exc).__name__)
         return fresh
     finally:
         stop_heartbeat.set()

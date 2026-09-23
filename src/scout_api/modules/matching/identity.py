@@ -1399,8 +1399,40 @@ def parse_variant_attributes(
 
 
 def variants_equal(key: str, left: str, right: str) -> bool:
-    """Compare variant values with canonicalization (storage units, color synonyms)."""
-    return normalize_variant_value(key, left) == normalize_variant_value(key, right)
+    """Compare variant values with canonicalization (storage units, color synonyms).
+
+    For color: bare finish tokens (``titânio`` / ``titanium``) are compatible
+    with finish+hue (``titânio preto`` → black). That is missing specificity,
+    not a real conflict — Amazon titles often omit the hue word.
+    """
+    left_n = normalize_variant_value(key, left)
+    right_n = normalize_variant_value(key, right)
+    if left_n == right_n:
+        return True
+    if key == "color":
+        return _colors_compatible(left_n, right_n, left, right)
+    return False
+
+
+_FINISH_ONLY_COLORS = frozenset({"titanium"})
+_FINISH_HUE_COLORS = frozenset({"black", "white", "gray"})
+
+
+def _colors_compatible(
+    left_n: str, right_n: str, left_raw: str, right_raw: str
+) -> bool:
+    """True when colors are the same family with incomplete evidence on one side."""
+    if left_n == right_n:
+        return True
+    pair = {left_n, right_n}
+    if pair & _FINISH_ONLY_COLORS and pair & _FINISH_HUE_COLORS:
+        return True
+    # Folded raw prefix: "titanio" ⊂ "titanio preto" (and PT/EN swaps).
+    a = fold_text(left_raw).strip()
+    b = fold_text(right_raw).strip()
+    if a and b and (a in b or b in a):
+        return True
+    return False
 
 
 def variant_key(attrs: dict[str, str]) -> str | None:

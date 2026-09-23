@@ -41,6 +41,15 @@ def _utcnow() -> datetime:
     return datetime.now(UTC)
 
 
+def _as_utc(value: datetime | None) -> datetime | None:
+    """Normalize DB/SQLite naive timestamps to aware UTC for duration math."""
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
+
+
 def sanitize_error_message(message: str | None, *, max_len: int = 400) -> str | None:
     if not message:
         return None
@@ -59,18 +68,37 @@ def format_duration_hms(total_ms: int | None) -> str:
     return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
 
+# Prefer stores with reliable public PDP scrape for Match Run reference.
+# Low scores (Shopping China, etc.) still usable as fallback when alone.
+_REFERENCE_STORE_PRIORITY: dict[str, int] = {
+    "kabum": 100,
+    "amazon_br": 95,
+    "amazon": 90,
+    "magazineluiza": 85,
+    "magalu": 85,
+    "pichau": 80,
+    "terabyte": 80,
+    "terabyteshop": 80,
+    "nissei": 75,
+    "bestbuy": 55,
+    "shoppingchina": 25,
+    "mercadolivre": 15,
+    "shopee": 15,
+}
+
+
 def select_reference_url_for_product(session: Session, product_id: UUID) -> str | None:
-    """Pick a durable listing URL for match — same scoring idea as PriceScout."""
+    """Pick a durable listing URL for match — prefer scrape-reliable stores."""
     listings = MatchingRepository(session).list_listings_for_canonical(product_id)
     active = [row for row in listings if (row.status or "").lower() == "active"]
     pool = active or list(listings)
 
     def _score(listing: StoreListing) -> int:
-        score = 10
-        if listing.url:
-            score += 2
+        score = _REFERENCE_STORE_PRIORITY.get((listing.store or "").lower(), 40)
         if listing.canonical_url:
             score += 3
+        elif listing.url:
+            score += 2
         return score
 
     pool.sort(key=_score, reverse=True)
@@ -180,7 +208,7 @@ class MatchRunService:
         stores_completed: int,
     ) -> UserNotification | None:
         now = _utcnow()
-        started = run.started_at or now
+        started = _as_utc(run.started_at) or now
         duration_ms = int((now - started).total_seconds() * 1000)
         run.status = "completed"
         run.finished_at = now
@@ -207,7 +235,7 @@ class MatchRunService:
         message: str,
     ) -> UserNotification | None:
         now = _utcnow()
-        started = run.started_at or now
+        started = _as_utc(run.started_at) or now
         duration_ms = int((now - started).total_seconds() * 1000)
         run.status = "failed"
         run.finished_at = now

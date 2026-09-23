@@ -25,7 +25,11 @@ No FX conversion in spiders.
 - SERP US: `https://www.amazon.com/s?k={query}`
 - Parser: shared `parse_amazon_search_results` over `s-search-result` cards
   (`data-asin`)
-- Used by `POST /match` (ADR 0019 / ADR 0024)
+- Used by `POST /match` and durable Match Runs (ADR 0019 / ADR 0024 / ADR 0036)
+- **Color finish vs hue:** bare SERP/PDP labels like ``Titânio`` / ``Titanium``
+  are treated as *missing hue specificity*, not as a conflict against
+  ``Titânio Preto`` / Titanium Black (MISSING ≠ CONFLICT). Real conflicts remain
+  (ex.: Titânio Preto vs Titânio Branco).
 - **Query forms matter more than anti-bot on BR:** compact tokens like
   `mzv9s1t0bam` / `990evoplus` often return sibling SKUs (990 PRO, 870 EVO).
   Matching builds SERP queries as `GTIN → MZ-V9S1T0B/AM (display MPN) →

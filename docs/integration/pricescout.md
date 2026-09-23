@@ -137,10 +137,18 @@ Regras:
 
 - A busca **não** pertence à página React; sair/reload não cancela a Run.
 - No máximo uma Run `pending|running` por produto (índice único parcial).
-- `reference_url` é resolvida no backend a partir das listings do produto.
+- `reference_url` é resolvida no backend a partir das listings do produto,
+  priorizando lojas com scrape de PDP mais confiável (ex.: Kabum/Amazon/Magalu
+  antes de Shopping China). Se o scrape da referência falhar, o worker faz
+  fallback para identidade canônica (`title`/`brand`/`model`) e segue o Match.
+- Com `compose.yaml`, o serviço `match-runner` é o worker canônico; o scheduler
+  in-process da API fica desligado por padrão (`API_MATCH_RUN_WORKER_ENABLED=false`).
 - A loja de referência **não** entra na descoberta (“outras lojas”).
 - `SEARCH_UNSUPPORTED` → store status `error` (nunca `no_match`).
 - Labels: `store_display_name` / `GET /stores.display_name` — não renderizar slug.
+  Ownership dos display labels de enums (`auto_match`, status de run, tipos de
+  notificação, etc.) é do **frontend** (`PriceScout/utils/display/`); a API
+  permanece language-neutral. Nunca renderizar snake_case/IDs técnicos na UI.
 - Toast ≠ Notification Center ≠ banner ≠ log detalhado.
 - Proibido `alert()` / `confirm()` / `prompt()` nesse fluxo (PriceScout).
 

@@ -47,7 +47,9 @@ def test_long_smartphone_title_builds_identity_queries_not_raw_title() -> None:
         identity_reference_item(title, brand="Samsung", category="smartphone")
     )
     queries = build_search_queries(identity)
-    assert queries[0] == "samsung galaxy s25 ultra 256gb"
+    # Progressive ladder: family first, then capacity (ADR 0033 / Magento SERPs).
+    assert queries[0] == "samsung galaxy s25 ultra"
+    assert "samsung galaxy s25 ultra 256gb" in queries
     assert title not in queries
     assert any("titanium black" in q or "black" in q for q in queries)
 

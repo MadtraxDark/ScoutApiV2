@@ -272,3 +272,139 @@ def test_notification_unread_and_mark_read(session: Session) -> None:
     service.mark_read(row.id, user_id=user_id)
     session.commit()
     assert service.unread_count(user_id) == 0
+
+
+def test_select_reference_url_prefers_reliable_store(session: Session) -> None:
+    from scout_api.modules.matching.match_run_service import (
+        select_reference_url_for_product,
+    )
+
+    principal = _principal()
+    product = CanonicalProduct(
+        title="Samsung Galaxy S25 Ultra 256GB",
+        brand="Samsung",
+        model="Galaxy S25 Ultra",
+        owner_user_id=principal.id,
+    )
+    session.add(product)
+    session.flush()
+    session.add(
+        StoreListing(
+            canonical_product_id=product.id,
+            store="shoppingchina",
+            country="PY",
+            product_id="sc-1",
+            url="https://www.shoppingchina.com.py/producto/a",
+            canonical_url="https://www.shoppingchina.com.py/producto/a",
+            match_decision="auto_match",
+            confidence=1,
+            status="active",
+            title=product.title,
+        )
+    )
+    session.add(
+        StoreListing(
+            canonical_product_id=product.id,
+            store="kabum",
+            country="BR",
+            product_id="703054",
+            url="https://www.kabum.com.br/produto/703054",
+            canonical_url="https://www.kabum.com.br/produto/703054",
+            match_decision="auto_match",
+            confidence=1,
+            status="active",
+            title=product.title,
+        )
+    )
+    session.commit()
+    url = select_reference_url_for_product(session, product.id)
+    assert url is not None
+    assert "kabum.com.br" in url
+
+
+def test_process_claimed_run_commits_before_match_and_persists_outcome(
+    session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Worker must not hold product_match_runs row lock during long match."""
+    from scout_api.core.config import Settings
+    from scout_api.modules.matching import match_run_worker as worker_mod
+    from scout_api.modules.matching.identity import identity_reference_item
+    from scout_api.modules.matching.match_run_worker import process_claimed_run
+    from scout_api.modules.matching.models import MatchStoreRun
+    from scout_api.modules.matching.schemas import MatchResponse
+
+    principal = _principal()
+    product = _product(session, owner=principal.id)
+    run = ProductMatchRun(
+        product_id=product.id,
+        status="running",
+        requested_by=principal.id,
+        reference_url="https://www.kabum.com.br/produto/123",
+        started_at=datetime.now(UTC),
+        last_activity_at=datetime.now(UTC),
+        worker_id="test-worker",
+        attempts=1,
+    )
+    session.add(run)
+    session.commit()
+    run_id = run.id
+    bind = session.get_bind()
+
+    def fake_execute(
+        sess: Session,
+        *,
+        run_id: object,
+        product_id: object,
+        reference_url: str,
+        on_store_outcome: object,
+    ) -> MatchResponse:
+        del sess, product_id, reference_url, run_id
+        on_store_outcome(  # type: ignore[operator]
+            worker_mod.MatchStoreOutcome(
+                store="amazon",
+                display_name="Amazon",
+                status="match",
+                duration_ms=100,
+                queries=("Samsung Galaxy S25 Ultra 256GB",),
+                candidates_found=1,
+                candidates_evaluated=1,
+                search_duration_ms=50,
+                candidate_fetch_duration_ms=40,
+                matched_url="https://www.amazon.com.br/dp/B0DSYJCY45",
+                matched_title="Samsung Galaxy S25 Ultra",
+            )
+        )
+        reference = identity_reference_item(
+            "Samsung Galaxy S25 Ultra",
+            brand="Samsung",
+            model="Galaxy S25 Ultra",
+        )
+        return MatchResponse(
+            reference=reference,
+            matches=[],
+            unmatched_stores=[],
+            errors=[],
+        )
+
+    def _factory() -> Session:
+        return sessionmaker(bind=bind, expire_on_commit=False)()
+
+    monkeypatch.setattr(worker_mod, "_execute_match_for_run", fake_execute)
+    monkeypatch.setattr(worker_mod, "get_session_factory", lambda: _factory)
+
+    settings = Settings(
+        match_run_worker_enabled=True,
+        match_run_lease_seconds=600,
+        match_run_max_attempts=3,
+    )
+    row = session.get(ProductMatchRun, run_id)
+    assert row is not None
+    process_claimed_run(session, row, worker_id="test-worker", settings=settings)
+    session.commit()
+
+    fresh = session.get(ProductMatchRun, run_id)
+    assert fresh is not None
+    assert fresh.status == "completed"
+    store_runs = list(session.query(MatchStoreRun).filter_by(run_id=run_id).all())
+    assert len(store_runs) == 1
+    assert store_runs[0].status == "match"
