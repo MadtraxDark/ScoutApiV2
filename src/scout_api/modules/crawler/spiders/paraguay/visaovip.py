@@ -11,10 +11,11 @@ from urllib.parse import urljoin, urlparse
 
 from scrapy.http import Response
 
-from ...core.exceptions import ParseError
+from ...core.exceptions import MissingPriceError, ParseError
 from ...core.fingerprints import canonicalize_url
 from ...models.product import ProductDetails, ProductOffer
 from ...models.search import SearchCandidate
+from ...utils.parsing import parse_money
 from ...utils.product_attributes import (
     format_identity_variant,
     merge_specification_gaps,
@@ -70,6 +71,16 @@ _SOFT_404_TITLE = re.compile(
     r"produto\s*-\s*vis[aã]ovip",
     re.IGNORECASE,
 )
+# Hero U$ amount followed by storefront companion G$ / R$ (not our FX).
+_DISPLAY_PRICE_BLOCK = re.compile(
+    r"U\$\s*(?P<usd>[\d.,]+)\s*</[^>]+>"
+    r".{0,600}?"
+    r"G\$\s*(?P<pyg>[\d.]+)"
+    r".{0,200}?"
+    r"R\$\s*(?P<brl>[\d.,]+)",
+    re.DOTALL | re.IGNORECASE,
+)
+_OG_CURRENCY_CODES = frozenset({"USD", "BRL", "PYG", "EUR"})
 
 
 class VisaoVipSpider(BaseStoreSpider):
@@ -176,9 +187,29 @@ class VisaoVipSpider(BaseStoreSpider):
                 Decimal("0.01")
             )
 
+        currency, currency_source = self._offer_currency(response)
         availability, availability_source = self._availability(response, product)
         sku, sku_source = self._sku(product)
         seller = self._seller(response)
+        display_prices, display_source = self._display_prices(response, price)
+
+        metadata: dict[str, Any] = {
+            "shipping_to_brazil": False,
+            "source": {
+                "product_data": "rsc-flight",
+                "price": price_source,
+                "original_price": original_source,
+                "pix_price": "not-found",
+                "installment": "not-found",
+                "currency": currency_source,
+                "display_prices": display_source,
+                "availability": availability_source,
+                "seller": "storefront-direct" if seller else "not-found",
+                "sku": sku_source,
+            },
+        }
+        if display_prices:
+            metadata["display_prices"] = display_prices
 
         return ProductOffer(
             store=self.store,
@@ -188,7 +219,7 @@ class VisaoVipSpider(BaseStoreSpider):
             seller=seller,
             url=response.url,
             canonical_url=canonicalize_url(response.url),
-            currency=self.currency,
+            currency=currency,
             price=price,
             pix_price=None,
             original_price=original_price,
@@ -197,18 +228,7 @@ class VisaoVipSpider(BaseStoreSpider):
             installment_count=None,
             availability=availability,
             available=availability == "available",
-            metadata={
-                "shipping_to_brazil": False,
-                "source": {
-                    "price": price_source,
-                    "original_price": original_source,
-                    "pix_price": "not-found",
-                    "installment": "not-found",
-                    "availability": availability_source,
-                    "seller": "storefront-direct" if seller else "not-found",
-                    "sku": sku_source,
-                },
-            },
+            metadata=metadata,
         )
 
     def extract_details(self, response: Response) -> ProductDetails:
@@ -413,6 +433,57 @@ class VisaoVipSpider(BaseStoreSpider):
             return promo, None, "product-promotion-price", "not-found"
 
         return list_price, None, "product-price-state", "not-found"
+
+    def _offer_currency(self, response: Response) -> tuple[str, str]:
+        """Prefer Open Graph currency when present; otherwise spider default (USD)."""
+        og = (
+            (
+                response.css(
+                    "meta[property='product:price:currency']::attr(content)"
+                ).get()
+                or ""
+            )
+            .strip()
+            .upper()
+        )
+        if og in _OG_CURRENCY_CODES:
+            return og, "og-price-currency"
+        return self.currency, "store-default"
+
+    def _display_prices(
+        self, response: Response, primary_usd: Decimal
+    ) -> tuple[dict[str, str] | None, str]:
+        """Capture storefront G$/R$ companions shown next to the primary U$ price.
+
+        These are Visão VIP display conversions (not ScoutApiV2 FX). Never used
+        as ``price``/``currency``. Pix is not exposed on this storefront.
+        """
+        html = response.text or ""
+        if not html:
+            return None, "not-found"
+
+        target = primary_usd.quantize(Decimal("0.01"))
+        for match in _DISPLAY_PRICE_BLOCK.finditer(html):
+            try:
+                usd = parse_money(match.group("usd"), "USD").quantize(Decimal("0.01"))
+            except MissingPriceError:
+                continue
+            if usd != target:
+                continue
+            extras: dict[str, str] = {}
+            try:
+                pyg = parse_money(match.group("pyg"), "PYG")
+                extras["PYG"] = format(pyg, "f")
+            except MissingPriceError:
+                pass
+            try:
+                brl = parse_money(match.group("brl"), "BRL")
+                extras["BRL"] = format(brl, "f")
+            except MissingPriceError:
+                pass
+            if extras:
+                return extras, "pdp-html-companion"
+        return None, "not-found"
 
     def _money(self, raw: Any, *, required: bool) -> Decimal:
         value = self._optional_money(raw)

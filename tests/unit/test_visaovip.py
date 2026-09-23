@@ -69,8 +69,11 @@ def test_visaovip_offer_identity_price_and_availability() -> None:
     assert offer.canonical_url.endswith("55359")
     assert offer.metadata["shipping_to_brazil"] is False
     assert offer.metadata["source"]["price"] == "product-price-state"
+    assert offer.metadata["source"]["pix_price"] == "not-found"
+    assert offer.metadata["source"]["product_data"] == "rsc-flight"
     assert offer.metadata["source"]["availability"] == "product-balance-state"
     assert offer.metadata["source"]["sku"] == "product-specifications"
+    assert "display_prices" not in offer.metadata
 
 
 def test_visaovip_discount_uses_promotion_as_current_price() -> None:
@@ -81,8 +84,26 @@ def test_visaovip_discount_uses_promotion_as_current_price() -> None:
     assert offer.price == Decimal("91.00")
     assert offer.original_price == Decimal("98.00")
     assert offer.discount_percentage == Decimal("7.14")
+    assert offer.pix_price is None
     assert offer.metadata["source"]["price"] == "product-promotion-price"
     assert offer.metadata["source"]["original_price"] == "product-price-state"
+
+
+def test_visaovip_display_prices_from_pdp_html_companions() -> None:
+    offer = VisaoVipSpider().extract_offer(
+        response_from_fixture("product_display_prices.html")
+    )
+    assert offer.currency == "USD"
+    assert offer.price == Decimal("889.00")
+    assert offer.pix_price is None
+    assert offer.metadata["display_prices"] == {
+        "PYG": "6160770",
+        "BRL": "4633.58",
+    }
+    assert offer.metadata["source"]["display_prices"] == "pdp-html-companion"
+    # Companions must never replace primary offer fields.
+    assert offer.currency != "BRL"
+    assert offer.currency != "PYG"
 
 
 def test_visaovip_details_brand_model_specs_and_title_fallback_reuse() -> None:
@@ -187,9 +208,7 @@ def test_visaovip_build_search_url_uses_termo_slug() -> None:
     spider = VisaoVipSpider()
     assert spider.supports_search is True
     url = spider.build_search_url("ASUS TUF Gaming B650M-E WIFI")
-    assert url == (
-        "https://www.visaovip.com/busca/termo/ASUS-TUF-Gaming-B650M-E-WIFI/"
-    )
+    assert url == ("https://www.visaovip.com/busca/termo/ASUS-TUF-Gaming-B650M-E-WIFI/")
     # Hyphenated model tokens survive whitespace→hyphen slugification.
     assert "B650M-E" in url
     assert "?q=" not in url
@@ -211,6 +230,46 @@ def test_visaovip_parse_search_results_extracts_product_cards() -> None:
     assert candidates[1].product_id == "54574"
     # CDN image path must not appear as a candidate.
     assert all("/595465" not in (c.url or "") for c in candidates)
+
+
+def test_visaovip_search_candidate_url_accepted_by_pdp_parser() -> None:
+    """Contract: SERP candidate URL shape is parseable by PDP extractors."""
+    spider = VisaoVipSpider()
+    serp = response_from_fixture(
+        "search_termo_board.html",
+        "https://www.visaovip.com/busca/termo/ASUS-TUF-Gaming-B650M-E-WIFI/",
+    )
+    candidates = spider.parse_search_results(serp)
+    assert candidates
+    candidate = candidates[0]
+    pdp = response_from_fixture("product_motherboard.html", candidate.url)
+    offer = spider.extract_offer(pdp)
+    details = spider.extract_details(pdp)
+    assert offer.product_id == candidate.product_id
+    assert details.product_id == candidate.product_id
+    assert offer.currency == "USD"
+    assert offer.price > 0
+
+
+def test_visaovip_search_parser_independent_of_broken_pdp_fixture() -> None:
+    spider = VisaoVipSpider()
+    serp = response_from_fixture(
+        "search_termo_board.html",
+        "https://www.visaovip.com/busca/termo/ASUS-TUF-Gaming-B650M-E-WIFI/",
+    )
+    candidates = spider.parse_search_results(serp)
+    assert len(candidates) == 2
+    broken = HtmlResponse(
+        url="https://www.visaovip.com/prod/x/y/1/",
+        body=(b"<html><head><title>Produto - Visaovip</title></head>"
+        b"<body></body></html>"),
+        encoding="utf-8",
+        request=Request("https://www.visaovip.com/prod/x/y/1/"),
+    )
+    with pytest.raises(ParseError):
+        spider.extract_offer(broken)
+    # Search still works after PDP failure on a different response.
+    assert len(spider.parse_search_results(serp)) == 2
 
 
 def test_visaovip_motherboard_details_identity_and_usd_price() -> None:

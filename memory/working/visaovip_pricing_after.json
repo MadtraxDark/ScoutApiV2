@@ -1,0 +1,182 @@
+{
+  "phase": "after",
+  "adata_crawl": {
+    "ms": 10257,
+    "product_id": "43764",
+    "sku": "AX4U32008G16A-SBKD35G",
+    "title": "Memória RAM ADATA XPG Spectrix D35G DDR4 8GB 3200MHz RGB - Preto (AX4U32008G16A-SBKD35G)",
+    "brand": "ADATA",
+    "model": "XPG Spectrix D35G",
+    "currency": "USD",
+    "price": "79.00",
+    "pix_price": null,
+    "original_price": null,
+    "images_count": 4,
+    "display_prices": {
+      "PYG": "547470",
+      "BRL": "412.38"
+    },
+    "source": {
+      "product_data": "rsc-flight",
+      "price": "product-price-state",
+      "original_price": "not-found",
+      "pix_price": "not-found",
+      "installment": "not-found",
+      "currency": "og-price-currency",
+      "display_prices": "pdp-html-companion",
+      "availability": "product-balance-state",
+      "seller": "storefront-direct",
+      "sku": "product-specifications",
+      "title": "product-flight-state",
+      "description": "product-flight-state",
+      "specifications": "product-flight-state",
+      "brand": "product-specifications",
+      "model": "product-title-fallback",
+      "gtin": "not-found",
+      "images": "product-gallery-state",
+      "color": "product-specifications",
+      "storage": "product-specifications",
+      "ram": "product-specifications",
+      "vram": "product-specifications",
+      "capacity": "product-specifications",
+      "voltage": "product-specifications",
+      "memory_type": "product-specifications",
+      "frequency": "product-title-fallback",
+      "cas_latency": "product-specifications",
+      "module_capacity": "product-specifications",
+      "cores": "product-specifications",
+      "form_factor": "product-specifications",
+      "category": "ram"
+    }
+  },
+  "offer_refresh": {
+    "ms": 3764,
+    "price": "79.00",
+    "currency": "USD",
+    "pix_price": null,
+    "display_prices": {
+      "PYG": "547470",
+      "BRL": "412.38"
+    }
+  },
+  "match_serp": {
+    "ms": 4107,
+    "count": 1,
+    "gt_discovered": true,
+    "candidates": [
+      {
+        "title": "Placa Mãe ASUS TUF Gaming B650M-E Wi-Fi Socket AM5 / DDR5",
+        "url": "https://www.visaovip.com/prod/placas-mae-amd/placa-mae-asus-tuf-gaming-b650m-e-wi-fi-socket-am5-ddr5/41749/",
+        "product_id": "41749"
+      }
+    ]
+  },
+  "multi_category_serp": [
+    {
+      "category": "memory",
+      "query": "Kingston Fury DDR5",
+      "ms": 4205,
+      "count": 5,
+      "error": null,
+      "first_url": "https://www.visaovip.com/prod/memoria-ram-pc/memoria-ram-kingston-fury-renegade-ddr5-32gb-2x16gb-6400mhz-rgb-preto-prata-kf564c32rsak2-32/58835/",
+      "first_id": "58835"
+    },
+    {
+      "category": "motherboard",
+      "query": "ASUS TUF Gaming B650M-E WIFI",
+      "ms": 4202,
+      "count": 1,
+      "error": null,
+      "first_url": "https://www.visaovip.com/prod/placas-mae-amd/placa-mae-asus-tuf-gaming-b650m-e-wi-fi-socket-am5-ddr5/41749/",
+      "first_id": "41749"
+    },
+    {
+      "category": "cpu",
+      "query": "Ryzen 7 5800X3D",
+      "ms": 3737,
+      "count": 1,
+      "error": null,
+      "first_url": "https://www.visaovip.com/prod/processador-cpu-amd/processador-amd-ryzen-7-5800x3d-10th-anniversary-edition-socket-am4-3-4ghz-100mb/59017/",
+      "first_id": "59017"
+    },
+    {
+      "category": "gpu",
+      "query": "RTX 5070",
+      "ms": 4403,
+      "count": 5,
+      "error": null,
+      "first_url": "https://www.visaovip.com/prod/notebook/notebook-gamer-alienware-16-aurora-lac16250-9346blu-pus-intel-core-9-270h-tela-2-5k-16-0-32gb-de-ram-1tb-ssd-win11home-geforce-rtx5070-8gb-azul-ingles/59712/",
+      "first_id": "59712"
+    },
+    {
+      "category": "ssd",
+      "query": "Samsung 990 PRO",
+      "ms": 3558,
+      "count": 3,
+      "error": null,
+      "first_url": "https://www.visaovip.com/prod/ssd-m-2-nvme/ssd-samsung-m-2-4tb-990-pro-nvme-mz-v9p4t0b-am/48987/",
+      "first_id": "48987"
+    }
+  ],
+  "multi_category_pdp": [
+    {
+      "category": "memory",
+      "ms": 3382,
+      "product_id": "58835",
+      "price": "630.00",
+      "currency": "USD",
+      "pix_price": null,
+      "display_prices": null,
+      "error": null
+    },
+    {
+      "category": "motherboard",
+      "ms": 9497,
+      "product_id": "41749",
+      "price": "171.00",
+      "currency": "USD",
+      "pix_price": null,
+      "display_prices": {
+        "PYG": "1185030",
+        "BRL": "892.62"
+      },
+      "error": null
+    },
+    {
+      "category": "cpu",
+      "ms": 4201,
+      "product_id": "59017",
+      "price": "378.00",
+      "currency": "USD",
+      "pix_price": null,
+      "display_prices": {
+        "PYG": "2619540",
+        "BRL": "1973.16"
+      },
+      "error": null
+    },
+    {
+      "category": "gpu",
+      "ms": 3607,
+      "product_id": "59712",
+      "price": "2190.00",
+      "currency": "USD",
+      "pix_price": null,
+      "display_prices": null,
+      "error": null
+    },
+    {
+      "category": "ssd",
+      "ms": 3681,
+      "product_id": "48987",
+      "price": "848.00",
+      "currency": "USD",
+      "pix_price": null,
+      "display_prices": {
+        "PYG": "5876640",
+        "BRL": "4426.56"
+      },
+      "error": null
+    }
+  ]
+}

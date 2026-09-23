@@ -6,6 +6,9 @@
 - Domains: `visaovip.com`, `www.visaovip.com`
 - Ciudad del Este storefront; prices advertised as `U$` (USD)
 - UI locales: `pt-BR` (default) and `es`
+- Storefront also shows companion `G$` (PYG, IVA) and `R$` (BRL) next to
+  the primary U$ — these are **display conversions of the store**, not
+  ScoutApiV2 FX and not Pix/card payment methods
 
 ## Identifiers
 
@@ -22,6 +25,8 @@
 - Open Graph support: `product:price:amount` / `product:price:currency=USD`,
   `og:availability`
 - No `__NEXT_DATA__`, no JSON-LD Product, no public product API used
+- Companion G$/R$ when present on the PDP HTML → `metadata.display_prices`
+  (`PYG` / `BRL` as decimal strings). Never overwrite `price` / `currency`
 
 ## Details source
 
@@ -44,14 +49,24 @@
 
 ## Pricing semantics
 
-- No promotion (`productPromotionPrice` is `0` / falsy):
-  - `price` = `productPrice`
-  - `original_price` = null
-- Promotion (`isProductPromotion` and `productPromotionPrice` > 0):
-  - `price` = `productPromotionPrice` (highlighted card price)
-  - `original_price` = `productPrice` (strikethrough) when greater than promo
-- `pix_price` / installments: **not exposed** in the structured payload → null
+- Primary offer is always the storefront **U$** amount:
+  - No promotion (`productPromotionPrice` is `0` / falsy):
+    - `price` = `productPrice`
+    - `original_price` = null
+  - Promotion (`isProductPromotion` and `productPromotionPrice` > 0):
+    - `price` = `productPromotionPrice` (highlighted card price)
+    - `original_price` = `productPrice` (strikethrough) when greater than promo
+- `currency`: prefer Open Graph `product:price:currency` when present;
+  otherwise `USD` (store default)
+- `pix_price` / installments: **not exposed** by Visão VIP → always null
+  (do **not** invent Pix from card/USD/BRL companions)
+- Companion `G$` / `R$` on the PDP → `metadata.display_prices` only
+  (source `pdp-html-companion`). These are **not** Pix and must not be mapped
+  to Brazilian “PREÇO NO PIX / PREÇO NO CARTÃO” UI slots as if they were
+  payment-method prices
 - Discount percentage derived only when both current and original exist
+- **No FX conversion** inside the spider (USD→BRL stays in the exchange
+  subsystem via `converted_price_brl`)
 
 ## Availability semantics
 
@@ -66,12 +81,24 @@
 
 - Direct storefront (not marketplace)
 - `seller` from `og:site_name` (typically `Visaovip`), else `Visãovip`
+- Display label for UI: store config `display_name="Visão VIP"` (not the spider)
 
 ## Fetch strategy
 
-- Default Camoufox + Proxy Cost Mode (`FALLBACK`)
-- Initial HTML already carries the RSC product payload; no store-specific
-  fetch layer. Plain HTTP with a normal UA also returns the flight data.
+- Default Camoufox + Proxy Cost Mode (`FALLBACK`) for general store fetch
+- **PDP:** initial HTML already carries the RSC product payload; plain HTTP
+  with a normal UA returns the flight data (HTTP-first is sufficient for offer)
+- **SERP:** shell HTTP often incomplete → Camoufox settle still required
+
+## Search vs PDP (do not conflate)
+
+| Layer | Responsibility |
+|---|---|
+| Search | `build_search_url` + `parse_search_results` → candidates |
+| PDP | `extract_offer` / `extract_details` / `extract_images` |
+| Identity / Match | shared `ProductIdentity` + `MatchingEngine` (not store-specific) |
+
+Fixing PDP pricing must not change Search query generation or matcher thresholds.
 
 ## Live search (matching)
 
@@ -96,9 +123,10 @@
 
 ## Important invariants
 
-- `country=PY` + `currency=USD` (do not convert FX in the spider)
+- `country=PY` + primary `currency=USD` (do not convert FX in the spider)
 - Do not treat soft-404 / incomplete flight as out of stock
 - Do not invent Pix or installment values
+- Companion G$/R$ stay in `metadata.display_prices` only
 
 ## Known limitations
 
@@ -106,9 +134,13 @@
 - GTIN often absent
 - Broad term queries (`B650M-E WIFI`) can return Wi-Fi adapters / sibling
   boards — progressive identity queries + matcher precision handle this
+- Frontend BR price cards (Pix / cartão) may show empty Pix when `pix_price`
+  is correctly null; primary USD may appear under a “cartão” label depending
+  on UI mapping — that is presentation, not a store Pix field
 
 ## Tests / fixtures
 
 - `tests/fixtures/visaovip/` — PDP + SERP (`search_termo_board.html`,
-  `product_motherboard.html`)
-- `tests/unit/test_visaovip.py` — offer/details/search URL + SERP parser
+  `product_motherboard.html`, `product_display_prices.html`)
+- `tests/unit/test_visaovip.py` — offer/details/search URL + SERP parser +
+  display_prices + Search↔PDP contract
