@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime
 from decimal import Decimal
 
@@ -1824,3 +1825,200 @@ def test_phone_wearable_kit_is_bundle_reject() -> None:
         "samsung galaxy s25 ultra 256gb titanio preto",
     )
     assert ranked[0].product_id == "238922200"
+
+
+# --- Motherboard long commercial title: SEARCH recall + MATCH precision ------
+
+_MB_LONG_TITLE = (
+    "Placa Mae Asus Tuf Gaming B650M-E WIFI, DDR5, Socket AMD AM5, "
+    "M-ATX, Chipset AMD B650, TUF-GAMING-B650M-E-WIFI"
+)
+
+
+def test_motherboard_long_title_queries_are_compact_not_raw() -> None:
+    """Raw commercial title must not drive SERP; prefer board identity ladder."""
+    identity = identity_from_price_item(
+        _item(
+            title=_MB_LONG_TITLE,
+            brand="Asus",
+            store="pichau",
+            product_id="mb-ref",
+            url="https://www.pichau.com.br/mb-ref",
+            canonical_url="https://www.pichau.com.br/mb-ref",
+        )
+    )
+    queries = build_search_queries(identity)
+    assert queries, "expected progressive queries"
+    assert not any(q.casefold() == _MB_LONG_TITLE.casefold() for q in queries)
+    # Must not collapse to brand-only / brand+wifi noise (live false-negative path).
+    assert "asus" not in {q.casefold() for q in queries}
+    assert "asus wifi" not in {q.casefold() for q in queries}
+    joined = " | ".join(q.casefold() for q in queries)
+    assert "b650m" in joined
+    assert any("wifi" in q.casefold() for q in queries)
+    # Strong identifier from manufacturer PN when present in title.
+    assert any("tuf-gaming-b650m-e-wifi" in q.casefold() for q in queries)
+
+
+def test_motherboard_wifi_variant_is_not_color_gate() -> None:
+    """Bare WiFi commercial variant must not become color=wifi (Kabum reject)."""
+    ref = identity_from_price_item(
+        _item(
+            title=_MB_LONG_TITLE,
+            brand="Asus",
+            variant="WiFi",
+            store="pichau",
+            product_id="mb-ref",
+            url="https://www.pichau.com.br/mb-ref",
+            canonical_url="https://www.pichau.com.br/mb-ref",
+        )
+    )
+    assert ref.variant_attrs.get("color") != "wifi"
+    assert "wifi" not in (ref.variant_attrs.get("color") or "")
+
+    cand = identity_from_price_item(
+        _item(
+            title=(
+                "Placa-Mãe ASUS TUF Gaming B650M-E, WIFI, AMD AM5, B650, "
+                "DDR5, Preto - 90MB1FV0-M0EAY0"
+            ),
+            brand="ASUS",
+            store="kabum",
+            product_id="523145",
+            url="https://www.kabum.com.br/produto/523145/placa",
+            canonical_url="https://www.kabum.com.br/produto/523145/placa",
+        )
+    )
+    score = MatchingEngine().score(ref, cand)
+    assert score.decision == "auto_match"
+    assert not any(r.code == "variant_mismatch" for r in score.reasons)
+
+
+def test_motherboard_short_title_missing_specs_still_matches() -> None:
+    """Missing DDR5/AM5/M-ATX on candidate title is unknown, not conflict."""
+    ref = identity_from_price_item(
+        _item(
+            title=_MB_LONG_TITLE,
+            brand="Asus",
+            store="pichau",
+            product_id="mb-ref",
+            url="https://www.pichau.com.br/mb-ref",
+            canonical_url="https://www.pichau.com.br/mb-ref",
+        )
+    )
+    cand = identity_from_price_item(
+        _item(
+            title="ASUS TUF GAMING B650M-E WIFI",
+            brand="ASUS",
+            store="kabum",
+            product_id="cand-short",
+            url="https://www.kabum.com.br/produto/cand-short/placa",
+            canonical_url="https://www.kabum.com.br/produto/cand-short/placa",
+        )
+    )
+    score = MatchingEngine().score(ref, cand)
+    assert score.decision == "auto_match"
+
+
+def test_motherboard_near_neighbor_model_rejects() -> None:
+    """B650M-E must not auto-match B650M-PLUS / B650M-A."""
+    ref = identity_from_price_item(
+        _item(
+            title=_MB_LONG_TITLE,
+            brand="Asus",
+            store="pichau",
+            product_id="mb-ref",
+            url="https://www.pichau.com.br/mb-ref",
+            canonical_url="https://www.pichau.com.br/mb-ref",
+        )
+    )
+    engine = MatchingEngine()
+    for bad_title, pid in (
+        ("ASUS TUF GAMING B650M-PLUS WIFI", "plus"),
+        ("ASUS PRIME B650M-A WIFI", "prime-a"),
+        ("ASUS TUF GAMING B650-PLUS WIFI", "b650-plus"),
+    ):
+        cand = identity_from_price_item(
+            _item(
+                title=bad_title,
+                brand="ASUS",
+                store="kabum",
+                product_id=pid,
+                url=f"https://www.kabum.com.br/produto/{pid}/placa",
+                canonical_url=f"https://www.kabum.com.br/produto/{pid}/placa",
+            )
+        )
+        score = engine.score(ref, cand)
+        assert score.decision == "reject", bad_title
+
+
+def test_motherboard_model_suffix_preserved_in_normalized_title() -> None:
+    """Hyphenated board suffixes (B650M-E) must survive title normalization."""
+    normalized = normalize_title(_MB_LONG_TITLE)
+    assert "b650m" in normalized
+    # Discriminating -E must not be dropped as the stopword "e".
+    assert "b650me" in normalized.replace(" ", "") or "b650m-e" in normalized
+    assert "e" in normalized.split() or "b650me" in normalized.replace(" ", "")
+
+
+def test_motherboard_unitless_ram_slots_are_not_variant_gate() -> None:
+    """Memory slot count (4) must not conflict with DDR5 / capacity strings."""
+    ref = identity_from_price_item(
+        _item(
+            title=_MB_LONG_TITLE,
+            brand="Asus",
+            store="pichau",
+            product_id="mb-ref",
+            url="https://www.pichau.com.br/mb-ref",
+            canonical_url="https://www.pichau.com.br/mb-ref",
+            metadata={"specifications": {"Memória RAM": "4", "Slots": "4"}},
+        )
+    )
+    assert "ram" not in ref.variant_attrs or not re.fullmatch(
+        r"\d{1,2}", ref.variant_attrs.get("ram", "")
+    )
+    cand = identity_from_price_item(
+        _item(
+            title="Placa Mãe Asus Tuf Gaming B650M-E WiFi Socket AM5 DDR5",
+            brand="ASUS",
+            store="magazineluiza",
+            product_id="ml-ok",
+            url="https://www.magazineluiza.com.br/p/ml-ok",
+            canonical_url="https://www.magazineluiza.com.br/p/ml-ok",
+        )
+    )
+    score = MatchingEngine().score(ref, cand)
+    assert score.decision == "auto_match"
+    assert not any(
+        r.code == "variant_mismatch" and "ram" in (r.detail or "") for r in score.reasons
+    )
+
+
+def test_cpu_x3d_suffix_rejects_base_sku() -> None:
+    score = MatchingEngine().score(
+        _identity(
+            brand="amd",
+            model="ryzen75800x3d",
+            title="AMD Ryzen 7 5800X3D",
+        ),
+        _identity(
+            brand="amd",
+            model="ryzen75800x",
+            title="AMD Ryzen 7 5800X",
+        ),
+    )
+    assert score.decision == "reject"
+
+
+def test_motherboard_parse_model_excludes_socket_marketing_tail() -> None:
+    from scout_api.modules.crawler.utils.category_profiles.extra_parsers import (
+        parse_motherboard,
+    )
+
+    parsed = parse_motherboard(_MB_LONG_TITLE, "motherboard")
+    model = (parsed.model or "").casefold()
+    assert "b650m" in model
+    assert "socket" not in model
+    assert "chipset" not in model
+    assert "ddr5" not in model
+    assert "m-atx" not in model and "matx" not in model.replace(" ", "")

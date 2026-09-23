@@ -4,8 +4,12 @@ from __future__ import annotations
 
 import io
 import logging
+import threading
 from typing import Any, Protocol
 
+import google_auth_httplib2
+import googleapiclient.http
+import httplib2
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
@@ -46,7 +50,12 @@ class DriveClientError(RuntimeError):
 
 
 class GoogleDriveClient:
-    """Drive v3 client using offline OAuth refresh token (backend-only)."""
+    """Drive v3 client using offline OAuth refresh token (backend-only).
+
+    Thread-safe for concurrent AVIF workers: httplib2.Http is not thread-safe,
+    so each API request gets its own AuthorizedHttp via requestBuilder
+    (see google-api-python-client thread safety docs).
+    """
 
     def __init__(
         self,
@@ -56,6 +65,7 @@ class GoogleDriveClient:
     ) -> None:
         self._settings = settings or get_settings()
         self._service = service
+        self._service_lock = threading.Lock()
 
     @property
     def root_folder_id(self) -> str:
@@ -100,9 +110,31 @@ class GoogleDriveClient:
     def _drive(self) -> Any:
         if self._service is not None:
             return self._service
-        creds = self._credentials()
-        self._service = build("drive", "v3", credentials=creds, cache_discovery=False)
-        return self._service
+        with self._service_lock:
+            if self._service is not None:
+                return self._service
+            creds = self._credentials()
+
+            def build_request(
+                http: object, *args: object, **kwargs: object
+            ) -> googleapiclient.http.HttpRequest:
+                # Fresh httplib2.Http per request — required under ThreadPoolExecutor.
+                new_http = google_auth_httplib2.AuthorizedHttp(
+                    creds, http=httplib2.Http()
+                )
+                return googleapiclient.http.HttpRequest(new_http, *args, **kwargs)
+
+            authorized_http = google_auth_httplib2.AuthorizedHttp(
+                creds, http=httplib2.Http()
+            )
+            self._service = build(
+                "drive",
+                "v3",
+                http=authorized_http,
+                requestBuilder=build_request,
+                cache_discovery=False,
+            )
+            return self._service
 
     def ensure_folder(self, name: str, *, parent_id: str) -> str:
         """Find or create a folder under parent (drive.file scoped)."""
@@ -133,7 +165,7 @@ class GoogleDriveClient:
                 .execute()
             )
             return str(created["id"])
-        except HttpError as exc:
+        except (HttpError, OSError) as exc:
             raise DriveClientError(f"Falha ao garantir pasta Drive: {exc}") from exc
 
     def upload_bytes(
@@ -156,7 +188,7 @@ class GoogleDriveClient:
                 .execute()
             )
             return str(created["id"])
-        except HttpError as exc:
+        except (HttpError, OSError) as exc:
             raise DriveClientError(f"Falha no upload Drive: {exc}") from exc
 
     def download_bytes(self, file_id: str) -> bytes:
@@ -172,6 +204,8 @@ class GoogleDriveClient:
             if getattr(exc, "resp", None) is not None and exc.resp.status == 404:
                 raise DriveClientError("DRIVE_FILE_NOT_FOUND") from exc
             raise DriveClientError(f"Falha no download Drive: {exc}") from exc
+        except OSError as exc:
+            raise DriveClientError(f"Falha no download Drive: {exc}") from exc
 
     def delete_file(self, file_id: str) -> None:
         """Idempotent delete: missing file is success."""
@@ -182,6 +216,8 @@ class GoogleDriveClient:
             if status == 404:
                 logger.info("Drive file already absent: %s", file_id[:8])
                 return
+            raise DriveClientError(f"Falha ao excluir arquivo Drive: {exc}") from exc
+        except OSError as exc:
             raise DriveClientError(f"Falha ao excluir arquivo Drive: {exc}") from exc
 
 

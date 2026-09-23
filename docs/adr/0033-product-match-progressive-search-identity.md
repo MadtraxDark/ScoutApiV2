@@ -46,16 +46,22 @@ de forma genérica (não hardcode de SKU)?
    `MatchingEngine` preserva precision (variante, sufixo de modelo, GTIN).
 2. `model_search_phrase` emite série comercial **human-spaced** também para
    Galaxy S-series e expande tokens compactados (`galaxys25ultra` →
-   `galaxy s25 ultra`; iPhone compacto idem).
+   `galaxy s25 ultra`; iPhone compacto idem). Para **placas-mãe**, emite
+   família + board code + Wi-Fi (`tuf gaming b650m-e wifi`) e a ladder
+   progressiva evita queries `brand` / `brand + wifi` nascidas de variant
+   Wi-Fi misclassificada como cor.
 3. Ladder progressiva continua: GTIN/MPN → brand+série+storage → série+storage
    → sinônimos de cor → brand+série → janela de título com stopwords de
    marketing (câmera/bateria/AI/celular), **sem** usar o título bruto inteiro
-   como query primária.
+   como query primária. Suffixed board tokens (`B650M-E`) são compactados
+   antes do stopword `e` apagar o discriminante.
 4. Cores marketing compostas (`titânio preto` / `titanium black`) canonicam para
-   a matiz base (`black`) para gates e sinônimos de SERP.
+   a matiz base (`black`) para gates e sinônimos de SERP. Labels `WiFi` /
+   `wireless` **não** entram no gate `color`.
 5. Não introduzir Splink, Elasticsearch, vector DB, embeddings ou LLM nesta
    etapa. Não baixar thresholds do matcher para mascarar falha de retrieval.
-6. Missing ≠ conflict permanece (ADR 0024).
+6. Missing ≠ conflict permanece (ADR 0024). Contagem de slots de memória
+   (`ram=4` unitless) não é gate de variante.
 7. Quando a SERP omite o título do card (Magalu static HTML), usar
    `title_hint_from_url` no slug da PDP para ranking/prefilter — sem inventar
    atributos; o matcher continua baseado no scrape da PDP.

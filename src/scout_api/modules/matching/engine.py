@@ -16,6 +16,7 @@ from scout_api.modules.matching.identity import (
     looks_like_accessory,
     looks_like_bundle,
     models_compatible,
+    motherboard_soft_model_title_exempt,
     token_set_ratio,
     variants_equal,
 )
@@ -294,6 +295,7 @@ class MatchingEngine:
             if title_sim < SOFT_MODEL_TITLE_MIN and not (
                 console_soft_model_title_exempt(reference, candidate)
                 or gpu_soft_model_title_exempt(reference, candidate)
+                or motherboard_soft_model_title_exempt(reference, candidate)
             ):
                 model_soft_ok = False
 

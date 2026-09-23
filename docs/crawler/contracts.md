@@ -90,18 +90,25 @@ ADR: [0011](../adr/0011-offer-vs-product-details.md), [0012](../adr/0012-optiona
   → validated **GTIN** → normalized **MPN** → brand+model (série comercial / MPN
   cruzado no título) → title similarity (cap; never alone for `auto_match`).
   Critical blockers include GPU suffix (`Ti`/`Super`), phone trim (`Pro`/`Max` /
-  `16e`≠`16`), SSD series (`990 evo plus` ≠ `870 evo`), DDR4≠DDR5, and storage
+  `16e`≠`16`), SSD series (`990 evo plus` ≠ `870 evo`), DDR4≠DDR5, **motherboard
+  board SKU** (`B650M-E` ≠ `B650M-PLUS` / `B650M-A`), and storage
   ≥128GB divergente. Soft model compatibility strips marketing/CPU suffixes and
   treats `Slim 3`≡`Slim 3i` (still rejects Intel↔AMD, chassis codes, CPU SKU
   conflicts, and critical suffixes like `pro`/`plus`/`ti`). Soft model matches
-  also require title similarity ≥ 0.75.   Title normalization compacta
-  `128 GB`≡`128gb`, preserva MPN como token único e mapeia cores PT/EN/ES
+  also require title similarity ≥ 0.75, **except** console / GPU / motherboard
+  board-signature agreements (long SEO titles vs short SERP cards). Title
+  normalization compacta
+  `128 GB`≡`128gb`, preserva MPN e **sufixos de board** (`B650M-E`→`b650me`)
+  como token único e mapeia cores PT/EN/ES
   (`Preto`≡`Black`, `Verde-acinzentado`≡`teal`). Variant key aliases
   (`cor`/`colour`→`color`, `armazenamento` / `tamanho`≥128GB→`storage`) keep the
-  color/storage gates active across locales. Opaque store SKUs / MPNs cedem a
-  nomes de família inferidos do título (iPhone, IdeaPad, séries SSD/GPU). When
+  color/storage gates active across locales. **Wi-Fi / wireless** bare variants
+  are connectivity attributes — never mapped onto the `color` gate (missing
+  Wi-Fi mention ≠ conflict). Opaque store SKUs / MPNs cedem a
+  nomes de família inferidos do título (iPhone, IdeaPad, séries SSD/GPU,
+  board codes). When
   metadata maps RAM into `storage`, identity prefers SSD-sized capacities from
-  the title. Placeholder brands (`outros`, Amazon Renewed store) are ignored so
+  the title; **unitless slot counts** (`4`) are ignored as `ram` gates. Placeholder brands (`outros`, Amazon Renewed store) are ignored so
   title brand can win. GPU **edition** (Dual / Shadow 3X / Gaming Trio) is a
   variant key: missing on one side is unknown, not a conflict; Dual ≠ Gaming
   Trio still rejects (ADR 0026). **Form factor:** discrete GPU / graphics card
@@ -109,7 +116,9 @@ ADR: [0011](../adr/0011-offer-vs-product-details.md), [0012](../adr/0012-optiona
   chip (`form_factor_reject`). Decisions: `auto_match` | `review` | `reject`.
 - **Search queries:** `GTIN → display MPN (hyphenated) → brand + spaced series
   + storage → color synonyms (preto/black) → progressive drop → compacted MPN
-  → título`. Compact tokens like `990evoplus` / `mzv9s1t0bam` are weak on Amazon
+  → título`. For **motherboards**, the ladder prefers board identity
+  (`brand + family + B650M-E + wifi` → relax) and never emits brand-only /
+  `brand + wifi` noise from a misclassified Wi-Fi variant. Compact tokens like `990evoplus` / `mzv9s1t0bam` are weak on Amazon
   SERP; `StoreSearchService` also re-ranks cards by query/title/**path** overlap
   (ignora `keywords=` na query-string da Amazon) before the scrape cap.
 - **Trusted GTIN learning:** when an `auto_match` yields a check-digit-valid

@@ -186,6 +186,36 @@ _MPN_PATTERNS: tuple[re.Pattern[str], ...] = (
     # (e.g. G5070-12S3C). Generic alnum+hyphen forms — not store-specific.
     re.compile(r"\b\d{3}-v\d{3}-\d{3}\b"),
     re.compile(r"\bg\d{4}-\d{1,2}[a-z0-9]{2,4}\b"),
+    # Motherboard / board marketing PNs (TUF-GAMING-B650M-E-WIFI) and ASUS
+    # board SKUs (90MB1FV0-M0EAY0). Require a digit so pure marketing phrases
+    # are not treated as identifiers.
+    re.compile(r"\b(?=[a-z0-9-]*\d)[a-z]{2,}(?:-[a-z0-9]{1,16}){2,}\b"),
+    re.compile(r"\b90mb[a-z0-9]+-[a-z0-9]+\b"),
+)
+
+# Bare commercial connectivity labels — never map onto the color variant gate.
+_WIFI_VARIANT_LABELS: frozenset[str] = frozenset(
+    {
+        "wifi",
+        "wi-fi",
+        "wi fi",
+        "wireless",
+        "wifi 6",
+        "wifi 6e",
+        "wifi 7",
+        "wi-fi 6",
+        "wi-fi 6e",
+        "wi-fi 7",
+    }
+)
+
+# Motherboard board-code capture (B650M-E, X670E-PLUS, Z790-A, …).
+_MOTHERBOARD_BOARD_RE = re.compile(
+    r"\b([abzhx]\d{3}m?)\s*-?\s*"
+    r"(plus|pro|gaming|wifi|a|e|f|i|ii|iii)?\b",
+)
+_MOTHERBOARD_FAMILY_RE = re.compile(
+    r"\b(tuf(?:\s+gaming)?|rog(?:\s+strix)?|prime|proart|aorus|mag|mpg|strix)\b",
 )
 
 # When metadata stores RAM as "storage", prefer SSD-sized capacities from title.
@@ -614,6 +644,10 @@ def model_search_phrase(*, model: str | None, title: str | None) -> str | None:
     match = re.search(r"\bideapad\s*slim\s*(\d+i?)\b", blob)
     if match:
         return f"ideapad slim {match.group(1)}"
+    # Motherboards: commercial board code (+ optional family / Wi-Fi).
+    mb_phrase = _motherboard_board_search_phrase(blob)
+    if mb_phrase:
+        return mb_phrase
     # Consoles: expand compacted identity (playstation5digital) for SERP.
     # Omit "slim" from the primary phrase — Shopping China (and similar) treat
     # "slim" as a hard token and return [] / wrong Pro SKUs when combined with
@@ -734,6 +768,84 @@ def _gpu_signature(text: str | None) -> str | None:
         return None
     suffix = match.group(3) or ""
     return f"{match.group(1)}{match.group(2)}{suffix}"
+
+
+def _is_wifi_variant_label(text: str | None) -> bool:
+    if not text:
+        return False
+    folded = re.sub(r"\s+", " ", fold_text(text)).strip()
+    return folded in _WIFI_VARIANT_LABELS
+
+
+def _wifi_presence(text: str | None) -> bool | None:
+    """True/False when Wi-Fi is explicit; None when unknown (missing ≠ conflict)."""
+    folded = fold_text(text or "")
+    if not folded:
+        return None
+    if re.search(r"\bwi-?fi\b|\bwireless\b", folded):
+        return True
+    return None
+
+
+def _motherboard_board_signature(text: str | None) -> str | None:
+    """Compact board SKU (b650me / b650mplus) for equality checks."""
+    folded = fold_text(text or "")
+    if not folded:
+        return None
+    # Prefer hyphenated board codes first (B650M-E, B650M-PLUS).
+    match = re.search(
+        r"\b([abzhx]\d{3}m?)\s*-\s*([a-z0-9]+)\b",
+        folded,
+    )
+    if match:
+        return f"{match.group(1)}{match.group(2)}"
+    match = _MOTHERBOARD_BOARD_RE.search(folded)
+    if not match:
+        return None
+    base = match.group(1)
+    suffix = (match.group(2) or "").strip()
+    if suffix in {"wifi", "gaming"}:
+        suffix = ""
+    return f"{base}{suffix}" if suffix else base
+
+
+def _motherboard_board_search_phrase(text: str | None) -> str | None:
+    """Human-spaced board phrase for SERP (b650m-e wifi)."""
+    folded = fold_text(text or "")
+    if not folded:
+        return None
+    match = re.search(
+        r"\b([abzhx]\d{3}m?)\s*-\s*([a-z0-9]+)\b",
+        folded,
+    )
+    if match:
+        board = f"{match.group(1)}-{match.group(2)}"
+    else:
+        match = _MOTHERBOARD_BOARD_RE.search(folded)
+        if not match:
+            return None
+        base = match.group(1)
+        suffix = (match.group(2) or "").strip()
+        if suffix and suffix not in {"wifi", "gaming"}:
+            board = f"{base}-{suffix}" if len(suffix) > 1 else f"{base}-{suffix}"
+        else:
+            board = base
+    family = _MOTHERBOARD_FAMILY_RE.search(folded)
+    parts: list[str] = []
+    if family:
+        fam = re.sub(r"\s+", " ", family.group(1)).strip()
+        parts.append(fam)
+    parts.append(board)
+    if _wifi_presence(folded):
+        parts.append("wifi")
+    return " ".join(parts)
+
+
+def _motherboard_family_phrase(text: str | None) -> str | None:
+    match = _MOTHERBOARD_FAMILY_RE.search(fold_text(text or ""))
+    if not match:
+        return None
+    return re.sub(r"\s+", " ", match.group(1)).strip()
 
 
 def _gpu_edition_signature(text: str | None) -> str | None:
@@ -927,10 +1039,28 @@ def critical_identity_conflict(
                 _identity_blob(candidate.model, candidate.title)
             ),
         ),
+        (
+            "motherboard",
+            _motherboard_board_signature(
+                _identity_blob(reference.model, reference.title)
+            ),
+            _motherboard_board_signature(
+                _identity_blob(candidate.model, candidate.title)
+            ),
+        ),
     )
     for name, left, right in checks:
         if left and right and left != right:
             return f"{name}_mismatch:{left}!={right}"
+
+    ref_wifi = _wifi_presence(_identity_blob(reference.model, reference.title))
+    cand_wifi = _wifi_presence(_identity_blob(candidate.model, candidate.title))
+    # Explicit wifi vs non-wifi only when both sides declare presence/absence.
+    # Missing Wi-Fi mention remains unknown (missing ≠ conflict).
+    if ref_wifi is True and cand_wifi is False:
+        return "wifi_mismatch:true!=false"
+    if ref_wifi is False and cand_wifi is True:
+        return "wifi_mismatch:false!=true"
 
     ref_controllers = _controller_count_signature(reference.title)
     cand_controllers = _controller_count_signature(candidate.title)
@@ -1010,6 +1140,11 @@ def models_compatible(
     right_phone = _phone_signature(right_blob)
     if left_phone and right_phone:
         return left_phone == right_phone
+
+    left_board = _motherboard_board_signature(left_blob)
+    right_board = _motherboard_board_signature(right_blob)
+    if left_board and right_board:
+        return left_board == right_board
 
     if not left or not right:
         # One side only has a commercial series inferred from the other title.
@@ -1119,6 +1254,9 @@ def infer_model_from_title(title: str | None) -> str | None:
         if edition:
             parts.append(edition)
         return normalize_model(" ".join(parts))
+    board = _motherboard_board_signature(folded)
+    if board:
+        return board
     return None
 
 
@@ -1190,6 +1328,29 @@ def gpu_soft_model_title_exempt(
     left = _gpu_signature(_identity_blob(reference.model, reference.title))
     right = _gpu_signature(_identity_blob(candidate.model, candidate.title))
     if not left or not right or left != right:
+        return False
+    return critical_identity_conflict(reference, candidate) is None
+
+
+def motherboard_soft_model_title_exempt(
+    reference: ProductIdentity,
+    candidate: ProductIdentity,
+) -> bool:
+    """Long SEO titles vs short SERP cards must not veto identical board SKUs."""
+    left = _motherboard_board_signature(
+        _identity_blob(reference.model, reference.title)
+    )
+    right = _motherboard_board_signature(
+        _identity_blob(candidate.model, candidate.title)
+    )
+    if not left or not right or left != right:
+        return False
+    if not models_compatible(
+        reference.model,
+        candidate.model,
+        left_title=reference.title,
+        right_title=candidate.title,
+    ):
         return False
     return critical_identity_conflict(reference, candidate) is None
 
@@ -1377,6 +1538,11 @@ def parse_variant_attributes(
         if key_n in attrs:
             return
         if key_n in {"storage", "capacity", "ram", "size"}:
+            # Slot counts ("4") without a capacity unit are not RAM identity.
+            if key_n == "ram" and re.fullmatch(
+                r"\d{1,2}", re.sub(r"\s+", "", fold_text(text))
+            ):
+                return
             attrs[key_n] = normalize_variant_value(key_n, text)
         else:
             folded = fold_text(text)
@@ -1454,6 +1620,17 @@ def normalize_title(title: str | None) -> str:
 
     for pattern in _MPN_PATTERNS:
         folded = pattern.sub(_compact_mpn, folded)
+
+    # Preserve discriminating board suffixes (B650M-E) before stopword "e"
+    # would erase the letter after hyphen→space normalization.
+    def _compact_board(match: re.Match[str]) -> str:
+        return f"{match.group(1)}{match.group(2)}"
+
+    folded = re.sub(
+        r"\b([abzhx]\d{3}m?)\s*-\s*([a-z0-9]+)\b",
+        _compact_board,
+        folded,
+    )
     folded = re.sub(r"[^a-z0-9\s]+", " ", folded)
     tokens = [t for t in folded.split() if t and t not in TITLE_STOPWORDS]
     # Map single-token color synonyms so PT/EN titles overlap.
@@ -1645,13 +1822,17 @@ def identity_from_price_item(item: ProductPriceItem) -> ProductIdentity:
         ):
             extra[key] = value
     # Bare Magalu-style variant ("Preto") → treat as color when no key:value form.
+    # Wi-Fi / wireless labels are connectivity attributes, never color gates.
     variant = item.variant
     if variant and ":" not in variant:
-        gpu_blob = _identity_blob(item.model, item.title)
-        if extract_gpu_chip(gpu_blob) is not None or extract_gpu_chip(variant):
-            extra.setdefault("edition", variant)
-        elif "color" not in extra:
-            extra["color"] = variant
+        if _is_wifi_variant_label(variant):
+            pass
+        else:
+            gpu_blob = _identity_blob(item.model, item.title)
+            if extract_gpu_chip(gpu_blob) is not None or extract_gpu_chip(variant):
+                extra.setdefault("edition", variant)
+            elif "color" not in extra:
+                extra["color"] = variant
     # Pull storage tokens from title when structured variant lacks them.
     attrs = parse_variant_attributes(
         variant if variant and ":" in variant else None,
@@ -1877,8 +2058,57 @@ def build_search_queries(identity: ProductIdentity) -> list[str]:
                 add(f"{identity.brand} {identity.mpn}")
         return queries
 
+    # --- Motherboard progressive ladder (board code first, SEO noise last) ---
+    board_phrase = _motherboard_board_search_phrase(
+        _identity_blob(identity.model, identity.title)
+    )
+    board_sig = _motherboard_board_signature(
+        _identity_blob(identity.model, identity.title)
+    )
+    if board_phrase or board_sig:
+        family = _motherboard_family_phrase(
+            _identity_blob(identity.model, identity.title)
+        )
+        wifi = "wifi" if _wifi_presence(identity.title) else None
+        # Spaced board token for SERP (prefer hyphenated form from phrase).
+        spaced_board = None
+        if board_phrase:
+            # Drop family/wifi from phrase to get bare board when needed.
+            spaced_board = board_phrase
+            for drop in filter(None, (family, wifi)):
+                spaced_board = re.sub(
+                    rf"\b{re.escape(drop)}\b",
+                    "",
+                    spaced_board,
+                    flags=re.I,
+                )
+            spaced_board = re.sub(r"\s+", " ", spaced_board).strip() or board_phrase
+        elif board_sig:
+            spaced_board = board_sig
+        for display in alias_displays:
+            add(display)
+            if identity.brand:
+                add(f"{identity.brand} {display}")
+        ladder_mb: list[list[str]] = []
+        ladder_mb.append(
+            [p for p in (identity.brand, family, spaced_board, wifi) if p]
+        )
+        ladder_mb.append([p for p in (identity.brand, spaced_board, wifi) if p])
+        ladder_mb.append([p for p in (family, spaced_board, wifi) if p])
+        ladder_mb.append([p for p in (spaced_board, wifi) if p])
+        if spaced_board:
+            ladder_mb.append([spaced_board])
+        for parts in ladder_mb:
+            if parts:
+                add(" ".join(parts))
+        if identity.mpn:
+            add(identity.mpn)
+            if identity.brand:
+                add(f"{identity.brand} {identity.mpn}")
+        return queries
+
     # Bare manufacturer PN ranks best on Amazon BR for exact SKU recovery
-    # (non-GPU categories).
+    # (non-GPU / non-motherboard categories).
     for display in alias_displays:
         add(display)
         if identity.brand:

@@ -58,7 +58,8 @@ def parse_motherboard(title: str, category: str) -> ParsedIdentity:
     if chip is None and not _SOCKET_RE.search(title):
         return ParsedIdentity(category, None, None, None, None, None, "ambiguous")
     brand = _display_token(tokens[0]) if tokens else None
-    noise = {
+    # Structural / marketing tokens that belong in attributes, not model.
+    stop_noise = {
         "placa",
         "mae",
         "mãe",
@@ -70,15 +71,43 @@ def parse_motherboard(title: str, category: str) -> ParsedIdentity:
         "ddr5",
         "am4",
         "am5",
+        "socket",
+        "soquete",
+        "chipset",
+        "amd",
+        "intel",
+        "matx",
+        "m-atx",
+        "micro-atx",
+        "microatx",
+        "atx",
+        "e-atx",
+        "mini-itx",
+        "itx",
+        "form",
+        "factor",
+        "formato",
     }
     model_parts: list[str] = []
     for token in tokens[1:]:
         lower = token.casefold()
-        if lower in noise:
+        folded = fold_identity(token).replace(" ", "")
+        if lower in stop_noise or folded in stop_noise:
+            # Once the commercial board code is collected, stop at structural specs.
+            if model_parts:
+                break
             continue
         if _SOCKET_RE.fullmatch(token):
+            if model_parts:
+                break
             continue
         if re.fullmatch(r"ddr[45]", lower):
+            if model_parts:
+                break
+            continue
+        if _FORM_RE.fullmatch(token):
+            if model_parts:
+                break
             continue
         if _WIFI_RE.fullmatch(token) or lower in {"wifi", "wi-fi"}:
             continue
@@ -99,6 +128,13 @@ def parse_motherboard(title: str, category: str) -> ParsedIdentity:
         return ParsedIdentity(category, brand, None, None, None, None, "ambiguous")
     # Drop trailing Wi-Fi tokens from model (kept as variant).
     display = re.sub(r"\s+wi-?fi\b", "", display, flags=re.I).strip()
+    # Drop accidental structural tails that slipped past tokenization.
+    display = re.sub(
+        r"\s+(socket|chipset|ddr[45]|m-?atx|atx|amd|intel)\b.*$",
+        "",
+        display,
+        flags=re.I,
+    ).strip()
     # Product line (TUF / ROG / MAG) when leading marketing token.
     product_line = None
     for token in model_parts[:2]:

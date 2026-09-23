@@ -181,6 +181,9 @@ antes do cascade (sem delete recursivo cego de pasta).
   (`python -m scout_api.modules.images.worker`).
 - Concorrência: `IMAGE_AVIF_MAX_CONCURRENCY` (ou
   `IMAGE_OPTIMIZATION_CONCURRENCY`).
+- O `GoogleDriveClient` é compartilhado entre threads do pool AVIF; cada
+  request Drive usa `httplib2.Http` próprio via `requestBuilder` (httplib2
+  não é thread-safe — sem isso aparece `SSL: DECRYPTION_FAILED_OR_BAD_RECORD_MAC`).
 
 ## Configuração
 

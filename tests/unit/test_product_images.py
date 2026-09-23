@@ -114,6 +114,37 @@ def test_google_drive_client_refresh_and_upload() -> None:
         assert file_id == "file-9"
 
 
+def test_google_drive_client_builds_per_request_http() -> None:
+    """httplib2.Http is not thread-safe; AVIF workers share one Drive client.
+
+    Each Drive API call must get its own AuthorizedHttp (Google requestBuilder
+    pattern), otherwise concurrent optimize_now hits SSL bad_record_mac.
+    """
+    captured: dict[str, object] = {}
+
+    def fake_build(*_args: object, **kwargs: object) -> MagicMock:
+        captured.update(kwargs)
+        return MagicMock(name="drive-service")
+
+    client = GoogleDriveClient()
+    creds = MagicMock(name="creds")
+    with (
+        patch.object(client, "_credentials", return_value=creds),
+        patch("scout_api.modules.images.drive_client.build", side_effect=fake_build),
+    ):
+        service = client._drive()
+        assert service is client._drive()  # cached service object
+
+    assert "requestBuilder" in captured
+    request_builder = captured["requestBuilder"]
+    assert callable(request_builder)
+
+    req_a = request_builder(None, "GET", "https://www.googleapis.com/drive/v3/a")
+    req_b = request_builder(None, "GET", "https://www.googleapis.com/drive/v3/b")
+    assert req_a.http is not req_b.http
+    assert req_a.http.http is not req_b.http.http
+
+
 def test_google_drive_delete_404_is_ok() -> None:
     service = MagicMock()
     from googleapiclient.errors import HttpError

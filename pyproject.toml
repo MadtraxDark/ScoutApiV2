@@ -89,8 +89,12 @@ module = [
     "google.oauth2.*",
     "google.auth",
     "google.auth.*",
+    "google_auth_httplib2",
+    "google_auth_httplib2.*",
     "google_auth_oauthlib",
     "google_auth_oauthlib.*",
+    "httplib2",
+    "httplib2.*",
 ]
 ignore_missing_imports = true
 

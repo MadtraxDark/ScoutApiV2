@@ -16,6 +16,9 @@ Camada canônica de identidade de produto do ScoutApiV2 (ADR 0026 + ADR 0027).
 title fallback → `null`.
 
 **missing ≠ conflict:** atributo ausente de um lado não rejeita match.
+Wi-Fi / wireless como variant comercial **não** vira gate de `color`.
+Sufixos de board (`B650M-E`) e MPNs hifenizados são preservados na
+normalização usada por Search/Match.
 
 **Não over-inferir:** `Ryzen 7 7800X3D` não ganha `cores=8` sem fonte.
 
