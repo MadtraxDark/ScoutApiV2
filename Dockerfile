@@ -20,6 +20,7 @@ RUN apt-get update \
         libcups2 \
         libdbus-1-3 \
         libdbus-glib-1-2 \
+        dbus-x11 \
         libdrm2 \
         libgbm1 \
         libgtk-3-0 \

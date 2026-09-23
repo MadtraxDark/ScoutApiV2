@@ -31,6 +31,7 @@ def get_shared_html_fetcher() -> HtmlFetcher:
         camoufox_headless=settings.camoufox_headless,
         camoufox_humanize=settings.camoufox_humanize,
         camoufox_timeout_ms=settings.camoufox_timeout_ms,
+        camoufox_launch_timeout_ms=settings.camoufox_launch_timeout_ms,
         camoufox_settle_ms=settings.camoufox_settle_ms,
         camoufox_max_settle_attempts=settings.camoufox_max_settle_attempts,
         camoufox_proxy_url=settings.camoufox_proxy_url,

@@ -216,6 +216,95 @@ def test_scrape_upstream_error_is_not_silent_unmatched() -> None:
     assert resp.matches == []
 
 
+def test_browser_infrastructure_error_fail_fast_not_no_match() -> None:
+    """Structural browser failure must ERROR the store and stop query burn."""
+    scrape = MagicMock()
+    scrape.scrape.return_value = _item()
+    search = MagicMock()
+    search.is_search_supported.return_value = True
+    search_calls: list[str] = []
+
+    def _search(store_key: str, query: str, *, limit: int = 5) -> list[SearchCandidate]:
+        del limit
+        search_calls.append(f"{store_key}:{query}")
+        raise RequestError(
+            "launch failed",
+            code="BROWSER_LAUNCH_ERROR",
+            url=f"https://www.{store_key}.com.br/busca",
+            retryable=False,
+        )
+
+    search.search.side_effect = _search
+
+    resp = ProductMatchService(scrape_service=scrape, search_service=search).match(
+        MatchRequest(
+            reference_url="https://www.mercadolivre.com.br/p/MLB1",
+            stores=["kabum"],
+            persist=False,
+        )
+    )
+    # One query attempt then break — not N queries × launch.
+    assert len(search_calls) == 1
+    assert any(
+        e.store == "kabum" and e.code == "BROWSER_LAUNCH_ERROR" for e in resp.errors
+    )
+    assert resp.errors
+    assert resp.matches == []
+
+
+def test_browser_scrape_failure_stops_remaining_candidates() -> None:
+    scrape = MagicMock()
+
+    def _scrape(
+        url: str,
+        *,
+        include_images: bool = False,
+        purpose: object = None,
+    ) -> ProductPriceItem:
+        del include_images, purpose
+        if "mercadolivre" in url:
+            return _item()
+        raise RequestError(
+            "circuit open",
+            code="BROWSER_INFRASTRUCTURE_UNAVAILABLE",
+            url=url,
+            retryable=False,
+        )
+
+    scrape.scrape.side_effect = _scrape
+    search = MagicMock()
+    search.is_search_supported.return_value = True
+    search.search.return_value = [
+        SearchCandidate(
+            url="https://www.kabum.com.br/produto/1",
+            title="MSI GeForce RTX 5070 Shadow 3X OC 12GB GDDR7",
+            product_id="1",
+        ),
+        SearchCandidate(
+            url="https://www.kabum.com.br/produto/2",
+            title="MSI GeForce RTX 5070 Shadow 3X OC 12GB GDDR7",
+            product_id="2",
+        ),
+    ]
+
+    resp = ProductMatchService(scrape_service=scrape, search_service=search).match(
+        MatchRequest(
+            reference_url="https://www.mercadolivre.com.br/p/MLB1",
+            stores=["kabum"],
+            persist=False,
+        )
+    )
+    # Only first candidate scrape attempted after infra failure.
+    candidate_calls = [
+        c for c in scrape.scrape.call_args_list if "kabum.com.br/produto" in str(c)
+    ]
+    assert len(candidate_calls) == 1
+    assert any(
+        e.store == "kabum" and e.code == "BROWSER_INFRASTRUCTURE_UNAVAILABLE"
+        for e in resp.errors
+    )
+
+
 def test_match_wave2_stores_run_concurrently(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

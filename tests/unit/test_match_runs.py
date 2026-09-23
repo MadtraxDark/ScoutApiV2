@@ -695,3 +695,47 @@ def test_worker_lost_notification_idempotent(session: Session) -> None:
     fresh = session.get(ProductMatchRun, run.id)
     assert fresh is not None
     assert fresh.failure_code == "worker_lost"
+
+
+def test_execute_match_prefers_identity_when_canonical_has_title(
+    session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Catalog title skips live reference scrape (match_from_item path)."""
+    from scout_api.modules.matching import match_run_worker as worker_mod
+    from scout_api.modules.matching.schemas import MatchResponse
+
+    principal = _principal()
+    product = _product(session, owner=principal.id)
+    session.commit()
+
+    calls: list[str] = []
+
+    class FakeMatchService:
+        def __init__(self, *, session: Session) -> None:
+            del session
+
+        def match(self, *args: object, **kwargs: object) -> MatchResponse:
+            del args, kwargs
+            calls.append("match")
+            raise AssertionError("live match() must not run when title exists")
+
+        def match_from_item(self, item: object, **kwargs: object) -> MatchResponse:
+            del kwargs
+            calls.append("match_from_item")
+            return MatchResponse(
+                reference=item,  # type: ignore[arg-type]
+                matches=[],
+                unmatched_stores=[],
+                errors=[],
+            )
+
+    monkeypatch.setattr(worker_mod, "ProductMatchService", FakeMatchService)
+    worker_mod._execute_match_for_run(
+        session,
+        run_id=uuid.uuid4(),
+        product_id=product.id,
+        reference_url="https://www.kabum.com.br/produto/123",
+        on_store_outcome=None,
+    )
+    assert calls == ["match_from_item"]

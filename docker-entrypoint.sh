@@ -24,8 +24,40 @@ PROFILE_DIR="${CAMOUFOX_USER_DATA_DIR:-/home/app/.cache/scout-api/camoufox-profi
 PROFILE_ROOT="$(dirname "$PROFILE_DIR")"
 
 mkdir -p "$PROFILE_DIR"
-# Named volumes are root-owned by default; the API runs as non-root `app`.
-chown -R app:app "$PROFILE_ROOT"
+# Sibling used by direct (non-proxy) Camoufox sessions.
+mkdir -p "${PROFILE_ROOT}/direct"
+
+# Ownership: do NOT recursively chown the profile tree. On Docker Desktop
+# Windows bind mounts, `chown -R` over tens of thousands of Firefox cache
+# files produces Input/output errors and can leave the tree inconsistent.
+# Named Linux volumes (root-owned) may set CAMOUFOX_CHOWN_PROFILES=root-only
+# to chown only the profile root directory (non-recursive).
+_chown_mode="${CAMOUFOX_CHOWN_PROFILES:-off}"
+case "$_chown_mode" in
+  root-only|ROOT-ONLY)
+    chown app:app "$PROFILE_ROOT" 2>/dev/null || true
+    chown app:app "$PROFILE_DIR" 2>/dev/null || true
+    chown app:app "${PROFILE_ROOT}/direct" 2>/dev/null || true
+    ;;
+esac
+
+# Disposable Firefox caches are safe to recreate. Purge them on startup so a
+# previously corrupted cache2 (e.g. after failed recursive chown) cannot hang
+# launch_persistent_context. Session cookies / prefs / logins are preserved.
+_purge="${CAMOUFOX_PURGE_DISPOSABLE_CACHE:-true}"
+case "$_purge" in
+  1|true|True|TRUE|yes|Yes|YES|on|On|ON)
+    if [ -d "$PROFILE_ROOT" ]; then
+      find "$PROFILE_ROOT" -type d \( \
+          -name cache2 -o -name startupCache -o -name thumbnails \
+        \) -print0 2>/dev/null | xargs -0 -r rm -rf 2>/dev/null || true
+      find "$PROFILE_ROOT" -type f \( \
+          -name '.parentlock' -o -name 'lock' \
+        \) -delete 2>/dev/null || true
+      echo "camoufox_disposable_cache_purged: root=$PROFILE_ROOT"
+    fi
+    ;;
+esac
 
 # Apply pending schema migrations before API/workers start.
 # Concurrent container starts are safe (Alembic Postgres advisory lock).

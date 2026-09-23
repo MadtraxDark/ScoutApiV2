@@ -30,6 +30,7 @@ Política de quando criar/atualizar docs:
 | [0034](0034-secondary-exchange-rates.md) | Câmbio secundário sem API comercial (providers web + PostgreSQL) | Accepted |
 | [0035](0035-media-access-cookie.md) | Cookie HttpOnly para auth de mídia (`<img>`) | Accepted |
 | [0036](0036-persistent-product-match-runs.md) | Product Match persistente + polling (sem SSE) | Accepted |
+| [0037](0037-camoufox-launch-health-match-fail-fast.md) | Camoufox launch health + Match fail-fast de infra | Accepted |
 
 ## Índice — crawler
 
@@ -55,6 +56,7 @@ Política de quando criar/atualizar docs:
 | [0030](0030-persistent-offer-monitoring.md) | Monitoramento persistente + promo expiry | Accepted |
 | [0032](0032-product-match-http-first-warm-camoufox.md) | Product Match HTTP-first + Camoufox warm reuse | Accepted |
 | [0033](0033-product-match-progressive-search-identity.md) | Progressive search a partir de ProductIdentity (não título bruto) | Accepted |
+| [0037](0037-camoufox-launch-health-match-fail-fast.md) | Launch timeout + circuit de browser + ERROR≠NO_MATCH | Accepted |
 
 ## Quando criar ADR
 

@@ -22,6 +22,9 @@ from scout_api.core.performance import (
     format_stage_summary,
     observe,
 )
+from scout_api.modules.crawler.core.browser_health import (
+    is_browser_infrastructure_error,
+)
 from scout_api.modules.crawler.core.exceptions import ParseError, RequestError
 from scout_api.modules.crawler.core.fingerprints import canonicalize_url
 from scout_api.modules.crawler.core.scrape_purpose import ScrapePurpose
@@ -474,7 +477,11 @@ class ProductMatchService:
                         code=exc.code,
                         message=str(exc),
                     )
-                    if exc.code == "SEARCH_UNSUPPORTED":
+                    # SEARCH_UNSUPPORTED and structural browser infra must not
+                    # keep spending queries (ERROR, never silent NO_MATCH).
+                    if exc.code == "SEARCH_UNSUPPORTED" or is_browser_infrastructure_error(
+                        exc.code
+                    ):
                         break
                     continue
                 except ParseError as exc:
@@ -595,6 +602,11 @@ class ProductMatchService:
                         scrape_failures += 1
                         if scrape_error is not None:
                             last_scrape_error = scrape_error
+                            # Structural browser failure: stop this store now
+                            # (do not burn remaining SERP candidates × launch).
+                            if is_browser_infrastructure_error(scrape_error.code):
+                                last_error = scrape_error
+                                break
                         continue
 
                     score = self._engine.score(
@@ -667,6 +679,10 @@ class ProductMatchService:
                 if store_matched:
                     break
                 if scrapes_done >= max_candidates_per_store:
+                    break
+                if last_error is not None and is_browser_infrastructure_error(
+                    last_error.code
+                ):
                     break
 
             store_elapsed_ms = (time.perf_counter() - store_t0) * 1000

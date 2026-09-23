@@ -90,8 +90,8 @@ Secrets/tokens/cookies/credentials **nunca** entram no contexto (redaction em
 |---|---|
 | Product Match | `match_store_timing`, `match_total_timing`, `match_timing_summary`, `match_store_waves` / `match_store_wave_parallel`, `observe(product_match*)`, caches request-scoped (`search_cache_entries` / `scrape_cache_entries`), `MATCH_STORE_CONCURRENCY` |
 | Product Search / scrape no match | `observe(product_search\|product_scrape)` |
-| Browser fetch | `fetch_cost_metrics` + `observe(browser_fetch)` + `browser_reused` |
-| Browser launch / reuse | `observe(browser_launch)` no enter; warm session (ADR 0032) amortiza launches |
+| Browser fetch | `fetch_cost_metrics` + `observe(browser_fetch)` + `browser_reused` + contadores de launch/circuit |
+| Browser launch / reuse | `observe(browser_launch)` / `browser_reuse`; `CAMOUFOX_LAUNCH_TIMEOUT_MS` (default 45 s) ≠ `CAMOUFOX_TIMEOUT_MS` (nav); circuit de processo em `browser_health` (ADR 0037) |
 | HTTP curl_cffi | `RetryLedger` + `curl_cffi_retry*` com `attempt_timings` |
 | Scrapy retry | `retry_scheduled` + `observe(scrapy_retry)` |
 | DB | listener SQLAlchemy de query lenta (`attach_slow_query_listener`) |
@@ -134,6 +134,10 @@ mesmo com testes verdes. Reportar no relatório final; otimizar ou abrir
 pendência `PERFORMANCE`.
 
 Baselines resumidos: [`performance/baselines.md`](performance/baselines.md).
+
+Falhas estruturais de Camoufox (launch/circuit) **não** devem somar N×180 s
+no Product Match: fail-fast com `BROWSER_*` + circuit (ADR 0037). Budget de
+`browser_launch` CRITICAL=60 s; `CAMOUFOX_LAUNCH_TIMEOUT_MS` default 45 s.
 
 Product Match full-store (13 lojas, `…023048Z`): completa sem hang, mas a
 Shopee sozinha pode consumir ~25–34 min antes de `AUTH_REQUIRED` — ver

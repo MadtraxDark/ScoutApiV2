@@ -127,12 +127,20 @@ def _should_drop_warm_session(exc: BaseException) -> bool:
 
 
 def classify_camoufox_navigation_error(exc: BaseException, *, url: str) -> RequestError:
-    """Map Camoufox/Playwright navigation failures to crawler RequestError codes.
+    """Map Camoufox/Playwright failures to crawler RequestError codes.
 
-    Connection resets / refused from the upstream (or its WAF) are treated as
-    ``UPSTREAM_BLOCKED`` so Proxy Cost Mode FALLBACK may retry with proxy.
-    Other render failures stay ``UPSTREAM_REQUEST_ERROR`` (no proxy fallback).
+    Structural launch failures become ``BROWSER_LAUNCH_ERROR`` (no proxy
+    fallback, no Product Match NO_MATCH). Connection resets / refused from the
+    upstream (or its WAF) are ``UPSTREAM_BLOCKED`` so Proxy Cost Mode FALLBACK
+    may retry with proxy. Other render failures stay ``UPSTREAM_REQUEST_ERROR``.
     """
+    from scout_api.modules.crawler.core.browser_health import (
+        classify_browser_error,
+        is_browser_launch_failure,
+    )
+
+    if is_browser_launch_failure(exc):
+        return classify_browser_error(exc, url=url)
     message = str(exc).casefold()
     if any(marker in message for marker in _CAMOUFOX_UPSTREAM_BLOCK_MARKERS):
         return RequestError(
@@ -887,6 +895,7 @@ class CamoufoxHtmlFetcher:
         headless: bool = True,
         humanize: bool = True,
         timeout_ms: int = 90_000,
+        launch_timeout_ms: int = 45_000,
         settle_ms: int = 5_000,
         max_settle_attempts: int = 12,
         proxy_url: str | None = None,
@@ -905,6 +914,7 @@ class CamoufoxHtmlFetcher:
         self._headless = headless
         self._humanize = humanize
         self._timeout_ms = timeout_ms
+        self._launch_timeout_ms = max(5_000, launch_timeout_ms)
         self._settle_ms = settle_ms
         self._max_settle_attempts = max_settle_attempts
         self._proxy_url = proxy_url
@@ -929,6 +939,8 @@ class CamoufoxHtmlFetcher:
         self._active_fingerprint: str | None = None
         self._browser_launches = 0
         self._browser_reuses = 0
+        self._browser_launch_failures = 0
+        self._browser_circuit_open_hits = 0
 
     @property
     def proxy_url(self) -> str | None:
@@ -949,6 +961,14 @@ class CamoufoxHtmlFetcher:
     @property
     def browser_reuse_count(self) -> int:
         return self._browser_reuses
+
+    @property
+    def browser_launch_failure_count(self) -> int:
+        return self._browser_launch_failures
+
+    @property
+    def browser_circuit_open_hit_count(self) -> int:
+        return self._browser_circuit_open_hits
 
     def close(self) -> None:
         """Release any warm Camoufox session held by this fetcher."""
@@ -994,6 +1014,25 @@ class CamoufoxHtmlFetcher:
 
     def _acquire_browser(self, url: str) -> tuple[Any, bool]:
         """Return ``(browser, reused)``. Caller must not close a reused browser."""
+        from scout_api.modules.crawler.core.browser_health import (
+            browser_unavailable_error,
+            get_browser_circuit,
+        )
+
+        circuit = get_browser_circuit()
+        if not circuit.allow():
+            self._browser_circuit_open_hits += 1
+            store_cfg = resolve_store_config(url)
+            logger.warning(
+                "camoufox_circuit_open_skip",
+                extra={
+                    "store": store_cfg.key if store_cfg is not None else None,
+                    "url": url,
+                    **circuit.snapshot(),
+                },
+            )
+            raise browser_unavailable_error(url=url)
+
         launch_kwargs = self._launch_kwargs(url=url)
         fingerprint = self._warm_fingerprint(launch_kwargs)
         self._active_fingerprint = fingerprint
@@ -1006,7 +1045,24 @@ class CamoufoxHtmlFetcher:
             session = None
         if session is None:
             timed = self._open_browser(url=url)
-            browser = timed.__enter__()
+            try:
+                browser = timed.__enter__()
+            except Exception as exc:
+                # Any failure during context enter is structural launch failure
+                # (Playwright TimeoutError often lacks "launch" in the message).
+                self._browser_launch_failures += 1
+                circuit.record_launch_failure()
+                logger.warning(
+                    "camoufox_launch_failed",
+                    extra={
+                        "url": url,
+                        "fingerprint": fingerprint,
+                        "exc_type": type(exc).__name__,
+                        **circuit.snapshot(),
+                    },
+                )
+                raise
+            circuit.record_success()
             self._warm_session = _WarmBrowserSession(
                 cm=timed,
                 browser=browser,
@@ -1021,6 +1077,7 @@ class CamoufoxHtmlFetcher:
                     "store": store_cfg.key if store_cfg is not None else None,
                     "launches": self._browser_launches,
                     "fingerprint": fingerprint,
+                    "launch_timeout_ms": self._launch_timeout_ms,
                 },
             )
             return browser, False
@@ -1057,10 +1114,19 @@ class CamoufoxHtmlFetcher:
         browser: Any = None
         reused = False
         try:
+            from scout_api.modules.crawler.core.browser_health import (
+                browser_unavailable_error,
+                get_browser_circuit,
+            )
+
+            circuit = get_browser_circuit()
             if oneshot:
                 # Playwright Sync cannot nest a second Camoufox context on the
                 # owner thread while a warm session still holds the driver loop
                 # (AliExpress oneshot during Match wave-2 → Sync-in-asyncio).
+                if not circuit.allow():
+                    self._browser_circuit_open_hits += 1
+                    raise browser_unavailable_error(url=url)
                 if self._warm_session is not None:
                     logger.info(
                         "camoufox_warm_drop_for_oneshot",
@@ -1068,7 +1134,22 @@ class CamoufoxHtmlFetcher:
                     )
                     self._close_warm_session_unlocked()
                 browser_cm = self._open_browser(url=url)
-                browser = browser_cm.__enter__()
+                try:
+                    browser = browser_cm.__enter__()
+                except Exception as exc:
+                    self._browser_launch_failures += 1
+                    circuit.record_launch_failure()
+                    logger.warning(
+                        "camoufox_launch_failed",
+                        extra={
+                            "url": url,
+                            "oneshot": True,
+                            "exc_type": type(exc).__name__,
+                            **circuit.snapshot(),
+                        },
+                    )
+                    raise
+                circuit.record_success()
                 self._browser_launches += 1
             else:
                 browser, reused = self._acquire_browser(url)
@@ -1354,9 +1435,19 @@ class CamoufoxHtmlFetcher:
                     extra={"url": url, "code": "unclassified"},
                 )
                 self._close_warm_session_unlocked()
+            # Launch failures already recorded in _acquire_browser / oneshot enter.
             metrics.result = "error"
             self._log_metrics(metrics, request_types, transferred, t0)
-            logger.exception("camoufox_fetch_failed", extra={"url": url})
+            store_key = store_cfg.key if store_cfg is not None else None
+            logger.exception(
+                "camoufox_fetch_failed",
+                extra={
+                    "url": url,
+                    "store": store_key,
+                    "oneshot": oneshot,
+                    "launch_failures": self._browser_launch_failures,
+                },
+            )
             raise classify_camoufox_navigation_error(exc, url=url) from exc
 
     def _log_metrics(
@@ -1401,6 +1492,10 @@ class CamoufoxHtmlFetcher:
                 "network_request_count": payload.get("network_request_count"),
                 "warmup_used": payload.get("warmup_used"),
                 "early_stop": payload.get("early_stop"),
+                "browser_launches": self._browser_launches,
+                "browser_reuses": self._browser_reuses,
+                "browser_launch_failures": self._browser_launch_failures,
+                "circuit_open_hits": self._browser_circuit_open_hits,
             },
         )
 
@@ -1499,6 +1594,9 @@ class CamoufoxHtmlFetcher:
             "geoip": True,
             "persistent_context": True,
             "user_data_dir": str(profile_dir),
+            # Playwright launch timeout (ms). Separate from page navigation
+            # ``self._timeout_ms`` used in page.goto / settle.
+            "timeout": self._launch_timeout_ms,
         }
         if is_aliexpress_url(url):
             import tempfile
@@ -2001,6 +2099,7 @@ def build_html_fetcher(
     camoufox_headless: bool = True,
     camoufox_humanize: bool = True,
     camoufox_timeout_ms: int = 90_000,
+    camoufox_launch_timeout_ms: int = 45_000,
     camoufox_settle_ms: int = 5_000,
     camoufox_max_settle_attempts: int = 12,
     camoufox_proxy_url: str | None = None,
@@ -2069,6 +2168,7 @@ def build_html_fetcher(
         "headless": camoufox_headless,
         "humanize": camoufox_humanize,
         "timeout_ms": camoufox_timeout_ms,
+        "launch_timeout_ms": camoufox_launch_timeout_ms,
         "settle_ms": camoufox_settle_ms,
         "max_settle_attempts": camoufox_max_settle_attempts,
         "disable_coop": camoufox_disable_coop,

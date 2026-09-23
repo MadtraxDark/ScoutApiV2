@@ -40,6 +40,14 @@ PROXY_FALLBACK_ERROR_CODES: frozenset[str] = frozenset(
     {"UPSTREAM_BLOCKED", "AUTH_REQUIRED"}
 )
 
+# Structural Camoufox launch / circuit — never Product Match NO_MATCH.
+BROWSER_INFRASTRUCTURE_ERROR_CODES: frozenset[str] = frozenset(
+    {
+        "BROWSER_LAUNCH_ERROR",
+        "BROWSER_INFRASTRUCTURE_UNAVAILABLE",
+    }
+)
+
 SHOPEE_AUTH_REQUIRED_MESSAGE = (
     "Shopee exige login/sessão autenticada (falta de login). "
     "Configure SHOPEE_AUTH_EMAIL e SHOPEE_AUTH_PASSWORD "

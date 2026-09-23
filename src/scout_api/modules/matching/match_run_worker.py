@@ -122,6 +122,13 @@ def _reference_from_canonical(product: CanonicalProduct) -> object:
     )
 
 
+def _canonical_has_match_identity(product: CanonicalProduct | None) -> bool:
+    """True when catalog title is enough to skip a live reference scrape."""
+    if product is None:
+        return False
+    return bool((product.title or "").strip())
+
+
 def _execute_match_for_run(
     session: Session,
     *,
@@ -131,8 +138,31 @@ def _execute_match_for_run(
     on_store_outcome: Any,
     skip_stores: frozenset[str] | set[str] | None = None,
 ) -> MatchResponse:
-    """Scrape reference URL; on failure, fall back to canonical identity."""
+    """Match using catalog identity first; live reference scrape only as fallback."""
     match_service = ProductMatchService(session=session)
+    product = session.get(CanonicalProduct, product_id)
+
+    if _canonical_has_match_identity(product):
+        assert product is not None
+        logger.info(
+            "match_run_identity_first_reference",
+            extra={
+                "run_id": str(run_id),
+                "product_id": str(product_id),
+                "title_len": len((product.title or "").strip()),
+            },
+        )
+        reference = _reference_from_canonical(product)
+        return match_service.match_from_item(
+            reference,  # type: ignore[arg-type]
+            persist=True,
+            include_review=True,
+            include_images=False,
+            canonical_product_id=product_id,  # type: ignore[arg-type]
+            on_store_outcome=on_store_outcome,
+            skip_stores=skip_stores,
+        )
+
     request = MatchRequest(
         reference_url=reference_url,  # type: ignore[arg-type]
         canonical_product_id=product_id,  # type: ignore[arg-type]
@@ -147,7 +177,6 @@ def _execute_match_for_run(
             skip_stores=skip_stores,
         )
     except RequestError as exc:
-        product = session.get(CanonicalProduct, product_id)
         title = (product.title or "").strip() if product is not None else ""
         if not title:
             raise

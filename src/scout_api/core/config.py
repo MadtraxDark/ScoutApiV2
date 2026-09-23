@@ -83,8 +83,14 @@ class Settings(BaseSettings):
     camoufox_headless: bool = True
     camoufox_humanize: bool = True
     camoufox_timeout_ms: int = 90_000
+    # Playwright launch_persistent_context timeout (separate from page navigation).
+    # Default Playwright is 180_000; keep much lower so a broken browser fails fast.
+    camoufox_launch_timeout_ms: int = 45_000
     camoufox_settle_ms: int = 5_000
     camoufox_max_settle_attempts: int = 12
+    # Process-wide circuit after structural Camoufox launch failures.
+    browser_circuit_failure_threshold: int = 1
+    browser_circuit_cooldown_seconds: int = 60
     camoufox_proxy_url: str | None = None
     camoufox_user_data_dir: str | None = None
     camoufox_disable_coop: bool = True
