@@ -17,11 +17,15 @@ from scout_api.core.performance import OperationCategory, timed
 from scout_api.modules.crawler.core.exceptions import ParseError, RequestError
 from scout_api.modules.matching.identity import identity_reference_item
 from scout_api.modules.matching.match_run_claim import (
+    FAILURE_CODE_WORKER_LOST,
+    WORKER_LOST_MESSAGE,
     claim_due_match_runs,
     heartbeat_claim,
+    list_stale_running,
     new_worker_id,
     utcnow,
 )
+from scout_api.modules.matching.match_run_repository import MatchRunRepository
 from scout_api.modules.matching.match_run_service import MatchRunService
 from scout_api.modules.matching.models import CanonicalProduct, ProductMatchRun
 from scout_api.modules.matching.product_match_service import (
@@ -57,13 +61,51 @@ def _fail_stale_exhausted(
         return False
     MatchRunService(session).finalize_failed(
         run,
-        code="STALE_LEASE_EXHAUSTED",
-        message=(
-            "A busca foi interrompida e esgotou tentativas de recuperação. "
-            "Inicie uma nova busca."
-        ),
+        code=FAILURE_CODE_WORKER_LOST,
+        message=WORKER_LOST_MESSAGE,
     )
     return True
+
+
+def reconcile_exhausted_stale_runs(
+    session: Session,
+    *,
+    settings: Settings | None = None,
+    now: object | None = None,
+) -> int:
+    """Terminalize RUNNING+expired-lease runs that already hit max attempts.
+
+    Does not claim — frees the product when reclaim would only fail.
+    """
+    from datetime import datetime
+
+    cfg = settings or get_settings()
+    max_attempts = max(1, int(cfg.match_run_max_attempts))
+    moment = now if isinstance(now, datetime) else utcnow()
+    exhausted = 0
+    for run in list_stale_running(session, now=moment, limit=100):
+        if int(run.attempts or 0) < max_attempts:
+            continue
+        logger.info(
+            "match_job_lease_expired",
+            extra={
+                "run_id": str(run.id),
+                "attempt": int(run.attempts or 0),
+                "claim_expires_at": (
+                    run.claim_expires_at.isoformat() if run.claim_expires_at else None
+                ),
+            },
+        )
+        MatchRunService(session).finalize_failed(
+            run,
+            code=FAILURE_CODE_WORKER_LOST,
+            message=WORKER_LOST_MESSAGE,
+            now=moment,
+        )
+        exhausted += 1
+    if exhausted:
+        session.flush()
+    return exhausted
 
 
 def _reference_from_canonical(product: CanonicalProduct) -> object:
@@ -87,6 +129,7 @@ def _execute_match_for_run(
     product_id: object,
     reference_url: str,
     on_store_outcome: Any,
+    skip_stores: frozenset[str] | set[str] | None = None,
 ) -> MatchResponse:
     """Scrape reference URL; on failure, fall back to canonical identity."""
     match_service = ProductMatchService(session=session)
@@ -98,7 +141,11 @@ def _execute_match_for_run(
         include_images=False,
     )
     try:
-        return match_service.match(request, on_store_outcome=on_store_outcome)
+        return match_service.match(
+            request,
+            on_store_outcome=on_store_outcome,
+            skip_stores=skip_stores,
+        )
     except RequestError as exc:
         product = session.get(CanonicalProduct, product_id)
         title = (product.title or "").strip() if product is not None else ""
@@ -120,6 +167,7 @@ def _execute_match_for_run(
             include_images=False,
             canonical_product_id=product_id,  # type: ignore[arg-type]
             on_store_outcome=on_store_outcome,
+            skip_stores=skip_stores,
         )
 
 
@@ -134,6 +182,7 @@ def process_claimed_run(
     run_id = run.id
     product_id = run.product_id
     reference_url = run.reference_url
+    claim_attempts = int(run.attempts or 0)
     started = utcnow()
     service = MatchRunService(session)
 
@@ -146,9 +195,12 @@ def process_claimed_run(
             run,
             code="REFERENCE_URL_MISSING",
             message="Produto sem URL de referência para busca.",
+            expected_worker_id=worker_id,
         )
         session.flush()
         return run
+
+    skip_stores = MatchRunRepository(session).terminal_store_keys(run_id)
 
     # Claim already committed in sweep_once. Touch activity in a short
     # transaction, then RELEASE the row lock before the long match.
@@ -162,7 +214,7 @@ def process_claimed_run(
     stop_heartbeat = threading.Event()
 
     def _heartbeat_loop() -> None:
-        interval = max(15, int(settings.match_run_lease_seconds) // 3)
+        interval = max(15, int(settings.match_run_heartbeat_interval_seconds))
         while not stop_heartbeat.wait(interval):
             try:
                 factory = get_session_factory()
@@ -171,7 +223,11 @@ def process_claimed_run(
                     if row is None or row.status != "running":
                         return
                     ok = heartbeat_claim(
-                        hb_session, row, worker_id=worker_id, settings=settings
+                        hb_session,
+                        row,
+                        worker_id=worker_id,
+                        settings=settings,
+                        expected_attempts=claim_attempts,
                     )
                     hb_session.commit()
                     if not ok:
@@ -214,6 +270,7 @@ def process_claimed_run(
                         search_duration_ms=outcome.search_duration_ms,
                         candidate_fetch_duration_ms=outcome.candidate_fetch_duration_ms,
                         candidates=[dict(c) for c in outcome.candidates],
+                        expected_worker_id=worker_id,
                     )
                     store_session.commit()
             except Exception:  # noqa: BLE001
@@ -227,7 +284,12 @@ def process_claimed_run(
         with timed(
             "product_match_run_job",
             category=OperationCategory.PRODUCT_MATCH,
-            context={"run_id": str(run_id), "product_id": str(product_id)},
+            context={
+                "run_id": str(run_id),
+                "product_id": str(product_id),
+                "attempt": claim_attempts,
+                "skip_stores": sorted(skip_stores),
+            },
         ):
             response = _execute_match_for_run(
                 session,
@@ -235,23 +297,29 @@ def process_claimed_run(
                 product_id=product_id,
                 reference_url=reference_url,
                 on_store_outcome=on_store_outcome,
+                skip_stores=skip_stores,
             )
 
         session.expire_all()
         fresh = session.get(ProductMatchRun, run_id)
         if fresh is None:
             return run
-        matches_found = len(response.matches)
-        no_matches = len(response.unmatched_stores)
-        errors = len(response.errors)
-        stores_total = matches_found + no_matches + errors
+        matches_found = max(int(fresh.matches_found or 0), len(response.matches))
+        no_matches = max(int(fresh.no_matches or 0), len(response.unmatched_stores))
+        errors = max(int(fresh.errors or 0), len(response.errors))
+        stores_total = max(
+            int(fresh.stores_total or 0),
+            matches_found + no_matches + errors,
+            int(fresh.stores_completed or 0),
+        )
         service.finalize_completed(
             fresh,
             matches_found=matches_found,
             no_matches=no_matches,
             errors=errors,
-            stores_total=max(stores_total, int(fresh.stores_completed or 0)),
+            stores_total=stores_total,
             stores_completed=int(fresh.stores_completed or stores_total),
+            expected_worker_id=worker_id,
         )
         finished = utcnow()
         logger.info(
@@ -260,6 +328,7 @@ def process_claimed_run(
                 "run_id": str(run_id),
                 "product_id": str(product_id),
                 "status": "completed",
+                "attempt": claim_attempts,
                 "started_at": started.isoformat(),
                 "finished_at": finished.isoformat(),
                 "duration_ms": int((finished - started).total_seconds() * 1000),
@@ -274,14 +343,22 @@ def process_claimed_run(
         if fresh is None:
             return run
         service.finalize_failed(
-            fresh, code=exc.code or "REQUEST_ERROR", message=str(exc)
+            fresh,
+            code=exc.code or "REQUEST_ERROR",
+            message=str(exc),
+            expected_worker_id=worker_id,
         )
         return fresh
     except ParseError as exc:
         fresh = session.get(ProductMatchRun, run_id)
         if fresh is None:
             return run
-        service.finalize_failed(fresh, code="PARSE_ERROR", message=str(exc))
+        service.finalize_failed(
+            fresh,
+            code="PARSE_ERROR",
+            message=str(exc),
+            expected_worker_id=worker_id,
+        )
         return fresh
     except Exception:  # noqa: BLE001
         logger.exception("match_run_failed run_id=%s", run_id)
@@ -289,7 +366,10 @@ def process_claimed_run(
         if fresh is None:
             return run
         service.finalize_failed(
-            fresh, code="INTERNAL_ERROR", message="Falha interna no Product Match"
+            fresh,
+            code="INTERNAL_ERROR",
+            message="Falha interna no Product Match",
+            expected_worker_id=worker_id,
         )
         return fresh
     finally:
@@ -303,12 +383,16 @@ def sweep_once(
     worker_id: str,
     settings: Settings | None = None,
 ) -> dict[str, Any]:
-    """Claim due match runs and process them sequentially."""
+    """Reconcile exhausted stale leases, then claim and process due runs."""
     cfg = settings or get_settings()
     if not cfg.match_run_worker_enabled:
         return {"claimed": 0, "processed": 0, "duration_ms": 0, "skipped": True}
 
     started = time.perf_counter()
+    exhausted = reconcile_exhausted_stale_runs(session, settings=cfg)
+    if exhausted:
+        session.commit()
+
     claimed = claim_due_match_runs(session, worker_id=worker_id, settings=cfg)
     session.commit()
 
@@ -324,6 +408,7 @@ def sweep_once(
     return {
         "claimed": len(claimed),
         "processed": processed,
+        "exhausted": exhausted,
         "duration_ms": int((time.perf_counter() - started) * 1000),
     }
 

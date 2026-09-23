@@ -60,9 +60,19 @@ Como executar Product Match de forma que:
    `GET /products/{id}/match-runs/active` — rate scope `poll` (bucket
    separado do CRUD/crawler; ver `docs/security/api-auth.md`).
 6. Lease/heartbeat + reclaim de Runs `running` com lease expirado; após
-   `match_run_max_attempts`, marcar `failed` (não bloquear o produto
-   eternamente).
+   `match_run_max_attempts`, marcar `failed` com `failure_code=worker_lost`
+   (não bloquear o produto eternamente).
 7. Notificação terminal idempotente por `(match_run_id, type)`.
+8. **Active (API/UX) ≠ `status` sozinho:** uma Run só é efetivamente ativa se
+   `pending` **ou** (`running` **e** lease válida / `claim_expires_at > now`).
+   `GET …/active` com lease expirada responde **204** (não finge worker vivo).
+9. **Política C (híbrida):** worker reclaim da mesma Run (skip de
+   `MatchStoreRun` já `match|no_match|error`); `POST start` com Run stale
+   terminaliza `worker_lost` e cria nova; sweeper terminaliza exhausted.
+10. Timer UX usa `active_since` (`claimed_at` da attempt atual, senão
+    `started_at`) — downtime offline **não** conta como processamento.
+11. Heartbeat só no worker (`MATCH_RUN_HEARTBEAT_INTERVAL_SECONDS`); fencing
+    por `worker_id` + `attempts` em heartbeat / store outcome / finalize.
 
 ## Justificativa
 
@@ -74,8 +84,9 @@ persistente da operação.
 ## Consequências positivas
 
 - UI deixa de ser dona do lifecycle.
-- Reload preserva elapsed e bloqueio de nova busca.
-- Restart da API/worker recupera jobs.
+- Reload preserva elapsed e bloqueio de nova busca **enquanto a lease for válida**.
+- Restart da API/worker recupera jobs (reclaim) ou libera produto (`worker_lost`).
+- Crash / power-loss não deixa banner eterno: active exige lease válida.
 - Logs/notificações auditáveis no site.
 - Código SSE morto removido do fluxo.
 
@@ -84,16 +95,28 @@ persistente da operação.
 - Feedback de progresso por loja deixa de ser streaming contínuo; o banner
   mostra elapsed (+ opcionalmente stores_completed/stores_total).
 - Latência de detecção de conclusão ≈ intervalo de polling (poucos segundos).
+- Após lease expirar, há janela em que `GET active` é 204 até reclaim ou
+  `POST start` / sweeper terminalizar — intencional (não fingir worker vivo).
 - Crescimento de linhas de log por Run — retenção agressiva fica para fase
   futura (documentada).
+
+## Configuração (Settings)
+
+| Env | Default | Papel |
+|---|---|---|
+| `MATCH_RUN_LEASE_SECONDS` | 600 | TTL da lease |
+| `MATCH_RUN_HEARTBEAT_INTERVAL_SECONDS` | 120 | Renovação (só worker) |
+| `MATCH_RUN_RECOVERY_INTERVAL_SECONDS` | 30 | Cadência de reconcile |
+| `MATCH_RUN_MAX_ATTEMPTS` | 3 | Após N claims → `worker_lost` |
+| `MATCH_RUN_SWEEP_INTERVAL_SECONDS` | 2 | Poll do claim loop |
 
 ## Endpoints
 
 | Método | Path | Papel |
 |---|---|---|
-| POST | `/products/{id}/match-runs` | Start (202) |
-| GET | `/products/{id}/match-runs/active` | Active ou 204 |
-| GET | `/match-runs/{id}` | Status (poll) |
+| POST | `/products/{id}/match-runs` | Start (202); stale → `worker_lost` + nova |
+| GET | `/products/{id}/match-runs/active` | Efetivamente ativa ou 204 |
+| GET | `/match-runs/{id}` | Status (poll); inclui `active_since` / `attempts` |
 | GET | `/products/{id}/match-runs` | Histórico |
 | GET | `/match-runs/{id}/details` | Relatório |
 | GET/POST | `/notifications*` | Central persistente |

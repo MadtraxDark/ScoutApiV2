@@ -41,7 +41,10 @@ class MatchRunRepository:
         )
         return self._session.scalars(stmt).first()
 
-    def get_active_for_product(self, product_id: uuid.UUID) -> ProductMatchRun | None:
+    def get_status_active_for_product(
+        self, product_id: uuid.UUID
+    ) -> ProductMatchRun | None:
+        """Row with status pending|running (ignores lease — unique-index holder)."""
         stmt = (
             select(ProductMatchRun)
             .where(
@@ -52,6 +55,32 @@ class MatchRunRepository:
             .limit(1)
         )
         return self._session.scalars(stmt).first()
+
+    def get_active_for_product(
+        self,
+        product_id: uuid.UUID,
+        *,
+        now: datetime | None = None,
+    ) -> ProductMatchRun | None:
+        """Effectively active run: pending, or running with a valid lease."""
+        from scout_api.modules.matching.match_run_claim import is_effectively_active
+
+        row = self.get_status_active_for_product(product_id)
+        if row is None:
+            return None
+        if is_effectively_active(row, now=now):
+            return row
+        return None
+
+    def terminal_store_keys(self, run_id: uuid.UUID) -> set[str]:
+        stmt = select(MatchStoreRun.store, MatchStoreRun.status).where(
+            MatchStoreRun.run_id == run_id
+        )
+        keys: set[str] = set()
+        for store, status in self._session.execute(stmt).all():
+            if (status or "").lower() in ("match", "no_match", "error"):
+                keys.add(str(store).lower())
+        return keys
 
     def list_for_product(
         self,

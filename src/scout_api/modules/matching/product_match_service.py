@@ -227,6 +227,7 @@ class ProductMatchService:
         *,
         on_progress: ProgressCallback | None = None,
         on_store_outcome: StoreOutcomeCallback | None = None,
+        skip_stores: frozenset[str] | set[str] | None = None,
     ) -> MatchResponse:
         """Match from a live reference URL (scrape → search → score)."""
         if on_progress is not None:
@@ -255,6 +256,7 @@ class ProductMatchService:
             clear_reference_price=False,
             on_progress=on_progress,
             on_store_outcome=on_store_outcome,
+            skip_stores=skip_stores,
         )
 
     def match_from_item(
@@ -270,6 +272,7 @@ class ProductMatchService:
         clear_reference_price: bool = True,
         on_progress: ProgressCallback | None = None,
         on_store_outcome: StoreOutcomeCallback | None = None,
+        skip_stores: frozenset[str] | set[str] | None = None,
     ) -> MatchResponse:
         """Match using an already-normalized reference item (no reference scrape).
 
@@ -292,6 +295,7 @@ class ProductMatchService:
             canonical_product_id=canonical_product_id,
             on_progress=on_progress,
             on_store_outcome=on_store_outcome,
+            skip_stores=skip_stores,
         )
 
     def _match_with_reference(
@@ -307,6 +311,7 @@ class ProductMatchService:
         canonical_product_id: UUID | None = None,
         on_progress: ProgressCallback | None = None,
         on_store_outcome: StoreOutcomeCallback | None = None,
+        skip_stores: frozenset[str] | set[str] | None = None,
     ) -> MatchResponse:
         # Product Match never needs gallery bytes — ignore caller flag for cost.
         include_images = False
@@ -316,6 +321,10 @@ class ProductMatchService:
             reference,
             reference_has_gtin=bool(ref_identity.gtin),
         )
+        if skip_stores:
+            skip = {s.strip().lower() for s in skip_stores if s and str(s).strip()}
+            if skip:
+                target_stores = [s for s in target_stores if s not in skip]
 
         matches: list[MatchHit] = []
         unmatched: list[str] = []

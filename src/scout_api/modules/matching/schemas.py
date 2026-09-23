@@ -550,6 +550,15 @@ class MatchRunStatusView(BaseModel):
     started_at: datetime
     finished_at: datetime | None = None
     last_activity_at: datetime
+    claimed_at: datetime | None = None
+    active_since: datetime | None = Field(
+        default=None,
+        description=(
+            "Início da attempt ativa (claimed_at) ou started_at — "
+            "base do timer UX; não inclui downtime offline."
+        ),
+    )
+    attempts: int = 0
     total_duration_ms: int | None = None
     stores_total: int = 0
     stores_completed: int = 0

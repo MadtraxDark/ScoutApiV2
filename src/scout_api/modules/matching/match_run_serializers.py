@@ -22,6 +22,8 @@ from scout_api.modules.matching.schemas import (
 def match_run_to_status(
     run: ProductMatchRun, *, already_active: bool = False
 ) -> MatchRunStatusView:
+    claimed_at = run.claimed_at
+    active_since = claimed_at or run.started_at
     return MatchRunStatusView(
         id=run.id,
         product_id=run.product_id,
@@ -29,6 +31,9 @@ def match_run_to_status(
         started_at=run.started_at,
         finished_at=run.finished_at,
         last_activity_at=run.last_activity_at,
+        claimed_at=claimed_at,
+        active_since=active_since,
+        attempts=int(run.attempts or 0),
         total_duration_ms=run.total_duration_ms,
         stores_total=int(run.stores_total or 0),
         stores_completed=int(run.stores_completed or 0),

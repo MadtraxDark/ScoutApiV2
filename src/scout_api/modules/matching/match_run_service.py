@@ -14,6 +14,12 @@ from sqlalchemy.orm import Session
 
 from scout_api.modules.auth.schemas import AuthenticatedPrincipal
 from scout_api.modules.crawler.stores import store_display_name
+from scout_api.modules.matching.match_run_claim import (
+    FAILURE_CODE_WORKER_LOST,
+    WORKER_LOST_MESSAGE,
+    is_effectively_active,
+    is_stale_running,
+)
 from scout_api.modules.matching.match_run_repository import (
     MatchRunRepository,
     NotificationRepository,
@@ -121,19 +127,45 @@ class MatchRunService:
         product_id: UUID,
         *,
         principal: AuthenticatedPrincipal,
+        now: datetime | None = None,
     ) -> tuple[ProductMatchRun, bool]:
-        """Create a pending run or return the existing active one.
+        """Create a pending run or return the existing effectively-active one.
 
-        Returns ``(run, created)``. Concurrent starts are serialized by the
-        partial unique index on active ``product_id``.
+        Returns ``(run, created)``. A ``running`` row with an expired lease is
+        terminalized as ``worker_lost`` so a new search can start (policy C).
         """
+        moment = now or _utcnow()
         product = self._registration.get_product(product_id, viewer=principal)
         if product is None:
             raise LookupError("PRODUCT_NOT_FOUND")
 
-        existing = self._runs.get_active_for_product(product_id)
-        if existing is not None:
-            return existing, False
+        blocking = self._runs.get_status_active_for_product(product_id)
+        if blocking is not None:
+            if is_effectively_active(blocking, now=moment):
+                return blocking, False
+            if is_stale_running(blocking, now=moment):
+                logger.info(
+                    "match_job_lease_expired",
+                    extra={
+                        "run_id": str(blocking.id),
+                        "product_id": str(product_id),
+                        "attempt": int(blocking.attempts or 0),
+                        "claim_expires_at": (
+                            blocking.claim_expires_at.isoformat()
+                            if blocking.claim_expires_at
+                            else None
+                        ),
+                    },
+                )
+                self.finalize_failed(
+                    blocking,
+                    code=FAILURE_CODE_WORKER_LOST,
+                    message=WORKER_LOST_MESSAGE,
+                    now=moment,
+                )
+            else:
+                # Defensive: non-active status-active row (should not happen).
+                return blocking, False
 
         reference_url = select_reference_url_for_product(self._session, product_id)
         if not reference_url:
@@ -149,18 +181,39 @@ class MatchRunService:
             return run, True
         except IntegrityError:
             # Race: another request won the partial unique index.
-            active = self._runs.get_active_for_product(product_id)
+            active = self._runs.get_active_for_product(product_id, now=moment)
             if active is not None:
                 return active, False
+            stale = self._runs.get_status_active_for_product(product_id)
+            if stale is not None and is_stale_running(stale, now=moment):
+                self.finalize_failed(
+                    stale,
+                    code=FAILURE_CODE_WORKER_LOST,
+                    message=WORKER_LOST_MESSAGE,
+                    now=moment,
+                )
+                with self._session.begin_nested():
+                    run = self._runs.create_pending(
+                        product_id=product_id,
+                        requested_by=principal.id,
+                        reference_url=reference_url,
+                    )
+                return run, True
             raise
 
     def get_active(
-        self, product_id: UUID, *, principal: AuthenticatedPrincipal
+        self,
+        product_id: UUID,
+        *,
+        principal: AuthenticatedPrincipal,
+        now: datetime | None = None,
     ) -> ProductMatchRun | None:
         product = self._registration.get_product(product_id, viewer=principal)
         if product is None:
             raise LookupError("PRODUCT_NOT_FOUND")
-        return self._runs.get_active_for_product(product_id)
+        # Do not terminalize here — leave reclaim to the worker; only hide
+        # lease-expired RUNNING from UX (policy C).
+        return self._runs.get_active_for_product(product_id, now=now or _utcnow())
 
     def get_status(
         self, run_id: UUID, *, principal: AuthenticatedPrincipal
@@ -206,13 +259,26 @@ class MatchRunService:
         errors: int,
         stores_total: int,
         stores_completed: int,
+        expected_worker_id: str | None = None,
+        now: datetime | None = None,
     ) -> UserNotification | None:
-        now = _utcnow()
-        started = _as_utc(run.started_at) or now
-        duration_ms = int((now - started).total_seconds() * 1000)
+        if expected_worker_id is not None and run.worker_id != expected_worker_id:
+            logger.warning(
+                "match_job_zombie_finalize_rejected",
+                extra={
+                    "run_id": str(run.id),
+                    "expected_worker_id": expected_worker_id,
+                    "actual_worker_id": run.worker_id,
+                },
+            )
+            return None
+        moment = now or _utcnow()
+        # Active processing time (current claim), not wall clock including downtime.
+        anchor = _as_utc(run.claimed_at) or _as_utc(run.started_at) or moment
+        duration_ms = max(0, int((moment - anchor).total_seconds() * 1000))
         run.status = "completed"
-        run.finished_at = now
-        run.last_activity_at = now
+        run.finished_at = moment
+        run.last_activity_at = moment
         run.total_duration_ms = duration_ms
         run.matches_found = matches_found
         run.no_matches = no_matches
@@ -225,6 +291,14 @@ class MatchRunService:
         run.claimed_at = None
         run.claim_expires_at = None
         self._session.flush()
+        logger.info(
+            "match_job_completed",
+            extra={
+                "run_id": str(run.id),
+                "attempt": int(run.attempts or 0),
+                "duration_ms": duration_ms,
+            },
+        )
         return self._notify_terminal(run, success=True)
 
     def finalize_failed(
@@ -233,20 +307,45 @@ class MatchRunService:
         *,
         code: str,
         message: str,
+        expected_worker_id: str | None = None,
+        now: datetime | None = None,
     ) -> UserNotification | None:
-        now = _utcnow()
-        started = _as_utc(run.started_at) or now
-        duration_ms = int((now - started).total_seconds() * 1000)
+        if expected_worker_id is not None and run.worker_id != expected_worker_id:
+            logger.warning(
+                "match_job_zombie_finalize_rejected",
+                extra={
+                    "run_id": str(run.id),
+                    "expected_worker_id": expected_worker_id,
+                    "actual_worker_id": run.worker_id,
+                },
+            )
+            return None
+        moment = now or _utcnow()
+        anchor = _as_utc(run.claimed_at) or _as_utc(run.started_at) or moment
+        duration_ms = max(0, int((moment - anchor).total_seconds() * 1000))
+        normalized = (code or "INTERNAL_ERROR").strip()
+        if normalized.upper() in {"STALE_LEASE_EXHAUSTED", "WORKER_LOST"}:
+            normalized = FAILURE_CODE_WORKER_LOST
         run.status = "failed"
-        run.finished_at = now
-        run.last_activity_at = now
+        run.finished_at = moment
+        run.last_activity_at = moment
         run.total_duration_ms = duration_ms
-        run.failure_code = (code or "INTERNAL_ERROR")[:64]
+        run.failure_code = normalized[:64]
         run.failure_message = sanitize_error_message(message)
         run.worker_id = None
         run.claimed_at = None
         run.claim_expires_at = None
         self._session.flush()
+        if run.failure_code == FAILURE_CODE_WORKER_LOST:
+            logger.info(
+                "match_job_interrupted",
+                extra={
+                    "run_id": str(run.id),
+                    "attempt": int(run.attempts or 0),
+                    "failure_code": run.failure_code,
+                    "duration_ms": duration_ms,
+                },
+            )
         return self._notify_terminal(run, success=False)
 
     def _notify_terminal(
@@ -281,11 +380,18 @@ class MatchRunService:
                 )
         else:
             ntype = "PRODUCT_MATCH_FAILED"
-            title = "Busca em outras lojas não concluída"
-            message = (
-                f"{product_title or 'Produto'} — a busca falhou. "
-                f"Tempo: {duration}. Consulte o log da execução."
-            )
+            if run.failure_code == FAILURE_CODE_WORKER_LOST:
+                title = "Busca interrompida"
+                message = (
+                    f"{product_title or 'Produto'} — a execução foi interrompida "
+                    f"antes da conclusão (worker perdido). Tempo ativo: {duration}."
+                )
+            else:
+                title = "Busca em outras lojas não concluída"
+                message = (
+                    f"{product_title or 'Produto'} — a busca falhou. "
+                    f"Tempo: {duration}. Consulte o log da execução."
+                )
 
         return self._notifications.create_idempotent(
             user_id=run.requested_by,
@@ -327,7 +433,37 @@ class MatchRunService:
         search_duration_ms: int | None = None,
         candidate_fetch_duration_ms: int | None = None,
         candidates: list[dict[str, Any]] | None = None,
-    ) -> MatchStoreRun:
+        expected_worker_id: str | None = None,
+    ) -> MatchStoreRun | None:
+        if expected_worker_id is not None and run.worker_id != expected_worker_id:
+            logger.warning(
+                "match_job_zombie_store_outcome_rejected",
+                extra={
+                    "run_id": str(run.id),
+                    "store": store,
+                    "expected_worker_id": expected_worker_id,
+                    "actual_worker_id": run.worker_id,
+                },
+            )
+            return None
+        if (run.status or "").lower() != "running":
+            return None
+        # Do not overwrite a terminal store result from a prior attempt.
+        existing = next(
+            (
+                row
+                for row in (run.store_runs or [])
+                if (row.store or "").lower() == (store or "").lower()
+            ),
+            None,
+        )
+        if existing is not None and (existing.status or "").lower() in (
+            "match",
+            "no_match",
+            "error",
+        ):
+            return existing
+
         store_run = self._runs.get_or_create_store_run(
             run.id, store, display_name=display_name or store_display_name(store)
         )

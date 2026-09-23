@@ -123,8 +123,9 @@ SSE (`POST /match/stream`) foi **removido**. O fluxo do botão
 **Buscar preços em outras lojas** é:
 
 1. `POST /products/{id}/match-runs` → **202** + `id` / `status` / `started_at`
-   (se já houver Run ativa, devolve a existente com `already_active=true`)
-2. Product Match roda em background (worker com lease PostgreSQL)
+   (se já houver Run **efetivamente** ativa, devolve a existente com
+   `already_active=true`)
+2. Product Match roda em background (worker com lease PostgreSQL + heartbeat)
 3. Frontend: polling leve em `GET /match-runs/{id}` +
    `GET /products/{id}/match-runs/active` para banner/botão
    (rate scope `poll`, bucket separado do CRUD — ver
@@ -137,6 +138,13 @@ Regras:
 
 - A busca **não** pertence à página React; sair/reload não cancela a Run.
 - No máximo uma Run `pending|running` por produto (índice único parcial).
+- **Active ≠ status sozinho:** `GET …/active` só retorna Run se `pending` ou
+  (`running` **e** lease válida). Após power-loss / Docker kill, lease expira →
+  **204** (sem banner de horas); worker reclaim (skip stores já terminais) ou
+  `POST start` / sweeper marca `failed` + `failure_code=worker_lost`.
+- Timer UX usa `active_since` (`claimed_at` da attempt, senão `started_at`) —
+  downtime offline não conta como processamento.
+- Toast `worker_lost`: “Busca anterior foi interrompida.” (uma vez por Run).
 - `reference_url` é resolvida no backend a partir das listings do produto,
   priorizando lojas com scrape de PDP mais confiável (ex.: Kabum/Amazon/Magalu
   antes de Shopping China). Se o scrape da referência falhar, o worker faz

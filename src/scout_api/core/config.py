@@ -154,6 +154,10 @@ class Settings(BaseSettings):
     match_run_sweep_interval_seconds: float = 2.0
     match_run_batch_size: int = 1
     match_run_lease_seconds: int = 600
+    # Heartbeat must be well below lease (default lease/5). Worker-only renewals.
+    match_run_heartbeat_interval_seconds: int = 120
+    # Periodic reconcile of exhausted stale leases (beyond claim sweep).
+    match_run_recovery_interval_seconds: float = 30.0
     match_run_max_attempts: int = 3
 
     @field_validator("debug", mode="before")
@@ -186,6 +190,18 @@ class Settings(BaseSettings):
             self.image_avif_max_concurrency = max(
                 1, int(self.image_optimization_concurrency)
             )
+        lease = max(60, int(self.match_run_lease_seconds))
+        heartbeat = max(15, int(self.match_run_heartbeat_interval_seconds))
+        if heartbeat >= lease:
+            raise ValueError(
+                "MATCH_RUN_HEARTBEAT_INTERVAL_SECONDS deve ser menor que "
+                "MATCH_RUN_LEASE_SECONDS (margem para falhas transitórias)."
+            )
+        self.match_run_lease_seconds = lease
+        self.match_run_heartbeat_interval_seconds = heartbeat
+        self.match_run_recovery_interval_seconds = max(
+            5.0, float(self.match_run_recovery_interval_seconds)
+        )
         return self
 
     model_config = SettingsConfigDict(
