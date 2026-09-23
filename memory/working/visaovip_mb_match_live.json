@@ -1,0 +1,27 @@
+{
+  "secs": 17.5,
+  "canonical_product_id": "0cb47f6a-298b-441d-9154-e33a37d75cd5",
+  "matches": [
+    {
+      "store": "visaovip",
+      "decision": "auto_match",
+      "url": "https://www.visaovip.com/prod/placas-mae-amd/placa-mae-asus-tuf-gaming-b650m-e-wi-fi-socket-am5-ddr5/41749/",
+      "product_id": "41749",
+      "title": "Placa Mãe ASUS TUF Gaming B650M-E Wi-Fi Socket AM5 / DDR5",
+      "price": "171.00",
+      "currency": "USD",
+      "search_query": "asus tuf gaming b650m-e wifi",
+      "reasons": [
+        "brand_match",
+        "brand_model_exact",
+        "title_similarity"
+      ]
+    }
+  ],
+  "unmatched": [],
+  "errors": [],
+  "gt_discovered": true,
+  "reference_title": "Placa-Mãe ASUS TUF Gaming B650M-E, WIFI, AMD AM5, B650, DDR5, Preto - 90MB1FV0-M0EAY0",
+  "reference_brand": "ASUS",
+  "reference_model": "TUF Gaming B650M-E"
+}

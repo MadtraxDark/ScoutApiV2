@@ -73,9 +73,25 @@
 - Initial HTML already carries the RSC product payload; no store-specific
   fetch layer. Plain HTTP with a normal UA also returns the flight data.
 
+## Live search (matching)
+
+- `supports_search=True`
+- SERP: `https://www.visaovip.com/busca/termo/{slug}/`
+  - Storefront search form converts whitespace to hyphens in the path
+    (`ASUS TUF Gaming B650M-E WIFI` → `ASUS-TUF-Gaming-B650M-E-WIFI`)
+  - Naive `/busca/?q=` is a soft 404 — do not use
+- Parser: `a[href*="/prod/"]` whose path matches `/prod/.../{productCode}/`
+  (stable productCode = same ID as PDP). CDN gallery URLs under
+  `cdn.visaovip.com/img/prod/...` are ignored
+- SERP HTML is RSC/postponed: plain HTTP shell often lacks cards; Camoufox
+  settle (default store fetch) hydrates product links. Prefer HTTP only if a
+  future JSON/RSC payload proves complete without browser
+- Progressive ProductIdentity queries (MPN / brand+family+board / board) apply
+  via shared `build_search_queries` — no store-specific SKU rules
+
 ## Known blocking
 
-- Some non-PDP routes (e.g. naive `/busca`) may 403 without browser context
+- Some non-PDP routes (e.g. naive `/busca`) may 403/404 without the term slug
 - Standard WAF/challenge classification via fetcher when it occurs
 
 ## Important invariants
@@ -86,10 +102,13 @@
 
 ## Known limitations
 
-- No live search adapter yet (`supports_search=False`)
 - Wrong/missing category slug in the URL can soft-404 even with a valid code
 - GTIN often absent
+- Broad term queries (`B650M-E WIFI`) can return Wi-Fi adapters / sibling
+  boards — progressive identity queries + matcher precision handle this
 
 ## Tests / fixtures
 
-- `tests/fixtures/visaovip/`, `tests/unit/test_visaovip.py`
+- `tests/fixtures/visaovip/` — PDP + SERP (`search_termo_board.html`,
+  `product_motherboard.html`)
+- `tests/unit/test_visaovip.py` — offer/details/search URL + SERP parser

@@ -1920,6 +1920,34 @@ def test_motherboard_short_title_missing_specs_still_matches() -> None:
     assert score.decision == "auto_match"
 
 
+def test_motherboard_visaovip_short_title_style_matches() -> None:
+    """Visão VIP shorter title (Wi-Fi / AM5 / DDR5) must still auto-match."""
+    ref = identity_from_price_item(
+        _item(
+            title=_MB_LONG_TITLE,
+            brand="Asus",
+            store="kabum",
+            product_id="523145",
+            url="https://www.kabum.com.br/produto/523145/placa",
+            canonical_url="https://www.kabum.com.br/produto/523145/placa",
+        )
+    )
+    cand = identity_from_price_item(
+        _item(
+            title="Placa Mãe Asus Tuf Gaming B650M-E Wi-Fi Socket AM5 DDR5",
+            brand="ASUS",
+            store="visaovip",
+            country="PY",
+            currency="USD",
+            product_id="vv-mb",
+            url="https://www.visaovip.com/prod/placas-mae-amd/vv-mb/",
+            canonical_url="https://www.visaovip.com/prod/placas-mae-amd/vv-mb/",
+        )
+    )
+    score = MatchingEngine().score(ref, cand)
+    assert score.decision == "auto_match"
+
+
 def test_motherboard_near_neighbor_model_rejects() -> None:
     """B650M-E must not auto-match B650M-PLUS / B650M-A."""
     ref = identity_from_price_item(

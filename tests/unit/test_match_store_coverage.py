@@ -57,10 +57,9 @@ def test_eligible_match_excludes_disabled_and_non_search() -> None:
     assert "shopee" not in eligible
     assert STORE_CONFIGS["mercadolivre"].match_enabled is False
     assert STORE_CONFIGS["shopee"].match_enabled is False
-    # Implemented without search must not be auto-executed.
-    assert "visaovip" not in eligible
     assert STORE_CONFIGS["visaovip"].implemented is True
-    # Search-capable + match_enabled stay in.
+    # Search-capable + match_enabled stay in (incl. Visão VIP term search).
+    assert "visaovip" in eligible
     assert "kabum" in eligible
     assert "magazineluiza" in eligible
     assert "pichau" in eligible
@@ -89,7 +88,7 @@ def test_match_runs_only_eligible_stores() -> None:
     assert covered == expected
     assert "mercadolivre" not in covered
     assert "shopee" not in covered
-    assert "visaovip" not in covered
+    assert "visaovip" in covered
     assert not any(e.code == "SEARCH_UNSUPPORTED" for e in resp.errors)
 
 

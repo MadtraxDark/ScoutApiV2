@@ -7,13 +7,14 @@ import re
 import unicodedata
 from decimal import Decimal, InvalidOperation
 from typing import Any, Literal
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 from scrapy.http import Response
 
 from ...core.exceptions import ParseError
 from ...core.fingerprints import canonicalize_url
 from ...models.product import ProductDetails, ProductOffer
+from ...models.search import SearchCandidate
 from ...utils.product_attributes import (
     format_identity_variant,
     merge_specification_gaps,
@@ -24,6 +25,17 @@ from ..base import BaseStoreSpider
 Availability = Literal["available", "out_of_stock", "unavailable"]
 
 _PRODUCT_PATH_ID = re.compile(r"/prod/.+/(\d+)/?$", re.IGNORECASE)
+_SERP_TITLE_CUT = re.compile(
+    r"\b(?:U\$|G\$|R\$|Código:|Codigo:)",
+    re.IGNORECASE,
+)
+_SERP_CATEGORY_GLUE = re.compile(
+    r"(?<=[a-z0-9/])\s+(?="
+    r"Placas?\s|Notebooks?\s|Processadores?\s|Mem[oó]rias?\s|"
+    r"SSDs?\s|HDs?\s|Smartphones?\s|Celulares?\s"
+    r")",
+    re.IGNORECASE,
+)
 _NEXT_FLIGHT_PUSH = re.compile(
     r"self\.__next_f\.push\(\[1,\"((?:[^\"\\]|\\.)*)\"\]\)",
     re.DOTALL,
@@ -70,8 +82,86 @@ class VisaoVipSpider(BaseStoreSpider):
 
     name = "visaovip"
     store, country, currency = "visaovip", "PY", "USD"
+    supports_search = True
     allowed_domains = ["visaovip.com", "www.visaovip.com"]
     start_urls: list[str] = []
+
+    def build_search_url(self, query: str) -> str:
+        """Next.js term search: ``/busca/termo/{slug}/`` (spaces → hyphens).
+
+        Free-text ``/busca/?q=`` returns a soft 404. The storefront form
+        navigates to a path slug where whitespace becomes ``-``.
+        """
+        slug = self._search_term_slug(query)
+        if not slug:
+            raise ParseError("Query de busca Visão VIP vazia")
+        return f"https://www.visaovip.com/busca/termo/{slug}/"
+
+    def parse_search_results(self, response: Response) -> list[SearchCandidate]:
+        """Extract PDP cards from hydrated SERP HTML (Camoufox settles RSC)."""
+        candidates: list[SearchCandidate] = []
+        seen: set[str] = set()
+        for link in response.css("a[href*='/prod/']"):
+            href = link.attrib.get("href") or link.css("::attr(href)").get()
+            if not href or not str(href).strip():
+                continue
+            absolute = urljoin(response.url, str(href).strip())
+            path = (urlparse(absolute).path or "").rstrip("/") + "/"
+            match = _PRODUCT_PATH_ID.search(path)
+            if not match:
+                continue
+            # Skip CDN gallery paths that embed ``/prod/.../{id}/{asset}``.
+            if re.search(r"/\d+/\d+\.(?:jpe?g|png|webp|gif)$", path, re.I):
+                continue
+            if re.search(r"/\d+/\d+/?$", path):
+                continue
+            product_id = match.group(1)
+            canonical = canonicalize_url(absolute)
+            if canonical in seen:
+                continue
+            seen.add(canonical)
+            title_bits = [
+                t.strip() for t in link.css("::text").getall() if t and t.strip()
+            ]
+            title = self._clean_serp_title(" ".join(title_bits))
+            candidates.append(
+                SearchCandidate(
+                    url=absolute,
+                    title=title,
+                    product_id=product_id,
+                    metadata={"source": "visaovip-search"},
+                )
+            )
+            if len(candidates) >= 20:
+                break
+        return candidates
+
+    @staticmethod
+    def _search_term_slug(query: str) -> str:
+        """Mirror storefront slug rules: whitespace → hyphen, keep model hyphens."""
+        text = (query or "").strip()
+        if not text:
+            return ""
+        # Preserve alnum / hyphen / underscore; map other separators to '-'.
+        text = re.sub(r"[\s_/]+", "-", text)
+        text = re.sub(r"[^\w\-]+", "-", text, flags=re.UNICODE)
+        text = re.sub(r"-{2,}", "-", text).strip("-")
+        return text
+
+    @staticmethod
+    def _clean_serp_title(raw: str | None) -> str | None:
+        if not raw:
+            return None
+        text = re.sub(r"\s+", " ", raw).strip()
+        if not text:
+            return None
+        cut = _SERP_TITLE_CUT.search(text)
+        if cut and cut.start() > 8:
+            text = text[: cut.start()].strip(" -/|")
+        glue = _SERP_CATEGORY_GLUE.search(text)
+        if glue and glue.start() > 8:
+            text = text[: glue.start()].strip(" -/|")
+        return text or None
 
     def extract_offer(self, response: Response) -> ProductOffer:
         product = self._product(response)

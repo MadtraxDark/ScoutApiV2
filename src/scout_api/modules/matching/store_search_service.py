@@ -111,6 +111,34 @@ class StoreSearchService:
                     url=page_url,
                 )
 
+        # Visão VIP: hydrated SERP must expose /prod/{…}/{code}/ cards. An empty
+        # Next.js shell on /busca/termo/ (no product links, no zero-hit copy)
+        # is a fetch/parser failure — never silent NO_MATCH.
+        if (
+            not candidates
+            and store_key == "visaovip"
+            and "/busca/termo/" in page_url.casefold()
+        ):
+            folded = text.casefold()
+            genuine_empty = any(
+                marker in folded
+                for marker in (
+                    "nenhum resultado",
+                    "não encontramos",
+                    "nao encontramos",
+                    "no results",
+                    "sin resultados",
+                    "0 resultados",
+                )
+            )
+            has_product_href = "/prod/" in folded
+            if not genuine_empty and not has_product_href:
+                raise RequestError(
+                    "SERP Visão VIP incompleta (sem cards /prod/ parseáveis)",
+                    code="UPSTREAM_BLOCKED",
+                    url=page_url,
+                )
+
         # Re-rank by query relevance before capping — retailers often promote
         # sibling SKUs above the exact manufacturer PN / series hit.
         # Fill empty SERP titles from URL slugs (Magalu/AliExpress static HTML).

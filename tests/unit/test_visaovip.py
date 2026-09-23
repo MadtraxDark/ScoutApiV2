@@ -181,3 +181,51 @@ def test_visaovip_soft_404_is_parse_error_not_unavailable() -> None:
     )
     with pytest.raises(ParseError, match="soft-404"):
         spider.extract_offer(response)
+
+
+def test_visaovip_build_search_url_uses_termo_slug() -> None:
+    spider = VisaoVipSpider()
+    assert spider.supports_search is True
+    url = spider.build_search_url("ASUS TUF Gaming B650M-E WIFI")
+    assert url == (
+        "https://www.visaovip.com/busca/termo/ASUS-TUF-Gaming-B650M-E-WIFI/"
+    )
+    # Hyphenated model tokens survive whitespace→hyphen slugification.
+    assert "B650M-E" in url
+    assert "?q=" not in url
+
+
+def test_visaovip_parse_search_results_extracts_product_cards() -> None:
+    spider = VisaoVipSpider()
+    response = response_from_fixture(
+        "search_termo_board.html",
+        "https://www.visaovip.com/busca/termo/ASUS-TUF-Gaming-B650M-E-WIFI/",
+    )
+    candidates = spider.parse_search_results(response)
+    assert len(candidates) == 2
+    assert candidates[0].product_id == "41749"
+    assert candidates[0].url.endswith("/41749/")
+    assert "B650M-E" in (candidates[0].title or "")
+    assert "U$" not in (candidates[0].title or "")
+    assert "Placas Mãe" not in (candidates[0].title or "")
+    assert candidates[1].product_id == "54574"
+    # CDN image path must not appear as a candidate.
+    assert all("/595465" not in (c.url or "") for c in candidates)
+
+
+def test_visaovip_motherboard_details_identity_and_usd_price() -> None:
+    spider = VisaoVipSpider()
+    url = (
+        "https://www.visaovip.com/prod/placas-mae-amd/"
+        "placa-mae-asus-tuf-gaming-b650m-e-wi-fi-socket-am5-ddr5/41749/"
+    )
+    response = response_from_fixture("product_motherboard.html", url)
+    details = spider.extract_details(response)
+    offer = spider.extract_offer(response)
+    assert details.product_id == "41749"
+    assert "B650M-E" in details.title.upper().replace(" ", "")
+    assert (details.brand or "").upper() == "ASUS"
+    assert offer.currency == "USD"
+    assert offer.price > 0
+    assert offer.available is True
+    assert details.sku  # manufacturer REFERÊNCIA when present

@@ -60,7 +60,7 @@ ADR: [0011](../adr/0011-offer-vs-product-details.md), [0012](../adr/0012-optiona
   ```
 
   Fonte cadastral: `STORE_CONFIGS` / `GET /stores` (não lista hardcoded no
-  frontend). Spiders sem search (ex. `visaovip`) e lojas com
+  frontend).   Spiders sem search e lojas com
   `match_enabled=false` **não** entram no conjunto — omitidas, não
   `ERROR`/`NO_MATCH`.
 
@@ -70,7 +70,7 @@ ADR: [0011](../adr/0011-offer-vs-product-details.md), [0012](../adr/0012-optiona
 
   Lojas search-capable típicas quando habilitadas: `kabum`, `bestbuy`,
   `nissei`, `shoppingchina`, `amazon_br`, `amazon_us`, `magazineluiza`,
-  `pichau`, `terabyteshop`, `aliexpress`, (+ ML/Shopee após reenable).
+  `pichau`, `terabyteshop`, `aliexpress`, `visaovip`, (+ ML/Shopee após reenable).
   Discovery may start from a **URL scrape** (`POST /match`) or from an
   **identity-only** reference (`match_from_item` / `identity_reference_item`)
   — brand/model(/variant) without known store URLs, product IDs, or prices

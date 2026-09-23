@@ -1,0 +1,122 @@
+[
+  {
+    "category": "motherboard",
+    "query": "ASUS TUF Gaming B650M-E WIFI",
+    "ms": 7353,
+    "count": 1,
+    "error": null,
+    "candidates": [
+      {
+        "product_id": "41749",
+        "title": "Placa Mãe ASUS TUF Gaming B650M-E Wi-Fi Socket AM5 / DDR5 Placas Mãe AMD ASUS",
+        "url": "https://www.visaovip.com/prod/placas-mae-amd/placa-mae-asus-tuf-gaming-b650m-e-wi-fi-socket-am5-ddr5/41749/"
+      }
+    ]
+  },
+  {
+    "category": "cpu",
+    "query": "Ryzen 7 5800X3D",
+    "ms": 3091,
+    "count": 1,
+    "error": null,
+    "candidates": [
+      {
+        "product_id": "59017",
+        "title": "Processador AMD Ryzen 7 5800X3D 10th Anniversary Edition Socket AM4 / 3.4GHz / 100MB Processador (CPU) AMD AMD",
+        "url": "https://www.visaovip.com/prod/processador-cpu-amd/processador-amd-ryzen-7-5800x3d-10th-anniversary-edition-socket-am4-3-4ghz-100mb/59017/"
+      }
+    ]
+  },
+  {
+    "category": "gpu",
+    "query": "RTX 5070",
+    "ms": 3374,
+    "count": 5,
+    "error": null,
+    "candidates": [
+      {
+        "product_id": "60096",
+        "title": "Notebook Gamer Alienware 16X Aurora LAC16251-9582BLU-PUS Intel Core Ultra 9 275HX Tela QHD 16\" / 32GB de RAM / 2TB SSD / Win11Home / GeForce RTX5070 8GB - Azul (Inglês) Notebook DELL",
+        "url": "https://www.visaovip.com/prod/notebook/notebook-gamer-alienware-16x-aurora-lac16251-9582blu-pus-intel-core-ultra-9-275hx-tela-qhd-16-32gb-de-ram-2tb-ssd-win11home-geforce-rtx5070-8gb-azul-ingles/60096/"
+      },
+      {
+        "product_id": "59712",
+        "title": "Notebook Gamer Alienware 16 Aurora LAC16250-9346BLU-PUS Intel Core 9 270H Tela 2.5K 16.0\" / 32GB de RAM / 1TB SSD / Win11Home / GeForce RTX5070 8GB - Azul (Inglês) Notebook ALIENWARE",
+        "url": "https://www.visaovip.com/prod/notebook/notebook-gamer-alienware-16-aurora-lac16250-9346blu-pus-intel-core-9-270h-tela-2-5k-16-0-32gb-de-ram-1tb-ssd-win11home-geforce-rtx5070-8gb-azul-ingles/59712/"
+      },
+      {
+        "product_id": "55293",
+        "title": "Notebook Gamer MSI Cyborg 15 B2RWGKG-409US Intel Core 7 240H Tela Full HD 15.6\" / 16GB de RAM / 1TB SSD / Win11Home / GeForce RTX5070 8GB - Translucent Preto (Inglês) Notebook MSI",
+        "url": "https://www.visaovip.com/prod/notebook/notebook-gamer-msi-cyborg-15-b2rwgkg-409us-intel-core-7-240h-tela-full-hd-15-6-16gb-de-ram-1tb-ssd-win11home-geforce-rtx5070-8gb-translucent-preto-ingles/55293/"
+      },
+      {
+        "product_id": "54158",
+        "title": "Notebook Gamer HP OMEN 16 Slim 16-AN0119NR Intel Core Ultra 9 285H Tela WQXGA 16.0\" / 16GB de RAM / 1TB SSD / Win11Home / GeForce RTX5070 8GB - Preto (Inglês) Notebook HP",
+        "url": "https://www.visaovip.com/prod/notebook/notebook-gamer-hp-omen-16-slim-16-an0119nr-intel-core-ultra-9-285h-tela-wqxga-16-0-16gb-de-ram-1tb-ssd-win11home-geforce-rtx5070-8gb-preto-ingles/54158/"
+      },
+      {
+        "product_id": "60986",
+        "title": "Placa de Vídeo ASUS ROG STRIX Gaming OC 12GB GeForce RTX5070 GDDR7 - ROG-STRIX-RTX5070-O12G-GAMING Placas de Vídeo NVIDIA ASUS",
+        "url": "https://www.visaovip.com/prod/placas-de-video-nvidia/placa-de-video-asus-rog-strix-gaming-oc-12gb-geforce-rtx5070-gddr7-rog-strix-rtx5070-o12g-gaming/60986/"
+      }
+    ]
+  },
+  {
+    "category": "memory",
+    "query": "Kingston Fury DDR5",
+    "ms": 3490,
+    "count": 5,
+    "error": null,
+    "candidates": [
+      {
+        "product_id": "58835",
+        "title": "Memória RAM Kingston Fury Renegade DDR5 32GB (2x16GB) 6400MHz RGB - Preto / Prata (KF564C32RSAK2-32) Memória RAM PC KINGSTON",
+        "url": "https://www.visaovip.com/prod/memoria-ram-pc/memoria-ram-kingston-fury-renegade-ddr5-32gb-2x16gb-6400mhz-rgb-preto-prata-kf564c32rsak2-32/58835/"
+      },
+      {
+        "product_id": "58839",
+        "title": "Memória RAM Kingston Fury Renegade DDR5 64GB (2x32GB) 6400MHz RGB - Preto / Prata (KF564C32RSAK2-64) Memória RAM PC KINGSTON",
+        "url": "https://www.visaovip.com/prod/memoria-ram-pc/memoria-ram-kingston-fury-renegade-ddr5-64gb-2x32gb-6400mhz-rgb-preto-prata-kf564c32rsak2-64/58839/"
+      },
+      {
+        "product_id": "58840",
+        "title": "Memória RAM Kingston Fury Renegade DDR5 96GB (2x48GB) 6400MHz - Preto / Prata (KF564C32RSK2-96) Memória RAM PC KINGSTON",
+        "url": "https://www.visaovip.com/prod/memoria-ram-pc/memoria-ram-kingston-fury-renegade-ddr5-96gb-2x48gb-6400mhz-preto-prata-kf564c32rsk2-96/58840/"
+      },
+      {
+        "product_id": "58836",
+        "title": "Memória RAM Kingston Fury Renegade DDR5 96GB (2x48GB) 6000MHz - Preto / Prata (KF560C32RSK2-96) Memória RAM PC KINGSTON",
+        "url": "https://www.visaovip.com/prod/memoria-ram-pc/memoria-ram-kingston-fury-renegade-ddr5-96gb-2x48gb-6000mhz-preto-prata-kf560c32rsk2-96/58836/"
+      },
+      {
+        "product_id": "58837",
+        "title": "Memória RAM Kingston Fury Renegade DDR5 64GB (2x32GB) 6400MHz - Preto / Prata (KF564C32RSK2-64) Memória RAM PC KINGSTON",
+        "url": "https://www.visaovip.com/prod/memoria-ram-pc/memoria-ram-kingston-fury-renegade-ddr5-64gb-2x32gb-6400mhz-preto-prata-kf564c32rsk2-64/58837/"
+      }
+    ]
+  },
+  {
+    "category": "ssd",
+    "query": "Samsung 990 PRO",
+    "ms": 3246,
+    "count": 3,
+    "error": null,
+    "candidates": [
+      {
+        "product_id": "48987",
+        "title": "SSD Samsung M.2 4TB 990 Pro NVMe - MZ-V9P4T0B/AM SSD M.2 NVMe SAMSUNG",
+        "url": "https://www.visaovip.com/prod/ssd-m-2-nvme/ssd-samsung-m-2-4tb-990-pro-nvme-mz-v9p4t0b-am/48987/"
+      },
+      {
+        "product_id": "45417",
+        "title": "SSD Samsung M.2 2TB 990 Pro NVMe - MZ-V9P2T0B/AM SSD M.2 NVMe SAMSUNG",
+        "url": "https://www.visaovip.com/prod/ssd-m-2-nvme/ssd-samsung-m-2-2tb-990-pro-nvme-mz-v9p2t0b-am/45417/"
+      },
+      {
+        "product_id": "41102",
+        "title": "SSD Samsung M.2 1TB 990 Pro NVMe - MZ-V9P1T0B/AM SSD M.2 NVMe SAMSUNG",
+        "url": "https://www.visaovip.com/prod/ssd-m-2-nvme/ssd-samsung-m-2-1tb-990-pro-nvme-mz-v9p1t0b-am/41102/"
+      }
+    ]
+  }
+]
