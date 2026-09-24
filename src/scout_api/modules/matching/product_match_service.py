@@ -1302,26 +1302,32 @@ class ProductMatchService:
                 )
 
         allow_reparent = canonical_product_id is not None
-        ref_listing = repo.upsert_listing(
-            canonical=canonical,
-            item=reference,
-            decision="auto_match",
-            confidence=Decimal("1.0000"),
-            status="active",
-            allow_reparent=allow_reparent,
+        identity_only_reference = bool(
+            (reference.metadata or {}).get("identity_only")
         )
-        ref_offer = product_offer_from_price_item(reference)
-        if repo.latest_snapshot(ref_listing.id) is None:
-            repo.append_snapshot_from_offer(ref_listing, ref_offer)
-            repo.append_event(
-                ref_listing, "offer_created", after={"url": reference.url}
+        if not identity_only_reference:
+            ref_listing = repo.upsert_listing(
+                canonical=canonical,
+                item=reference,
+                decision="auto_match",
+                confidence=Decimal("1.0000"),
+                status="active",
+                allow_reparent=allow_reparent,
             )
-            from scout_api.modules.monitoring.hooks import initialize_listing_schedule
+            ref_offer = product_offer_from_price_item(reference)
+            if repo.latest_snapshot(ref_listing.id) is None:
+                repo.append_snapshot_from_offer(ref_listing, ref_offer)
+                repo.append_event(
+                    ref_listing, "offer_created", after={"url": reference.url}
+                )
+                from scout_api.modules.monitoring.hooks import (
+                    initialize_listing_schedule,
+                )
 
-            initialize_listing_schedule(
-                ref_listing, checked_at=ref_offer.scraped_at or datetime.now(UTC)
-            )
-        if learned and learned.source != "reference":
+                initialize_listing_schedule(
+                    ref_listing, checked_at=ref_offer.scraped_at or datetime.now(UTC)
+                )
+        if learned and learned.source != "reference" and not identity_only_reference:
             repo.append_event(
                 ref_listing,
                 "gtin_learned",

@@ -220,6 +220,225 @@ def test_mpn_query_precedes_title_tokens() -> None:
     assert any("mzv9s1t0bam" in q for q in queries)
 
 
+def test_monitor_model_code_exact_match_overrides_title_and_variant_noise() -> None:
+    reference = identity_from_price_item(
+        _item(
+            title="Monitor Gamer ASUS TUF VG259Q5A 24.5 Full HD 200Hz",
+            brand="ASUS",
+            metadata={"category": "monitor"},
+            variant="size: 24.5; color: black",
+        )
+    )
+    candidate = identity_from_price_item(
+        _item(
+            store="amazon_br",
+            product_id="monitor-1",
+            title="ASUS TUF Gaming VG259Q5A 24.5 IPS 200Hz",
+            brand="ASUS",
+            metadata={"category": "monitor"},
+            variant="size: 25; color: white",
+        )
+    )
+
+    score = MatchingEngine().score(reference, candidate)
+
+    assert reference.monitor_model_code == candidate.monitor_model_code == "VG259Q5A"
+    assert score.decision == "auto_match"
+    assert score.confidence == Decimal("0.9900")
+    assert any(reason.code == "monitor_model_code_exact" for reason in score.reasons)
+
+
+def test_monitor_model_code_case_is_normalized_safely() -> None:
+    reference = identity_from_price_item(
+        _item(
+            title="Monitor ASUS TUF VG259Q5A 24.5 200Hz",
+            brand="ASUS",
+            metadata={"category": "monitor"},
+        )
+    )
+    candidate = identity_from_price_item(
+        _item(
+            store="amazon_br",
+            title="Monitor ASUS TUF vg259q5a 24.5 IPS 200Hz",
+            brand="ASUS",
+            metadata={"category": "monitor"},
+        )
+    )
+
+    assert reference.monitor_model_code == candidate.monitor_model_code == "VG259Q5A"
+    assert MatchingEngine().score(reference, candidate).decision == "auto_match"
+
+
+def test_monitor_model_code_extraction_supports_varied_manufacturer_formats() -> None:
+    expected = {
+        "ASUS TUF VG27AQ3A 27 180Hz": "VG27AQ3A",
+        "Alienware AW2725DF 27 QD-OLED": "AW2725DF",
+        "Dell G2724D 27 IPS": "G2724D",
+        "LG UltraGear 27GS95QE-B 27 240Hz": "27GS95QE-B",
+        "Samsung LS32DG802SNXZA 32 4K": "LS32DG802SNXZA",
+        "Gigabyte M27Q-X 27 IPS": "M27Q-X",
+    }
+    for title, model_code in expected.items():
+        identity = identity_from_price_item(
+            _item(
+                title=title,
+                brand="monitor brand",
+                metadata={"category": "monitor"},
+            )
+        )
+        assert identity.monitor_model_code == model_code
+
+    no_model_code = identity_from_price_item(
+        _item(
+            title="Monitor Gamer ASUS TUF 24.5 Full HD 200Hz IPS HDR10 BT2020",
+            brand="ASUS",
+            metadata={"category": "monitor"},
+        )
+    )
+    assert no_model_code.monitor_model_code is None
+
+
+def test_monitor_model_code_mismatch_rejects_similar_titles() -> None:
+    reference = identity_from_price_item(
+        _item(
+            title="Monitor Gamer ASUS TUF VG259Q5A 24.5 Full HD 200Hz",
+            brand="ASUS",
+            metadata={"category": "monitor"},
+        )
+    )
+    candidate = identity_from_price_item(
+        _item(
+            store="amazon_br",
+            title="Monitor ASUS TUF VG259QM 24.5 Full HD 200Hz",
+            brand="ASUS",
+            metadata={"category": "monitor"},
+        )
+    )
+
+    score = MatchingEngine().score(reference, candidate)
+
+    assert score.decision == "reject"
+    assert any(reason.code == "monitor_model_code_conflict" for reason in score.reasons)
+
+
+def test_monitor_model_code_suffix_is_part_of_exact_identifier() -> None:
+    reference = identity_from_price_item(
+        _item(
+            title="Monitor LG UltraGear 27GS95QE 27 inch 240Hz",
+            brand="LG",
+            metadata={"category": "monitor"},
+        )
+    )
+    candidate = identity_from_price_item(
+        _item(
+            store="amazon_br",
+            title="Monitor LG UltraGear 27GS95QE-B 27 inch 240Hz",
+            brand="LG",
+            metadata={"category": "monitor"},
+        )
+    )
+
+    assert reference.monitor_model_code == "27GS95QE"
+    assert candidate.monitor_model_code == "27GS95QE-B"
+    assert MatchingEngine().score(reference, candidate).decision == "reject"
+
+
+def test_monitor_missing_model_code_falls_back_to_regular_match() -> None:
+    reference = identity_from_price_item(
+        _item(
+            title="Monitor Gamer ASUS TUF VG259Q5A 24.5 Full HD 200Hz",
+            brand="ASUS",
+            metadata={"category": "monitor"},
+        )
+    )
+    candidate = identity_from_price_item(
+        _item(
+            store="amazon_br",
+            title="Monitor Asus TUF Gaming 24.5 Full HD IPS 200Hz",
+            brand="ASUS",
+            metadata={"category": "monitor"},
+        )
+    )
+
+    score = MatchingEngine().score(reference, candidate)
+
+    assert score.decision == "auto_match"
+    assert any(reason.code == "brand_model_exact" for reason in score.reasons)
+
+
+def test_monitor_missing_code_can_continue_with_matching_display_specs() -> None:
+    reference = identity_from_price_item(
+        _item(
+            title=(
+                "Monitor Gamer Gigabyte GS24F14 23.8 Pol Full HD IPS 144Hz 1ms"
+            ),
+            brand="Gigabyte",
+            metadata={"category": "monitor"},
+        )
+    )
+    candidate = identity_from_price_item(
+        _item(
+            store="amazon_br",
+            title="Monitor Gamer Gigabyte 23.8 Pol Full HD IPS 144Hz 1ms",
+            brand="Gigabyte",
+            metadata={"category": "monitor"},
+        )
+    )
+
+    score = MatchingEngine().score(reference, candidate)
+
+    assert reference.monitor_model_code == "GS24F14"
+    assert candidate.monitor_model_code is None
+    assert score.decision == "review"
+    assert any(reason.code == "monitor_specs_agree" for reason in score.reasons)
+
+
+def test_candidate_only_monitor_model_code_falls_back_to_regular_match() -> None:
+    reference = identity_from_price_item(
+        _item(
+            title="Monitor ASUS TUF Gaming 24.5 Full HD IPS 200Hz",
+            brand="ASUS",
+            metadata={"category": "monitor"},
+        )
+    )
+    candidate = identity_from_price_item(
+        _item(
+            store="amazon_br",
+            title="Monitor ASUS TUF VG259Q5A 24.5 Full HD 200Hz",
+            brand="ASUS",
+            metadata={"category": "monitor"},
+        )
+    )
+
+    score = MatchingEngine().score(reference, candidate)
+
+    assert score.decision == "auto_match"
+    assert any(reason.code == "brand_model_exact" for reason in score.reasons)
+
+
+def test_no_monitor_model_codes_keep_regular_matching() -> None:
+    reference = identity_from_price_item(
+        _item(
+            title="Monitor ASUS TUF Gaming 24.5 Full HD IPS 200Hz",
+            brand="ASUS",
+            metadata={"category": "monitor"},
+        )
+    )
+    candidate = identity_from_price_item(
+        _item(
+            store="amazon_br",
+            title="ASUS TUF Gaming 24.5 IPS Full HD 200 Hz",
+            brand="ASUS",
+            metadata={"category": "monitor"},
+        )
+    )
+    score = MatchingEngine().score(reference, candidate)
+
+    assert reference.monitor_model_code is None
+    assert candidate.monitor_model_code is None
+    assert score.decision == "auto_match"
+
+
 def test_rank_candidates_prefers_mpn_title_hit() -> None:
     from scout_api.modules.matching.search_candidate import SearchCandidate
     from scout_api.modules.matching.identity import rank_candidates_for_query

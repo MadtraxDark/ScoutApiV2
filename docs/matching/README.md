@@ -35,6 +35,14 @@ Fonte de Search: `matching/search_adapters/registry.py` — **não** `supports_s
 - `StoreSearchAdapter` — `build_search_request` / `parse_candidates` / `classify_empty_result`
 - `SearchCandidate` — `matching/search_candidate.py`
 
+## Geração de queries
+
+`ProductIdentity` gera queries progressivas a partir de identificadores e frases
+comerciais reconhecidas. Quando não há frase específica para a categoria, um
+modelo estruturado alfanumérico (letras e números) também é preservado como
+chave de descoberta; a validação posterior continua sob responsabilidade do
+matcher e dos gates de variante.
+
 ## Budgets por loja (StoreAttemptBudget)
 
 Cada loja dentro de um `MatchRun` opera sob três budgets independentes

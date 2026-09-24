@@ -75,6 +75,16 @@ Aliases de marca só com evidência (`ASUSTeK`→`ASUS`).
 
 Evidência forte: GTIN/MPN/model_number. Title similarity só complementar.
 Conflitos críticos por profile (ex.: `rtx5070`≠`rtx5070ti`, Digital≠Disc).
+Para monitores, o parser de título identifica códigos de fabricante alfanuméricos
+com contexto da categoria (incluindo sufixos hifenizados), normaliza apenas
+capitalização e espaços, e compara o identificador completo. Códigos iguais
+confirmam o match; códigos distintos identificados nos dois lados rejeitam.
+Se qualquer lado não tiver código confiável, o matcher segue a cascata normal;
+a ausência nunca é tratada como conflito. Quando o código falta e ao menos três
+atributos explícitos entre tamanho da tela, resolução, taxa de atualização e
+painel coincidem, esses dados sustentam `review`; não promovem sozinhos um
+match automático. As decisões são registradas nos logs estruturados do
+`MatchingEngine`.
 
 ## Persistência
 

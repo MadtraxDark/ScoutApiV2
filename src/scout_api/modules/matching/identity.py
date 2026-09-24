@@ -654,13 +654,23 @@ def model_search_phrase(*, model: str | None, title: str | None) -> str | None:
     # brand+storage. Slim remains optional evidence, not a SERP requirement.
     if "playstation5" in model_fold or re.search(r"\b(?:playstation|ps)\s*5\b", folded):
         parts = ["playstation 5"]
-        edition = _console_edition_signature(blob) or _console_edition_signature(folded)
-        if edition:
-            parts.append(edition)
+        console_edition = _console_edition_signature(
+            blob
+        ) or _console_edition_signature(folded)
+        if console_edition:
+            parts.append(console_edition)
         return " ".join(parts)
-    if model and not looks_like_mpn(model) and " " in (title or ""):
-        # Last resort: avoid emitting compacted tokens like ``990evoplus``.
-        return None
+    if model and " " in (title or ""):
+        # Last resort: structured alphanumeric model codes are useful SERP keys
+        # even when no category-specific commercial phrase exists. Retrieval
+        # may use them broadly; MatchingEngine remains authoritative.
+        compact_model = re.sub(r"[^a-z0-9]+", "", model_fold)
+        if re.fullmatch(
+            r"(?=[a-z0-9]{4,}$)(?=.*[a-z])(?=.*\d)[a-z0-9]+", compact_model
+        ):
+            return model_fold
+        if not looks_like_mpn(model):
+            return None
     return None
 
 
@@ -1802,6 +1812,8 @@ class ProductIdentity:
     mpn: str | None = None
     mpn_display: str | None = None
     mpn_aliases: frozenset[str] = field(default_factory=frozenset)
+    monitor_model_code: str | None = None
+    category: str | None = None
 
     @property
     def variant_key(self) -> str | None:
@@ -1872,7 +1884,49 @@ def identity_from_price_item(item: ProductPriceItem) -> ProductIdentity:
         if memory_type and "memory_type" not in attrs:
             attrs["memory_type"] = memory_type
 
+    category = meta.get("category")
+    if not category:
+        from scout_api.modules.crawler.utils.product_attributes import (
+            detect_product_category,
+        )
+
+        category = detect_product_category(item.title)
+    category = str(category).casefold() if category else None
+    monitor_model_code = None
     model = resolve_model(item.model, item.title)
+    if category == "monitor":
+        from scout_api.modules.crawler.utils.product_attributes import (
+            resolve_product_identity,
+        )
+
+        monitor_attributes = resolve_product_identity(
+            specifications=specs,
+            title=item.title,
+            attributes=("screen_size", "resolution", "refresh_rate", "panel"),
+            category="monitor",
+        )
+        for key in ("screen_size", "resolution", "refresh_rate", "panel"):
+            value = monitor_attributes.value(key)
+            if value:
+                attrs[key] = normalize_variant_value(key, value)
+        structured_monitor_code = bool(
+            item.model
+            and parse_title_identity(item.model, category="monitor").confidence
+            == "exact_title"
+        )
+        for text in (item.title, item.model):
+            parsed = parse_title_identity(text, category="monitor")
+            if parsed.product_line and (not item.model or structured_monitor_code):
+                model = normalize_model(parsed.product_line)
+            elif (
+                parsed.confidence == "contextual"
+                and parsed.model
+                and (not item.model or structured_monitor_code)
+            ):
+                model = normalize_model(parsed.model)
+            if parsed.confidence == "exact_title" and parsed.model:
+                monitor_model_code = re.sub(r"\s+", "", parsed.model).upper()
+                break
     # Spec REFERÊNCIA / manufacturer codes feed MPN extraction alongside sku/title.
     spec_mpn_bits = [
         str(specs[key])
@@ -1913,6 +1967,8 @@ def identity_from_price_item(item: ProductPriceItem) -> ProductIdentity:
         mpn=mpn,
         mpn_display=mpn_display,
         mpn_aliases=mpn_aliases,
+        monitor_model_code=monitor_model_code,
+        category=category,
     )
 
 
@@ -2090,9 +2146,7 @@ def build_search_queries(identity: ProductIdentity) -> list[str]:
             if identity.brand:
                 add(f"{identity.brand} {display}")
         ladder_mb: list[list[str]] = []
-        ladder_mb.append(
-            [p for p in (identity.brand, family, spaced_board, wifi) if p]
-        )
+        ladder_mb.append([p for p in (identity.brand, family, spaced_board, wifi) if p])
         ladder_mb.append([p for p in (identity.brand, spaced_board, wifi) if p])
         ladder_mb.append([p for p in (family, spaced_board, wifi) if p])
         ladder_mb.append([p for p in (spaced_board, wifi) if p])

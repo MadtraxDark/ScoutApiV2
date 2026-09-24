@@ -543,6 +543,19 @@ def _to_product_view(
     images: list[ProductImageView] | None = None,
     session: Session | None = None,
 ) -> ProductView:
+    # Older Product Match runs may have persisted the identity-only placeholder
+    # as a listing. It is a search reference, never a commercial offer.
+    listings = [
+        item
+        for item in listings
+        if not (
+            item.store.casefold() == "synthetic"
+            and (
+                item.url.casefold().startswith("scout://identity/")
+                or item.product_id.casefold().startswith("identity:")
+            )
+        )
+    ]
     gtins = [
         ident.value_normalized
         for ident in (product.identifiers or [])

@@ -74,8 +74,10 @@ ADR: [0011](../adr/0011-offer-vs-product-details.md), [0012](../adr/0012-optiona
   Discovery may start from a **URL scrape** (`POST /match`) or from an
   **identity-only** reference (`match_from_item` / `identity_reference_item`)
   — brand/model(/variant) without known store URLs, product IDs, or prices
-  fed into Search. Search and Match remain separate stages; Search lives in
-  `matching.search_adapters` (not PDP spiders).
+  fed into Search. The synthetic item exists only as an in-memory matching
+  reference; its placeholder price and `scout://identity/` URL are never
+  persisted or returned as a commercial listing. Search and Match remain
+  separate stages; Search lives in `matching.search_adapters` (not PDP spiders).
   Queries are built from **structured ProductIdentity** (progressive ladder:
   identifier → brand+series+critical variant → relax) — never the raw
   commercial PDP title as the primary SERP query (ADR 0033).

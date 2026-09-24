@@ -29,9 +29,8 @@ _CONSOLE_RE = re.compile(
     re.I,
 )
 _PSU_WATT = re.compile(r"\b(?P<w>\d{3,4})\s*w\b", re.I)
-_MONITOR_MODEL = re.compile(
-    r"\b(?P<code>[A-Z]{1,3}\d{2}[A-Z0-9]{2,8})\b"
-)
+_MONITOR_MODEL = re.compile(r"\b(?P<code>[A-Z0-9]+(?:-[A-Z0-9]+)*)\b", re.I)
+_MONITOR_MODEL_NOISE = frozenset({"displayport", "hdmi", "usb"})
 _RADIATOR = re.compile(r"\b(?P<mm>120|240|280|360|420)\s*mm\b", re.I)
 
 
@@ -382,34 +381,41 @@ def parse_cooler(title: str, category: str) -> ParsedIdentity:
 
 def parse_monitor(title: str, category: str) -> ParsedIdentity:
     tokens = _title_tokens(title)
+    while tokens and tokens[0].casefold() in {"monitor", "gamer", "gaming"}:
+        tokens = tokens[1:]
     if not tokens:
         return ParsedIdentity(category, None, None, None, None, None, "ambiguous")
     brand = _display_token(tokens[0])
     # Prefer alphanumeric model codes (27GS95QE) over inventing size from prefix.
-    codes = [
-        m.group("code")
-        for m in _MONITOR_MODEL.finditer(title)
-        if not re.fullmatch(r"\d{2,4}(?:HZ|W|GB)?", m.group("code"), re.I)
-        and len(m.group("code")) >= 5
-    ]
-    # Filter out pure sizes like 27IN
-    codes = [c for c in codes if not re.fullmatch(r"\d{2}(?:IN|\"|MM)?", c, re.I)]
-    if codes:
-        # Pick the longest distinctive code after brand.
-        display = max(codes, key=len)
-        return ParsedIdentity(
-            category=category,
-            brand=brand,
-            model=display.upper(),
-            model_key=re.sub(r"[^a-z0-9]+", "", fold_identity(display)),
-            variant=None,
-            variant_key=None,
-            confidence="exact_title",
-        )
-    # Fallback: product line tokens until size/Hz.
+    codes: list[str] = []
+    for match in _MONITOR_MODEL.finditer(title):
+        code = match.group("code").strip("-")
+        compact = re.sub(r"[^A-Z0-9]", "", code.upper())
+        if (
+            len(compact) < 5
+            or not re.search(r"[A-Z]", compact)
+            or not re.search(r"\d", compact)
+        ):
+            continue
+        folded = compact.casefold()
+        if (
+            folded in _MONITOR_MODEL_NOISE
+            or folded.startswith(("hdr", "hdmi", "displayport", "usb", "bt"))
+            or folded.endswith(
+                ("hz", "khz", "mhz", "ghz", "ms", "mm", "cm", "in", "bit", "bpc")
+            )
+            or re.fullmatch(r"\d{3,4}x\d{3,4}", folded)
+            or re.fullmatch(r"dci-?p3", code, re.I)
+        ):
+            continue
+        codes.append(code)
+    code_keys = {re.sub(r"[^a-z0-9]", "", fold_identity(code)) for code in codes}
     parts: list[str] = []
     for token in tokens[1:]:
         lower = token.casefold()
+        compact = re.sub(r"[^a-z0-9]", "", fold_identity(token))
+        if compact in code_keys:
+            break
         if lower in {"monitor", "ultragear", "gaming"}:
             if lower == "ultragear":
                 parts.append("UltraGear")
@@ -421,6 +427,20 @@ def parse_monitor(title: str, category: str) -> ParsedIdentity:
         parts.append(_display_token(token))
         if len(parts) >= 4:
             break
+    product_line = " ".join(parts) or None
+    if codes:
+        # Pick the longest distinctive code after brand.
+        display = max(codes, key=len)
+        return ParsedIdentity(
+            category=category,
+            brand=brand,
+            model=display.upper(),
+            model_key=re.sub(r"[^a-z0-9]+", "", fold_identity(display)),
+            variant=None,
+            variant_key=None,
+            confidence="exact_title",
+            product_line=product_line,
+        )
     if not parts:
         return ParsedIdentity(category, brand, None, None, None, None, "ambiguous")
     display = " ".join(parts)
@@ -432,6 +452,7 @@ def parse_monitor(title: str, category: str) -> ParsedIdentity:
         variant=None,
         variant_key=None,
         confidence="contextual",
+        product_line=display,
     )
 
 

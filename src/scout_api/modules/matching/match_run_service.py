@@ -96,6 +96,17 @@ _REFERENCE_STORE_PRIORITY: dict[str, int] = {
 def select_reference_url_for_product(session: Session, product_id: UUID) -> str | None:
     """Pick a durable listing URL for match — prefer scrape-reliable stores."""
     listings = MatchingRepository(session).list_listings_for_canonical(product_id)
+    listings = [
+        row
+        for row in listings
+        if not (
+            row.store.casefold() == "synthetic"
+            and (
+                row.url.casefold().startswith("scout://identity/")
+                or row.product_id.casefold().startswith("identity:")
+            )
+        )
+    ]
     active = [row for row in listings if (row.status or "").lower() == "active"]
     pool = active or list(listings)
 

@@ -3,15 +3,13 @@
 from __future__ import annotations
 
 from scout_api.modules.crawler.core.fingerprints import canonicalize_url
-from scout_api.modules.crawler.spiders.amazon.parsing import prepare_amazon_fetch_url
 from scout_api.modules.crawler.spiders.amazon.marketplace import AMAZON_BR
+from scout_api.modules.crawler.spiders.amazon.parsing import prepare_amazon_fetch_url
 from scout_api.modules.crawler.stores import store_display_name
 from scout_api.modules.matching.identity import (
-    ProductIdentity,
     build_search_queries,
     identity_from_price_item,
     identity_reference_item,
-    normalize_title,
 )
 from scout_api.modules.matching.product_match_service import _serp_title_reject_reason
 
@@ -40,7 +38,7 @@ def test_amazon_tracking_url_canonicalizes_to_dp_asin() -> None:
 
 def test_long_smartphone_title_builds_identity_queries_not_raw_title() -> None:
     title = (
-        'Celular Samsung Galaxy S25 Ultra 5G 256GB Galaxy AI Titânio Preto '
+        "Celular Samsung Galaxy S25 Ultra 5G 256GB Galaxy AI Titânio Preto "
         '6,9" 12GB RAM Câm. Quádrupla 200+50+10+50MP Bateria 5000mAh Dual Chip'
     )
     identity = identity_from_price_item(
@@ -52,6 +50,25 @@ def test_long_smartphone_title_builds_identity_queries_not_raw_title() -> None:
     assert "samsung galaxy s25 ultra 256gb" in queries
     assert title not in queries
     assert any("titanium black" in q or "black" in q for q in queries)
+
+
+def test_generic_alphanumeric_model_is_kept_in_search_queries() -> None:
+    title = 'Monitor Gamer ASUS TUF 24.5", Full HD, 200Hz, Fast IPS, Preto - VG259Q5A'
+    identity = identity_from_price_item(
+        identity_reference_item(
+            title,
+            brand="ASUS",
+            model="VG259Q5A",
+            category="monitor",
+        )
+    )
+
+    queries = build_search_queries(identity)
+
+    assert queries[0] == "asus vg259q5a"
+    assert "vg259q5a" in queries
+    assert "asus preto" not in queries[:2]
+    assert title not in queries
 
 
 def test_serp_prefilter_rejects_renewed_when_reference_is_new() -> None:
@@ -73,7 +90,9 @@ def test_serp_prefilter_rejects_renewed_when_reference_is_new() -> None:
 def test_asin_length_gate_in_search_parser() -> None:
     from scrapy.http import HtmlResponse
 
-    from scout_api.modules.matching.search_adapters.amazon.parse import parse_amazon_search_results
+    from scout_api.modules.matching.search_adapters.amazon.parse import (
+        parse_amazon_search_results,
+    )
 
     html = (
         '<div data-component-type="s-search-result" data-asin="B0DSYJCY45">'

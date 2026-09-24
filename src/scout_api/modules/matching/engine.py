@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Literal
@@ -32,6 +33,7 @@ TITLE_ONLY_CAP = Decimal("0.74")  # never reaches auto_match alone
 # Soft model equality (3≡3i, stripped suffixes) still needs title support.
 SOFT_MODEL_TITLE_MIN = 0.75
 EXTREME_PRICE_RATIO = Decimal("4.0")
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -74,32 +76,82 @@ class MatchingEngine:
         self, reference: ProductIdentity, candidate: ProductIdentity
     ) -> MatchScore:
         reasons: list[MatchReason] = []
-
-        conflict = _variant_conflict(reference, candidate)
-        if conflict:
-            reasons.append(
-                MatchReason(code="variant_mismatch", detail=conflict, score=0.0)
-            )
-            return MatchScore(
-                decision="reject",
-                confidence=Decimal("0.0000"),
-                reasons=tuple(reasons),
-            )
-
-        critical = critical_identity_conflict(reference, candidate)
-        if critical:
-            reasons.append(
-                MatchReason(
-                    code="critical_conflict",
-                    detail=critical,
-                    score=0.0,
+        ref_monitor_code = reference.monitor_model_code
+        cand_monitor_code = candidate.monitor_model_code
+        monitor_code_exact = bool(
+            ref_monitor_code
+            and cand_monitor_code
+            and ref_monitor_code.casefold() == cand_monitor_code.casefold()
+        )
+        if ref_monitor_code and cand_monitor_code:
+            if not monitor_code_exact:
+                logger.info(
+                    "product_match_monitor_model_code_conflict",
+                    extra={
+                        "source_model_code": ref_monitor_code,
+                        "candidate_model_code": cand_monitor_code,
+                    },
                 )
+                reasons.append(
+                    MatchReason(
+                        code="monitor_model_code_conflict",
+                        detail=f"{ref_monitor_code}!={cand_monitor_code}",
+                        score=0.0,
+                    )
+                )
+                return MatchScore(
+                    decision="reject",
+                    confidence=Decimal("0.0000"),
+                    reasons=tuple(reasons),
+                )
+            logger.info(
+                "product_match_monitor_model_code_exact",
+                extra={
+                    "source_model_code": ref_monitor_code,
+                    "candidate_model_code": cand_monitor_code,
+                },
             )
-            return MatchScore(
-                decision="reject",
-                confidence=Decimal("0.0000"),
-                reasons=tuple(reasons),
+        elif (
+            ref_monitor_code
+            or cand_monitor_code
+            or reference.category == "monitor"
+            or candidate.category == "monitor"
+        ):
+            logger.info(
+                "product_match_monitor_model_code_fallback",
+                extra={
+                    "source_model_code": ref_monitor_code or "not_found",
+                    "candidate_model_code": cand_monitor_code or "not_found",
+                    "reason": "identifier_missing",
+                },
             )
+
+        if not monitor_code_exact:
+            conflict = _variant_conflict(reference, candidate)
+            if conflict:
+                reasons.append(
+                    MatchReason(code="variant_mismatch", detail=conflict, score=0.0)
+                )
+                return MatchScore(
+                    decision="reject",
+                    confidence=Decimal("0.0000"),
+                    reasons=tuple(reasons),
+                )
+
+            critical = critical_identity_conflict(reference, candidate)
+            if critical:
+                reasons.append(
+                    MatchReason(
+                        code="critical_conflict",
+                        detail=critical,
+                        score=0.0,
+                    )
+                )
+                return MatchScore(
+                    decision="reject",
+                    confidence=Decimal("0.0000"),
+                    reasons=tuple(reasons),
+                )
 
         if looks_like_accessory(candidate.title, reference_title=reference.title):
             reasons.append(
@@ -152,6 +204,37 @@ class MatchingEngine:
             return MatchScore(
                 decision="reject",
                 confidence=Decimal("0.0000"),
+                reasons=tuple(reasons),
+            )
+
+        if monitor_code_exact:
+            reasons.append(
+                MatchReason(
+                    code="monitor_model_code_exact",
+                    detail=f"model_code={ref_monitor_code}",
+                    score=1.0,
+                )
+            )
+            if (
+                reference.brand
+                and candidate.brand
+                and not _brand_compatible(reference, candidate)
+            ):
+                reasons.append(
+                    MatchReason(
+                        code="monitor_model_code_brand_conflict",
+                        detail="model_code_match_but_brand_diverges",
+                        score=0.5,
+                    )
+                )
+                return MatchScore(
+                    decision="review",
+                    confidence=Decimal("0.8500"),
+                    reasons=tuple(reasons),
+                )
+            return MatchScore(
+                decision="auto_match",
+                confidence=Decimal("0.9900"),
                 reasons=tuple(reasons),
             )
 
@@ -251,6 +334,7 @@ class MatchingEngine:
 
         confidence = Decimal("0.0000")
         has_strong_id = False
+        monitor_spec_support = False
 
         if (
             reference.brand
@@ -274,6 +358,26 @@ class MatchingEngine:
                 confidence=Decimal("0.0000"),
                 reasons=tuple(reasons),
             )
+
+        if reference.category == candidate.category == "monitor":
+            monitor_keys = ("screen_size", "resolution", "refresh_rate", "panel")
+            shared_specs = [
+                key
+                for key in monitor_keys
+                if reference.variant_attrs.get(key)
+                and candidate.variant_attrs.get(key)
+                and reference.variant_attrs[key] == candidate.variant_attrs[key]
+            ]
+            if shared_specs:
+                reasons.append(
+                    MatchReason(
+                        code="monitor_specs_agree",
+                        detail=f"attributes={','.join(shared_specs)}",
+                        score=len(shared_specs) / len(monitor_keys),
+                    )
+                )
+                confidence += Decimal("0.11") * len(shared_specs)
+                monitor_spec_support = len(shared_specs) >= 3
 
         title_sim = token_set_ratio(reference.title, candidate.title)
         model_soft_ok = bool(
@@ -352,7 +456,11 @@ class MatchingEngine:
             )
 
         # Title alone must never auto-match.
-        if not has_strong_id and not (reference.gtin and candidate.gtin):
+        if (
+            not has_strong_id
+            and not (reference.gtin and candidate.gtin)
+            and not monitor_spec_support
+        ):
             confidence = min(confidence, TITLE_ONLY_CAP)
 
         if _price_extreme(reference, candidate):
