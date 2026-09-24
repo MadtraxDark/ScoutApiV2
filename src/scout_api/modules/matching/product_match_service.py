@@ -40,6 +40,19 @@ from scout_api.modules.crawler.stores import STORE_CONFIGS, store_display_name
 from scout_api.modules.matching.eligibility import eligible_match_store_keys
 from scout_api.modules.matching.engine import MatchingEngine
 from scout_api.modules.matching.attempt_budget import StoreAttemptBudget
+from scout_api.modules.matching.match_deadlines import (
+    MonotonicDeadline,
+    nested_deadline,
+)
+from scout_api.modules.matching.match_hang_constants import (
+    FAILURE_CODE_RUN_WALL_TIMEOUT,
+    FAILURE_CODE_STORE_WALL_TIMEOUT,
+)
+from scout_api.modules.matching.match_progress import (
+    GLOBAL_MATCH_PROGRESS,
+    MatchProgressPhase,
+    MatchProgressTracker,
+)
 from scout_api.modules.matching.gtin_learning import (
     TrustedGtin,
     identity_with_gtin,
@@ -230,6 +243,9 @@ class ProductMatchService:
         on_progress: ProgressCallback | None = None,
         on_store_outcome: StoreOutcomeCallback | None = None,
         skip_stores: frozenset[str] | set[str] | None = None,
+        run_deadline: MonotonicDeadline | None = None,
+        progress_tracker: MatchProgressTracker | None = None,
+        run_id: str | None = None,
     ) -> MatchResponse:
         """Match from a live reference URL (scrape → search → score)."""
         if on_progress is not None:
@@ -241,6 +257,12 @@ class ProductMatchService:
                     message="Coletando produto de referência",
                     sequence=0,
                 )
+            )
+        tracker = progress_tracker or GLOBAL_MATCH_PROGRESS
+        if run_id is not None:
+            tracker.mark_progress(
+                run_id=run_id,
+                phase=MatchProgressPhase.SEARCHING,
             )
         reference = self._scrape.scrape(
             str(request.reference_url),
@@ -259,6 +281,9 @@ class ProductMatchService:
             on_progress=on_progress,
             on_store_outcome=on_store_outcome,
             skip_stores=skip_stores,
+            run_deadline=run_deadline,
+            progress_tracker=progress_tracker,
+            run_id=run_id,
         )
 
     def match_from_item(
@@ -275,6 +300,9 @@ class ProductMatchService:
         on_progress: ProgressCallback | None = None,
         on_store_outcome: StoreOutcomeCallback | None = None,
         skip_stores: frozenset[str] | set[str] | None = None,
+        run_deadline: MonotonicDeadline | None = None,
+        progress_tracker: MatchProgressTracker | None = None,
+        run_id: str | None = None,
     ) -> MatchResponse:
         """Match using an already-normalized reference item (no reference scrape).
 
@@ -298,6 +326,9 @@ class ProductMatchService:
             on_progress=on_progress,
             on_store_outcome=on_store_outcome,
             skip_stores=skip_stores,
+            run_deadline=run_deadline,
+            progress_tracker=progress_tracker,
+            run_id=run_id,
         )
 
     def _match_with_reference(
@@ -314,9 +345,38 @@ class ProductMatchService:
         on_progress: ProgressCallback | None = None,
         on_store_outcome: StoreOutcomeCallback | None = None,
         skip_stores: frozenset[str] | set[str] | None = None,
+        run_deadline: MonotonicDeadline | None = None,
+        progress_tracker: MatchProgressTracker | None = None,
+        run_id: str | None = None,
     ) -> MatchResponse:
         # Product Match never needs gallery bytes — ignore caller flag for cost.
         include_images = False
+        settings = get_settings()
+        tracker = progress_tracker or GLOBAL_MATCH_PROGRESS
+        effective_run_id = run_id or "sync-match"
+        if run_deadline is None:
+            run_deadline = MonotonicDeadline.start(
+                timeout_seconds=float(settings.match_run_wall_timeout_seconds)
+            )
+
+        def mark(phase: MatchProgressPhase, *, store: str | None = None) -> None:
+            tracker.mark_progress(run_id=effective_run_id, phase=phase, store=store)
+
+        def ensure_run_budget() -> None:
+            if run_deadline.expired():
+                logger.warning(
+                    "match_run_wall_timeout",
+                    extra={
+                        "run_id": effective_run_id,
+                        "timeout_seconds": run_deadline.timeout_seconds,
+                    },
+                )
+                raise RequestError(
+                    "Product Match excedeu o tempo máximo da execução.",
+                    code=FAILURE_CODE_RUN_WALL_TIMEOUT,
+                    retryable=False,
+                )
+
         queries = build_search_queries(ref_identity)
         target_stores = self._resolve_stores(
             stores,
@@ -359,6 +419,7 @@ class ProductMatchService:
 
         def process_one(store_key: str) -> None:
             nonlocal queries, ref_identity, learned
+            ensure_run_budget()
             display_name = _store_label(store_key)
             with state_lock:
                 local_queries = list(queries)
@@ -370,6 +431,11 @@ class ProductMatchService:
                 external_attempt_budget=settings.match_external_attempt_budget,
                 browser_navigation_budget=settings.match_browser_navigation_budget,
             )
+            store_deadline = nested_deadline(
+                run_deadline,
+                timeout_seconds=float(settings.match_store_wall_timeout_seconds),
+            )
+            mark(MatchProgressPhase.STARTING_STORE, store=store_key)
             emit(
                 type="store_started",
                 store=store_key,
@@ -429,7 +495,63 @@ class ProductMatchService:
             seen_query_keys: set[str] = set()
             executed_queries: list[str] = []
             candidate_logs: list[dict[str, object]] = []
+
+            def store_wall_timed_out() -> bool:
+                if not store_deadline.expired():
+                    remaining = store_deadline.remaining_seconds()
+                    if remaining is None or remaining > 0.05:
+                        return False
+                elapsed_ms = int(round((time.perf_counter() - store_t0) * 1000))
+                logger.warning(
+                    "match_store_wall_timeout",
+                    extra={
+                        "store": store_key,
+                        "run_id": effective_run_id,
+                        "timeout_seconds": store_deadline.timeout_seconds,
+                        "elapsed_ms": elapsed_ms,
+                    },
+                )
+                err = _store_error(
+                    store_key,
+                    code=FAILURE_CODE_STORE_WALL_TIMEOUT,
+                    message=(
+                        f"Busca em {display_name} excedeu o tempo limite da loja."
+                    ),
+                )
+                with state_lock:
+                    errors.append(err)
+                emit(
+                    type="error",
+                    store=store_key,
+                    display_name=display_name,
+                    stage="store_wall_timeout",
+                    status="error",
+                    message=err.message,
+                )
+                mark(MatchProgressPhase.FINALIZING_STORE, store=store_key)
+                if on_store_outcome is not None:
+                    on_store_outcome(
+                        MatchStoreOutcome(
+                            store=store_key,
+                            display_name=display_name,
+                            status="error",
+                            duration_ms=elapsed_ms,
+                            queries=tuple(executed_queries),
+                            candidates_found=candidates_seen,
+                            candidates_evaluated=scrapes_done,
+                            search_duration_ms=int(round(search_ms_total)),
+                            candidate_fetch_duration_ms=int(round(scrape_ms_total)),
+                            error_code=err.code,
+                            error_message=err.message,
+                            candidates=tuple(candidate_logs),
+                        )
+                    )
+                return True
+
             for query in local_queries:
+                if store_wall_timed_out():
+                    return
+                ensure_run_budget()
                 qkey = _normalize_query_key(query)
                 if qkey and qkey in seen_query_keys:
                     queries_skipped += 1
@@ -460,6 +582,7 @@ class ProductMatchService:
                     status="running",
                     message=f"Buscando: {query}",
                 )
+                mark(MatchProgressPhase.SEARCHING, store=store_key)
                 executed_queries.append(query)
                 try:
                     search_t0 = time.perf_counter()
@@ -539,6 +662,7 @@ class ProductMatchService:
                     continue
 
                 empty_searches = 0
+                mark(MatchProgressPhase.EVALUATING, store=store_key)
                 emit(
                     type="candidates_found",
                     store=store_key,
@@ -559,6 +683,9 @@ class ProductMatchService:
                 )
                 _budget_stop_candidates = False
                 for candidate in candidates:
+                    if store_wall_timed_out():
+                        return
+                    ensure_run_budget()
                     if scrapes_done >= max_candidates_per_store:
                         logger.info(
                             "match_scrape_budget_cap",
@@ -617,6 +744,7 @@ class ProductMatchService:
                             status="running",
                             message="Avaliando candidato",
                         )
+                        mark(MatchProgressPhase.FETCHING_CANDIDATE, store=store_key)
                         scrape_t0 = time.perf_counter()
                         product, scrape_error = self._scrape_candidate(
                             candidate.url,
@@ -765,6 +893,7 @@ class ProductMatchService:
                 with state_lock:
                     matches.append(best_by_store[store_key])
                 hit = best_by_store[store_key]
+                mark(MatchProgressPhase.MATCHING, store=store_key)
                 emit(
                     type="matched",
                     store=store_key,
@@ -897,7 +1026,8 @@ class ProductMatchService:
         def run_stores(store_list: list[str], *, parallel: bool) -> None:
             if not store_list:
                 return
-            if not parallel or len(store_list) == 1 or concurrency <= 1:
+            ensure_run_budget()
+            if not parallel or len(store_list) <= 1 or concurrency <= 1:
                 for key in store_list:
                     process_one(key)
                 return

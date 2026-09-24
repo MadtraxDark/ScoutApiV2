@@ -65,3 +65,27 @@ O `BrowserScheduler` limita o número de slots Camoufox simultâneos:
 - Failure domains: circuit por store key; falha de infra (launch) ≠ `NO_MATCH`.
 
 Ver ADR 0037 (launch health + fail-fast) e ADR 0039 (bounded scheduler C1).
+
+## Hang defense-in-depth (match-runner)
+
+Uma MatchRun travada **não** pode bloquear o único worker indefinidamente.
+
+| Camada | Setting | Default | Efeito |
+|---|---|---|---|
+| Store wall | `MATCH_STORE_WALL_TIMEOUT_SECONDS` | 180 | Deadline absoluto por loja (monotonic). Estouro → store `error` `STORE_WALL_TIMEOUT` (nunca `NO_MATCH`). Run continua. |
+| Run wall | `MATCH_RUN_WALL_TIMEOUT_SECONDS` | 2700 | Desde claim/processamento (PENDING não conta). Estouro → run `failed` `RUN_WALL_TIMEOUT`. |
+| Watchdog | `MATCH_RUN_WATCHDOG_STALE_SECONDS` | 600 | Sem **progresso real** → `os._exit(78)` + Docker restart + reclaim ADR 0036. |
+| Flag | `MATCH_RUN_WATCHDOG_ENABLED` | true | Rollback operacional. |
+| `0` nos timeouts numéricos | — | desliga aquela camada. |
+
+**Heartbeat ≠ progresso.** Lease heartbeat renova ownership; `ProgressTracker.mark_progress`
+só em eventos observáveis (store start, search, candidates, scrape, match/no_match/error).
+
+Exit code documentado: `MATCH_WORKER_HANG_EXIT_CODE = 78`.
+
+Labels UI (PriceScout): mapear códigos para pt-BR — nunca exibir snake_case cru
+(`STORE_WALL_TIMEOUT` → “A busca nesta loja excedeu o tempo limite.”;
+`RUN_WALL_TIMEOUT` → “A execução excedeu o tempo máximo.”;
+`worker_lost` → “Busca anterior foi interrompida.”).
+
+Ver emenda em ADR 0036.

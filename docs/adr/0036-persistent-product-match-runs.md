@@ -109,6 +109,18 @@ persistente da operação.
 | `MATCH_RUN_RECOVERY_INTERVAL_SECONDS` | 30 | Cadência de reconcile |
 | `MATCH_RUN_MAX_ATTEMPTS` | 3 | Após N claims → `worker_lost` |
 | `MATCH_RUN_SWEEP_INTERVAL_SECONDS` | 2 | Poll do claim loop |
+| `MATCH_STORE_WALL_TIMEOUT_SECONDS` | 180 | Deadline absoluto por loja (`0`=off); ERROR `STORE_WALL_TIMEOUT` |
+| `MATCH_RUN_WALL_TIMEOUT_SECONDS` | 2700 | Deadline da run desde claim (`0`=off); FAILED `RUN_WALL_TIMEOUT` |
+| `MATCH_RUN_WATCHDOG_STALE_SECONDS` | 600 | Sem progresso real → `os._exit(78)` (`0`=off) |
+| `MATCH_RUN_WATCHDOG_ENABLED` | true | Liga/desliga watchdog de processo |
+| `MATCH_RUN_WATCHDOG_CHECK_INTERVAL_SECONDS` | 5 | Intervalo do daemon watchdog |
+
+### Emenda 2026-09-23 — Hang watchdog (híbrido)
+
+Lease resolve **worker desapareceu**. Watchdog resolve **worker vivo sem progresso**.
+Store/run wall resolvem budgets cooperativos. Heartbeat de lease **não** conta como
+progresso. Exit code `78` (`MATCH_WORKER_HANG_EXIT_CODE`); Compose
+`restart: unless-stopped` + reclaim ADR 0036. Detalhes: `docs/matching/README.md`.
 
 ## Endpoints
 

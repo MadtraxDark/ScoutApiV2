@@ -145,6 +145,11 @@ Regras:
 - Timer UX usa `active_since` (`claimed_at` da attempt, senão `started_at`) —
   downtime offline não conta como processamento.
 - Toast `worker_lost`: “Busca anterior foi interrompida.” (uma vez por Run).
+- Labels de timeout (nunca snake_case cru na UI):
+  - `STORE_WALL_TIMEOUT` → “A busca nesta loja excedeu o tempo limite.”
+  - `RUN_WALL_TIMEOUT` → “A execução excedeu o tempo máximo.”
+- Hang watchdog do `match-runner` (exit 78 + restart): ver
+  [`docs/matching/README.md`](../matching/README.md) e ADR 0036.
 - `reference_url` é resolvida no backend a partir das listings do produto,
   priorizando lojas com scrape de PDP mais confiável (ex.: Kabum/Amazon/Magalu
   antes de Shopping China). Se o scrape da referência falhar, o worker faz

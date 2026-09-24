@@ -16,6 +16,14 @@ from scout_api.core.database import get_session_factory
 from scout_api.core.performance import OperationCategory, timed
 from scout_api.modules.crawler.core.exceptions import ParseError, RequestError
 from scout_api.modules.matching.identity import identity_reference_item
+from scout_api.modules.matching.match_deadlines import MonotonicDeadline
+from scout_api.modules.matching.match_hang_constants import (
+    FAILURE_CODE_RUN_WALL_TIMEOUT,
+)
+from scout_api.modules.matching.match_progress import (
+    GLOBAL_MATCH_PROGRESS,
+    MatchProgressPhase,
+)
 from scout_api.modules.matching.match_run_claim import (
     FAILURE_CODE_WORKER_LOST,
     WORKER_LOST_MESSAGE,
@@ -27,6 +35,7 @@ from scout_api.modules.matching.match_run_claim import (
 )
 from scout_api.modules.matching.match_run_repository import MatchRunRepository
 from scout_api.modules.matching.match_run_service import MatchRunService
+from scout_api.modules.matching.match_watchdog import MatchHangWatchdog
 from scout_api.modules.matching.models import CanonicalProduct, ProductMatchRun
 from scout_api.modules.matching.product_match_service import (
     MatchStoreOutcome,
@@ -39,12 +48,16 @@ logger = logging.getLogger(__name__)
 _STOP = False
 _scheduler_lock = threading.Lock()
 _scheduler: MatchRunScheduler | None = None
+_active_watchdog: MatchHangWatchdog | None = None
 
 
 def _handle_stop(_signum: int, _frame: object) -> None:
     global _STOP
     _STOP = True
     logger.info("match_run_worker_stop_requested")
+    wd = _active_watchdog
+    if wd is not None:
+        wd.request_shutdown()
 
 
 def _fail_stale_exhausted(
@@ -137,17 +150,19 @@ def _execute_match_for_run(
     reference_url: str,
     on_store_outcome: Any,
     skip_stores: frozenset[str] | set[str] | None = None,
+    run_deadline: MonotonicDeadline | None = None,
 ) -> MatchResponse:
     """Match using catalog identity first; live reference scrape only as fallback."""
     match_service = ProductMatchService(session=session)
     product = session.get(CanonicalProduct, product_id)
+    run_id_str = str(run_id)
 
     if _canonical_has_match_identity(product):
         assert product is not None
         logger.info(
             "match_run_identity_first_reference",
             extra={
-                "run_id": str(run_id),
+                "run_id": run_id_str,
                 "product_id": str(product_id),
                 "title_len": len((product.title or "").strip()),
             },
@@ -161,6 +176,9 @@ def _execute_match_for_run(
             canonical_product_id=product_id,  # type: ignore[arg-type]
             on_store_outcome=on_store_outcome,
             skip_stores=skip_stores,
+            run_deadline=run_deadline,
+            progress_tracker=GLOBAL_MATCH_PROGRESS,
+            run_id=run_id_str,
         )
 
     request = MatchRequest(
@@ -175,6 +193,9 @@ def _execute_match_for_run(
             request,
             on_store_outcome=on_store_outcome,
             skip_stores=skip_stores,
+            run_deadline=run_deadline,
+            progress_tracker=GLOBAL_MATCH_PROGRESS,
+            run_id=run_id_str,
         )
     except RequestError as exc:
         title = (product.title or "").strip() if product is not None else ""
@@ -183,7 +204,7 @@ def _execute_match_for_run(
         logger.warning(
             "match_run_reference_fallback",
             extra={
-                "run_id": str(run_id),
+                "run_id": run_id_str,
                 "product_id": str(product_id),
                 "code": exc.code,
             },
@@ -197,6 +218,9 @@ def _execute_match_for_run(
             canonical_product_id=product_id,  # type: ignore[arg-type]
             on_store_outcome=on_store_outcome,
             skip_stores=skip_stores,
+            run_deadline=run_deadline,
+            progress_tracker=GLOBAL_MATCH_PROGRESS,
+            run_id=run_id_str,
         )
 
 
@@ -240,12 +264,20 @@ def process_claimed_run(
     session.commit()
     session.expunge_all()
 
+    run_id_str = str(run_id)
+    GLOBAL_MATCH_PROGRESS.arm(run_id=run_id_str, worker_id=worker_id)
+    run_deadline = MonotonicDeadline.start(
+        timeout_seconds=float(settings.match_run_wall_timeout_seconds)
+    )
+
     stop_heartbeat = threading.Event()
 
     def _heartbeat_loop() -> None:
         interval = max(15, int(settings.match_run_heartbeat_interval_seconds))
         while not stop_heartbeat.wait(interval):
             try:
+                # Lease renewal is liveness only — MUST NOT count as progress.
+                GLOBAL_MATCH_PROGRESS.note_lease_heartbeat()
                 factory = get_session_factory()
                 with factory() as hb_session:
                     row = hb_session.get(ProductMatchRun, run_id)
@@ -269,11 +301,29 @@ def process_claimed_run(
     )
     hb_thread.start()
 
+    # Test-only hard hang AFTER heartbeat starts (rejected in production).
+    # Proves watchdog fires despite lease renewals (heartbeat ≠ progress).
+    if settings.match_run_test_inject_hang:
+        logger.critical(
+            "match_run_test_inject_hang_armed",
+            extra={"run_id": run_id_str, "worker_id": worker_id},
+        )
+        while not _STOP:
+            time.sleep(60)
+
     outcome_lock = threading.Lock()
 
     def on_store_outcome(outcome: MatchStoreOutcome) -> None:
         with outcome_lock:
             try:
+                phase = MatchProgressPhase.FINALIZING_STORE
+                if outcome.status == "match":
+                    phase = MatchProgressPhase.MATCHING
+                GLOBAL_MATCH_PROGRESS.mark_progress(
+                    run_id=run_id_str,
+                    store=outcome.store,
+                    phase=phase,
+                )
                 factory = get_session_factory()
                 with factory() as store_session:
                     row = store_session.get(ProductMatchRun, run_id)
@@ -314,7 +364,7 @@ def process_claimed_run(
             "product_match_run_job",
             category=OperationCategory.PRODUCT_MATCH,
             context={
-                "run_id": str(run_id),
+                "run_id": run_id_str,
                 "product_id": str(product_id),
                 "attempt": claim_attempts,
                 "skip_stores": sorted(skip_stores),
@@ -327,8 +377,13 @@ def process_claimed_run(
                 reference_url=reference_url,
                 on_store_outcome=on_store_outcome,
                 skip_stores=skip_stores,
+                run_deadline=run_deadline,
             )
 
+        GLOBAL_MATCH_PROGRESS.mark_progress(
+            run_id=run_id_str,
+            phase=MatchProgressPhase.FINALIZING_RUN,
+        )
         session.expire_all()
         fresh = session.get(ProductMatchRun, run_id)
         if fresh is None:
@@ -354,7 +409,7 @@ def process_claimed_run(
         logger.info(
             "match_run_done",
             extra={
-                "run_id": str(run_id),
+                "run_id": run_id_str,
                 "product_id": str(product_id),
                 "status": "completed",
                 "attempt": claim_attempts,
@@ -371,9 +426,15 @@ def process_claimed_run(
         fresh = session.get(ProductMatchRun, run_id)
         if fresh is None:
             return run
+        code = exc.code or "REQUEST_ERROR"
+        if code == FAILURE_CODE_RUN_WALL_TIMEOUT:
+            logger.warning(
+                "match_run_wall_timeout",
+                extra={"run_id": run_id_str, "worker_id": worker_id},
+            )
         service.finalize_failed(
             fresh,
-            code=exc.code or "REQUEST_ERROR",
+            code=code,
             message=str(exc),
             expected_worker_id=worker_id,
         )
@@ -404,6 +465,8 @@ def process_claimed_run(
     finally:
         stop_heartbeat.set()
         hb_thread.join(timeout=2.0)
+        GLOBAL_MATCH_PROGRESS.disarm(run_id=run_id_str)
+
 
 
 def sweep_once(
@@ -507,22 +570,35 @@ def stop_scheduler() -> None:
 
 
 def run_forever(*, settings: Settings | None = None) -> None:
-    global _STOP
+    global _STOP, _active_watchdog
     cfg = settings or get_settings()
     worker_id = new_worker_id()
     signal.signal(signal.SIGINT, _handle_stop)
     signal.signal(signal.SIGTERM, _handle_stop)
     logger.info("match_run_worker_started", extra={"worker_id": worker_id})
+    watchdog = MatchHangWatchdog(
+        tracker=GLOBAL_MATCH_PROGRESS,
+        stale_seconds=float(cfg.match_run_watchdog_stale_seconds),
+        check_interval_seconds=float(cfg.match_run_watchdog_check_interval_seconds),
+        enabled=bool(cfg.match_run_watchdog_enabled),
+    )
+    _active_watchdog = watchdog
+    watchdog.start()
     interval = max(1.0, float(cfg.match_run_sweep_interval_seconds))
-    while not _STOP:
-        try:
-            factory = get_session_factory()
-            with factory() as session:
-                sweep_once(session, worker_id=worker_id, settings=cfg)
-        except Exception:  # noqa: BLE001
-            logger.exception("match_run_worker_sweep_failed")
-        time.sleep(interval)
-    logger.info("match_run_worker_stopped", extra={"worker_id": worker_id})
+    try:
+        while not _STOP:
+            try:
+                factory = get_session_factory()
+                with factory() as session:
+                    sweep_once(session, worker_id=worker_id, settings=cfg)
+            except Exception:  # noqa: BLE001
+                logger.exception("match_run_worker_sweep_failed")
+            time.sleep(interval)
+    finally:
+        watchdog.request_shutdown()
+        watchdog.stop()
+        _active_watchdog = None
+        logger.info("match_run_worker_stopped", extra={"worker_id": worker_id})
 
 
 def main() -> None:

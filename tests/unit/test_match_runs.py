@@ -358,8 +358,9 @@ def test_process_claimed_run_commits_before_match_and_persists_outcome(
         reference_url: str,
         on_store_outcome: object,
         skip_stores: object = None,
+        run_deadline: object = None,
     ) -> MatchResponse:
-        del sess, product_id, reference_url, run_id, skip_stores
+        del sess, product_id, reference_url, run_id, skip_stores, run_deadline
         on_store_outcome(  # type: ignore[operator]
             worker_mod.MatchStoreOutcome(
                 store="amazon",

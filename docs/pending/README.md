@@ -84,8 +84,9 @@ Itens resolvidos **não** ficam no índice ativo.
 |---|---|---|---|---|---|
 | [PENDING-016](PENDING-016-shopee-match-wall-time.md) | Shopee domina wall-time Product Match full-store | OPEN | PERFORMANCE | P1 | crawler/shopee |
 | [PENDING-017](PENDING-017-match-reenable-ml-shopee.md) | Reativar ML/Shopee no Product Match após login estável | OPEN | INCOMPLETE | P1 | matching |
+| [PENDING-019](PENDING-019-pricescout-match-start-failure-smoke.md) | Completar smoke de falhas no start do Product Match | OPEN | TESTING | P2 | frontend/product-match |
 
-*(pendências ativas: 2)*
+*(pendências ativas: 3)*
 
 Resolvida em 2026-09-23:
 

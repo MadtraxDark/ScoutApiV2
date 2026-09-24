@@ -193,6 +193,20 @@ class Settings(BaseSettings):
     # Periodic reconcile of exhausted stale leases (beyond claim sweep).
     match_run_recovery_interval_seconds: float = 30.0
     match_run_max_attempts: int = 3
+    # --- Match hang / wall deadlines (defense-in-depth; 0 = disabled) ---
+    # Absolute wall-time per store inside a MatchRun (monotonic). Progress does
+    # NOT reset this deadline. Exceeded → store ERROR STORE_WALL_TIMEOUT.
+    match_store_wall_timeout_seconds: float = 180.0
+    # Absolute wall-time for the whole run since claim/processing start
+    # (PENDING queue time does not count). Exceeded → FAILED RUN_WALL_TIMEOUT.
+    match_run_wall_timeout_seconds: float = 2700.0
+    # Watchdog: no *real* progress for this long → os._exit(78). Independent
+    # of lease heartbeat (heartbeat ≠ progress).
+    match_run_watchdog_stale_seconds: float = 600.0
+    match_run_watchdog_enabled: bool = True
+    match_run_watchdog_check_interval_seconds: float = 5.0
+    # Test-only: block after claim to exercise hard hang (rejected in production).
+    match_run_test_inject_hang: bool = False
     # --- Store + capability circuit breaker (Phase 11) ---
     # Process-local circuit per (store_key, capability).
     # Set false to disable entirely (rollback path).
@@ -253,6 +267,24 @@ class Settings(BaseSettings):
         self.match_run_recovery_interval_seconds = max(
             5.0, float(self.match_run_recovery_interval_seconds)
         )
+        # Wall/watchdog: negative → 0 (disabled). Keep floats finite.
+        self.match_store_wall_timeout_seconds = max(
+            0.0, float(self.match_store_wall_timeout_seconds)
+        )
+        self.match_run_wall_timeout_seconds = max(
+            0.0, float(self.match_run_wall_timeout_seconds)
+        )
+        self.match_run_watchdog_stale_seconds = max(
+            0.0, float(self.match_run_watchdog_stale_seconds)
+        )
+        self.match_run_watchdog_check_interval_seconds = max(
+            0.5, float(self.match_run_watchdog_check_interval_seconds)
+        )
+        if self.match_run_test_inject_hang and self.environment.lower() == "production":
+            raise ValueError(
+                "MATCH_RUN_TEST_INJECT_HANG não é permitido quando "
+                "ENVIRONMENT=production."
+            )
         return self
 
     model_config = SettingsConfigDict(
