@@ -15,7 +15,9 @@ from scout_api.modules.crawler.utils.product_identity import (
     parse_title_identity,
 )
 
-VARIANT_GATE_KEYS = frozenset({"color", "storage", "size", "capacity", "ram", "pack"})
+VARIANT_GATE_KEYS = frozenset(
+    {"color", "storage", "size", "capacity", "ram", "pack", "network_lock"}
+)
 
 # Map common PT/EN/ES color labels to a single canonical token for gates.
 COLOR_CANONICAL: dict[str, str] = {
@@ -85,7 +87,36 @@ COLOR_CANONICAL: dict[str, str] = {
     # Bare finish token — only when no base hue is present in the title.
     "titanio": "titanium",
     "titanium": "titanium",
+    # Orange labels occur across PT/ES/EN catalogs. Compound labels are
+    # canonicalized from their translated hue + finish tokens below.
+    "orange": "orange",
+    "laranja": "orange",
+    "naranja": "orange",
 }
+
+# Color finish words are retained as semantic qualifiers, but their translated
+# forms and order are normalized. This keeps "Cosmic Orange" and
+# "Laranja cósmico" equivalent without collapsing Orange into Deep Blue, etc.
+_COLOR_DESCRIPTOR_CANONICAL: dict[str, str] = {
+    "cosmic": "cosmic",
+    "cosmico": "cosmic",
+    "cosmica": "cosmic",
+    "space": "space",
+    "espacial": "space",
+    "deep": "deep",
+    "intenso": "deep",
+    "intensa": "deep",
+    "dark": "dark",
+    "escuro": "dark",
+    "escura": "dark",
+    "light": "light",
+    "claro": "light",
+    "clara": "light",
+    "arctic": "arctic",
+    "artico": "arctic",
+    "artica": "arctic",
+}
+_COLOR_HUES = frozenset(COLOR_CANONICAL.values())
 
 # Locale / marketplace aliases → VARIANT_GATE_KEYS (applied before gate filter).
 _VARIANT_KEY_ALIASES: dict[str, str] = {
@@ -106,6 +137,48 @@ _VARIANT_KEY_ALIASES: dict[str, str] = {
     "memoria_ram": "ram",
     "pack": "pack",
     "embalagem": "pack",
+    "network_lock": "network_lock",
+    "carrier_status": "network_lock",
+    "carrier_lock": "network_lock",
+}
+
+# Attribute value aliases are grouped by meaning, then normalized only in
+# contexts where the attribute is understood. This avoids translating entire
+# titles or letting text similarity override explicit variant conflicts.
+_ATTRIBUTE_VALUE_ALIASES: dict[str, dict[str, str]] = {
+    "network_lock": {
+        "unlocked": "unlocked",
+        "desbloqueado": "unlocked",
+        "desbloqueada": "unlocked",
+        "liberado": "unlocked",
+        "liberada": "unlocked",
+        "locked": "locked",
+        "bloqueado": "locked",
+        "bloqueada": "locked",
+    }
+}
+_TITLE_SEMANTIC_ALIASES: dict[str, tuple[str, ...]] = {
+    "unlocked": (
+        "fully unlocked",
+        "desbloqueado",
+        "desbloqueada",
+        "liberado",
+        "liberada",
+    ),
+    "locked": ("bloqueado", "bloqueada"),
+    "wireless": ("sem fio", "sin cables", "inalambrico", "inalambrica", "sans fil"),
+    "wired": ("com fio", "con cable", "cableado", "cableada", "avec fil"),
+    "refurbished": (
+        "renewed",
+        "reconditioned",
+        "reacondicionado",
+        "reacondicionada",
+        "recondicionado",
+        "recondicionada",
+    ),
+    "used": ("usado", "usada", "usados", "usadas", "seminovo", "seminova"),
+    "openbox": ("open box", "caja abierta", "caixa aberta"),
+    "new": ("nuevo", "nueva", "novo", "nova", "neuf", "neuve"),
 }
 
 # Preferred cross-locale color labels for progressive SERP queries.
@@ -122,6 +195,14 @@ _COLOR_SEARCH_SYNONYMS: dict[str, tuple[str, ...]] = {
     "gray": ("gray", "cinza", "grey", "titanium gray", "titanium grey"),
     "gold": ("gold", "dourado"),
     "silver": ("silver", "prata", "prateado"),
+    "orange": (
+        "orange",
+        "laranja",
+        "naranja",
+        "cosmic orange",
+        "laranja cosmico",
+        "naranja cosmico",
+    ),
 }
 
 _CONDITION_TOKENS = frozenset(
@@ -130,12 +211,21 @@ _CONDITION_TOKENS = frozenset(
         "refurbished",
         "recondicionado",
         "recondicionada",
+        "reacondicionado",
+        "reacondicionada",
+        "reconditioned",
+        "renovado",
+        "renovada",
         "usado",
         "usada",
+        "usados",
+        "usadas",
         "used",
         "cpo",
         "open box",
         "open-box",
+        "caja abierta",
+        "caixa aberta",
         "seminovo",
         "seminova",
     }
@@ -178,6 +268,10 @@ _MODEL_FAMILY_MARKERS: tuple[str, ...] = (
 
 # Manufacturer part-number shapes frequently published in titles / model fields.
 _MPN_PATTERNS: tuple[re.Pattern[str], ...] = (
+    # Generic regional manufacturer part number (e.g. MG7L4LL/A). The
+    # slash+region suffix is required to avoid treating ordinary model tokens
+    # such as A3256 as a part number.
+    re.compile(r"\b[a-z]{2,4}\d[a-z0-9]{2,8}/[a-z]{1,3}\b"),
     re.compile(r"\bmz[-\s]?[a-z]\d[a-z0-9]{4,}(?:/[a-z]{2})?\b"),  # Samsung SSD
     re.compile(r"\bsm-?[a-z]?\d{3}[a-z0-9]*(?:/[a-z]{2})?\b"),  # Samsung mobile
     re.compile(r"\bcfi[-\s]?\d{4}[a-z]?\b"),  # PlayStation SKU
@@ -535,6 +629,7 @@ def extract_all_mpn_forms(*texts: str | None) -> list[tuple[str, str]]:
     found: list[tuple[str, str]] = []
     seen: set[str] = set()
     raw_patterns = (
+        re.compile(r"\b[A-Za-z]{2,4}\d[A-Za-z0-9]{2,8}/[A-Za-z]{1,3}\b"),
         re.compile(r"\bMZ[-\s]?[A-Za-z]\d[A-Za-z0-9]{4,}(?:/[A-Za-z]{2})?\b"),
         re.compile(r"\bSM[-\s]?[A-Za-z]?\d{3}[A-Za-z0-9]*(?:/[A-Za-z]{2})?\b"),
         re.compile(r"\bCFI[-\s]?\d{4}[A-Za-z]?\b"),
@@ -1371,7 +1466,19 @@ def _canonical_color(text: str) -> str:
     if text in COLOR_CANONICAL:
         return COLOR_CANONICAL[text]
     words = text.split()
-    # "luna grey" / "arctic gray" → match longest known suffix.
+    components: list[str] = []
+    for word in words:
+        if word in COLOR_CANONICAL:
+            components.append(COLOR_CANONICAL[word])
+        elif word in _COLOR_DESCRIPTOR_CANONICAL:
+            components.append(_COLOR_DESCRIPTOR_CANONICAL[word])
+        else:
+            components = []
+            break
+    hues = [word for word in components if word in _COLOR_HUES]
+    if len(hues) == 1:
+        return " ".join(sorted(components))
+    # Legacy finish labels can resolve to a known hue through a complete suffix.
     for index in range(len(words)):
         suffix = " ".join(words[index:])
         if suffix in COLOR_CANONICAL:
@@ -1399,6 +1506,8 @@ def normalize_variant_value(key: str, value: str) -> str:
         return canonical_variant_key(text) or re.sub(r"[^a-z0-9]+", "", text)
     if key == "color":
         return _canonical_color(text)
+    if key in _ATTRIBUTE_VALUE_ALIASES:
+        return _ATTRIBUTE_VALUE_ALIASES[key].get(text, text)
     return text
 
 
@@ -1458,10 +1567,25 @@ def _color_label_from_title(title: str | None) -> str | None:
     folded = re.sub(r"\s+", " ", folded).strip()
     if not folded:
         return None
-    # Longest label first so "titanio preto" wins over "titanio" / "preto".
+    # Longest catalog label first so "verde acinzentado" wins over "verde".
     for label in sorted(COLOR_CANONICAL, key=len, reverse=True):
         if re.search(rf"\b{re.escape(label)}\b", folded):
             return label
+    # For translated compounds, find a short span whose terms are all known
+    # hue/finish concepts (e.g. "laranja cósmico" or "cosmic orange").
+    words = folded.split()
+    for width in range(min(3, len(words)), 0, -1):
+        for start in range(len(words) - width + 1):
+            span = " ".join(words[start : start + width])
+            normalized = _canonical_color(span)
+            if normalized != span or (
+                set(normalized.split()) & _COLOR_HUES
+                and all(
+                    word in COLOR_CANONICAL or word in _COLOR_DESCRIPTOR_CANONICAL
+                    for word in span.split()
+                )
+            ):
+                return span
     return None
 
 
@@ -1555,8 +1679,11 @@ def parse_variant_attributes(
                 return
             attrs[key_n] = normalize_variant_value(key_n, text)
         else:
-            folded = fold_text(text)
-            folded = re.sub(r"\s+", " ", folded).strip()
+            folded = (
+                normalize_variant_value(key_n, text)
+                if key_n == "network_lock"
+                else re.sub(r"\s+", " ", fold_text(text)).strip()
+            )
             if folded:
                 attrs[key_n] = folded
 
@@ -1586,27 +1713,39 @@ def variants_equal(key: str, left: str, right: str) -> bool:
     if left_n == right_n:
         return True
     if key == "color":
-        return _colors_compatible(left_n, right_n, left, right)
+        return _colors_compatible(left_n, right_n)
     return False
+
+
+def variant_comparison_uncertain(key: str, left: str, right: str) -> bool:
+    """Return true when an explicit color uses values outside the known lexicon."""
+    if key != "color" or variants_equal(key, left, right):
+        return False
+    return not (_color_hues_from_value(left) and _color_hues_from_value(right))
+
+
+def _color_hues_from_value(value: str) -> set[str]:
+    normalized = normalize_variant_value("color", value)
+    return set(normalized.split()) & _COLOR_HUES
 
 
 _FINISH_ONLY_COLORS = frozenset({"titanium"})
 _FINISH_HUE_COLORS = frozenset({"black", "white", "gray"})
 
 
-def _colors_compatible(
-    left_n: str, right_n: str, left_raw: str, right_raw: str
-) -> bool:
+def _colors_compatible(left_n: str, right_n: str) -> bool:
     """True when colors are the same family with incomplete evidence on one side."""
     if left_n == right_n:
         return True
+    left_words, right_words = set(left_n.split()), set(right_n.split())
+    left_hues = left_words & _COLOR_HUES
+    right_hues = right_words & _COLOR_HUES
+    # Retailers often omit a finish qualifier ("Orange" vs "Cosmic Orange").
+    # The explicit base hue must still agree; distinct hues remain a hard gate.
+    if left_hues and left_hues == right_hues:
+        return True
     pair = {left_n, right_n}
     if pair & _FINISH_ONLY_COLORS and pair & _FINISH_HUE_COLORS:
-        return True
-    # Folded raw prefix: "titanio" ⊂ "titanio preto" (and PT/EN swaps).
-    a = fold_text(left_raw).strip()
-    b = fold_text(right_raw).strip()
-    if a and b and (a in b or b in a):
         return True
     return False
 
@@ -1621,6 +1760,11 @@ def normalize_title(title: str | None) -> str:
     if not title:
         return ""
     folded = fold_text(title)
+    # Normalize a controlled set of translated attribute phrases. This helps
+    # lexical evidence without translating or discarding the full title.
+    for canonical, aliases in _TITLE_SEMANTIC_ALIASES.items():
+        for alias in sorted(aliases, key=len, reverse=True):
+            folded = re.sub(rf"\b{re.escape(alias)}\b", canonical, folded)
     # Compact capacity units so "128 GB" and "128GB" share a token.
     folded = re.sub(r"\b(\d+)\s*(gb|tb|mb)\b", r"\1\2", folded)
 
@@ -1644,7 +1788,10 @@ def normalize_title(title: str | None) -> str:
     folded = re.sub(r"[^a-z0-9\s]+", " ", folded)
     tokens = [t for t in folded.split() if t and t not in TITLE_STOPWORDS]
     # Map single-token color synonyms so PT/EN titles overlap.
-    tokens = [COLOR_CANONICAL.get(token, token) for token in tokens]
+    tokens = [
+        COLOR_CANONICAL.get(token, _COLOR_DESCRIPTOR_CANONICAL.get(token, token))
+        for token in tokens
+    ]
     return " ".join(tokens)
 
 
@@ -1785,6 +1932,17 @@ def looks_like_used_condition(title: str | None) -> bool:
     return False
 
 
+def _network_lock_from_title(title: str | None) -> str | None:
+    folded = fold_text(title or "")
+    if re.search(
+        r"\b(?:fully\s+)?unlocked\b|\b(?:desbloquead[oa]|liberad[oa])\b", folded
+    ):
+        return "unlocked"
+    if re.search(r"\b(?:locked|bloquead[oa])\b", folded):
+        return "locked"
+    return None
+
+
 def condition_conflict(
     reference_title: str | None,
     candidate_title: str | None,
@@ -1812,6 +1970,7 @@ class ProductIdentity:
     mpn: str | None = None
     mpn_display: str | None = None
     mpn_aliases: frozenset[str] = field(default_factory=frozenset)
+    model_numbers: frozenset[str] = field(default_factory=frozenset)
     monitor_model_code: str | None = None
     category: str | None = None
 
@@ -1825,7 +1984,16 @@ def identity_from_price_item(item: ProductPriceItem) -> ProductIdentity:
     raw_specs = meta.get("specifications")
     specs: dict[str, Any] = raw_specs if isinstance(raw_specs, dict) else {}
     extra: dict[str, Any] = {}
-    for key in ("color", "storage", "size", "capacity", "ram", "vram", "edition"):
+    for key in (
+        "color",
+        "storage",
+        "size",
+        "capacity",
+        "ram",
+        "vram",
+        "edition",
+        "network_lock",
+    ):
         value = meta.get(key)
         if (
             value is not None
@@ -1856,6 +2024,10 @@ def identity_from_price_item(item: ProductPriceItem) -> ProductIdentity:
         title_color = _color_label_from_title(item.title)
         if title_color:
             attrs["color"] = title_color
+    if "network_lock" not in attrs:
+        network_lock = _network_lock_from_title(item.title)
+        if network_lock:
+            attrs["network_lock"] = network_lock
 
     blob = _identity_blob(item.model, item.title)
     # GPU VRAM is often mis-tagged as RAM by generic parsers — promote when GPU.
@@ -1945,6 +2117,21 @@ def identity_from_price_item(item: ProductPriceItem) -> ProductIdentity:
     mpn = mpn_forms[0][0] if mpn_forms else None
     mpn_display = mpn_forms[0][1] if mpn_forms else None
     mpn_aliases = frozenset(norm for norm, _disp in mpn_forms)
+    model_number_values: set[str] = set()
+    for key, value in specs.items():
+        if fold_text(str(key)) in {
+            "model number",
+            "numero do modelo",
+            "numero de modelo",
+            "manufacturer model number",
+        }:
+            model_number_values.add(normalize_model(str(value)) or "")
+    if _phone_signature(_identity_blob(item.model, item.title)):
+        model_number_values.update(
+            match.group(0).lower()
+            for match in re.finditer(r"\bA\d{4}\b", item.title or "", re.I)
+        )
+    model_number_values.discard("")
     brand = normalize_brand(item.brand)
     if brand is None:
         # Title often starts with the real brand when PDP brand is a placeholder.
@@ -1967,6 +2154,7 @@ def identity_from_price_item(item: ProductPriceItem) -> ProductIdentity:
         mpn=mpn,
         mpn_display=mpn_display,
         mpn_aliases=mpn_aliases,
+        model_numbers=frozenset(model_number_values),
         monitor_model_code=monitor_model_code,
         category=category,
     )
@@ -2199,7 +2387,11 @@ def build_search_queries(identity: ProductIdentity) -> list[str]:
     if color:
         color_labels.append(color)
         canon = normalize_variant_value("color", color)
-        for synonym in _COLOR_SEARCH_SYNONYMS.get(canon, (canon,)):
+        hue = next((word for word in canon.split() if word in _COLOR_HUES), canon)
+        synonyms = _COLOR_SEARCH_SYNONYMS.get(canon, ()) + _COLOR_SEARCH_SYNONYMS.get(
+            hue, (canon,)
+        )
+        for synonym in synonyms:
             if synonym not in color_labels:
                 color_labels.append(synonym)
 

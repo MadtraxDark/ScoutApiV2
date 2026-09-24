@@ -19,6 +19,7 @@ from scout_api.modules.matching.identity import (
     models_compatible,
     motherboard_soft_model_title_exempt,
     token_set_ratio,
+    variant_comparison_uncertain,
     variants_equal,
 )
 from scout_api.modules.matching.schemas import MatchReason
@@ -47,8 +48,19 @@ def _variant_conflict(ref: ProductIdentity, cand: ProductIdentity) -> str | None
     for key, ref_value in ref.variant_attrs.items():
         cand_value = cand.variant_attrs.get(key)
         if cand_value and not variants_equal(key, ref_value, cand_value):
+            if variant_comparison_uncertain(key, ref_value, cand_value):
+                continue
             return f"variant_{key}_mismatch:{ref_value}!={cand_value}"
     return None
+
+
+def _variant_uncertainties(ref: ProductIdentity, cand: ProductIdentity) -> list[str]:
+    return [
+        f"color:{ref_value}!={cand_value}"
+        for key, ref_value in ref.variant_attrs.items()
+        if (cand_value := cand.variant_attrs.get(key))
+        and variant_comparison_uncertain(key, ref_value, cand_value)
+    ]
 
 
 def _brand_compatible(ref: ProductIdentity, cand: ProductIdentity) -> bool:
@@ -76,6 +88,7 @@ class MatchingEngine:
         self, reference: ProductIdentity, candidate: ProductIdentity
     ) -> MatchScore:
         reasons: list[MatchReason] = []
+        variant_uncertainties = _variant_uncertainties(reference, candidate)
         ref_monitor_code = reference.monitor_model_code
         cand_monitor_code = candidate.monitor_model_code
         monitor_code_exact = bool(
@@ -332,6 +345,52 @@ class MatchingEngine:
                 reasons=tuple(reasons),
             )
 
+        shared_model_numbers = reference.model_numbers & candidate.model_numbers
+        if shared_model_numbers:
+            shared = sorted(shared_model_numbers)[0]
+            reasons.append(
+                MatchReason(
+                    code="model_number_exact",
+                    detail=f"model_number={shared}",
+                    score=1.0,
+                )
+            )
+            if variant_uncertainties:
+                reasons.append(
+                    MatchReason(
+                        code="variant_semantic_uncertain",
+                        detail=";".join(variant_uncertainties),
+                        score=0.5,
+                    )
+                )
+                return MatchScore(
+                    decision="review",
+                    confidence=Decimal("0.8500"),
+                    reasons=tuple(reasons),
+                )
+            if (
+                reference.brand
+                and candidate.brand
+                and not _brand_compatible(reference, candidate)
+            ):
+                reasons.append(
+                    MatchReason(
+                        code="model_number_brand_conflict",
+                        detail="model_number_match_but_brand_diverges",
+                        score=0.5,
+                    )
+                )
+                return MatchScore(
+                    decision="review",
+                    confidence=Decimal("0.8500"),
+                    reasons=tuple(reasons),
+                )
+            return MatchScore(
+                decision="auto_match",
+                confidence=Decimal("0.9800"),
+                reasons=tuple(reasons),
+            )
+
         confidence = Decimal("0.0000")
         has_strong_id = False
         monitor_spec_support = False
@@ -424,6 +483,19 @@ class MatchingEngine:
                         score=title_sim,
                     )
                 )
+            if variant_uncertainties:
+                reasons.append(
+                    MatchReason(
+                        code="variant_semantic_uncertain",
+                        detail=";".join(variant_uncertainties),
+                        score=0.5,
+                    )
+                )
+                return MatchScore(
+                    decision="review",
+                    confidence=min(confidence, Decimal("0.8900")),
+                    reasons=tuple(reasons),
+                )
             if _price_extreme(reference, candidate):
                 reasons.append(
                     MatchReason(
@@ -491,6 +563,17 @@ class MatchingEngine:
         if decision == "auto_match" and not has_strong_id:
             decision = "review"
             confidence = min(confidence, Decimal("0.8900"))
+
+        if variant_uncertainties and decision == "reject":
+            reasons.append(
+                MatchReason(
+                    code="variant_semantic_uncertain",
+                    detail=";".join(variant_uncertainties),
+                    score=0.5,
+                )
+            )
+            decision = "review"
+            confidence = max(confidence, REVIEW_THRESHOLD)
 
         return MatchScore(
             decision=decision, confidence=confidence, reasons=tuple(reasons)

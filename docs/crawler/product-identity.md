@@ -74,6 +74,17 @@ Aliases de marca só com evidência (`ASUSTeK`→`ASUS`).
 ## Match
 
 Evidência forte: GTIN/MPN/model_number. Title similarity só complementar.
+Valores de atributos explícitos usam aliases semânticos por chave para suportar
+idiomas e ordens diferentes sem traduzir o título inteiro. Ausência permanece
+desconhecida. Matiz de cor, qualificador, capacidade, modelo e condição continuam
+separados; qualificadores ausentes só são compatíveis quando o matiz explícito
+coincide. `network_lock` compara `unlocked`/`desbloqueado` e `locked`/`bloqueado`
+quando ambos os lados declaram o atributo. Condição `renewed`, `refurbished`,
+`used` ou `open box` não é descartada na normalização e segue o gate de oferta
+do ADR 0024. Cor explícita fora do vocabulário fica em `review` quando os valores
+divergem; não rejeita por diferença textual nem recebe `auto_match` só por
+marca/modelo. Ver [ADR 0040](../adr/0040-matching-multilingual-attributes.md).
+
 Conflitos críticos por profile (ex.: `rtx5070`≠`rtx5070ti`, Digital≠Disc).
 Para monitores, o parser de título identifica códigos de fabricante alfanuméricos
 com contexto da categoria (incluindo sufixos hifenizados), normaliza apenas

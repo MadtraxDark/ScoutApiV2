@@ -14,6 +14,7 @@ from scout_api.modules.matching.identity import (
     identity_from_price_item,
     normalize_gtin,
     normalize_title,
+    normalize_variant_value,
     token_set_ratio,
 )
 
@@ -673,6 +674,189 @@ def test_iphone16_search_queries_include_color_synonyms() -> None:
     assert any("preto" in q for q in queries)
     assert any("black" in q for q in queries)
     assert any(q == "iphone 16 128gb" for q in queries)
+
+
+def test_iphone17_cosmic_orange_matches_translated_compound_color() -> None:
+    ref = identity_from_price_item(
+        _item(
+            title="Apple iPhone 17 Pro 256GB Laranja cósmico",
+            brand="Apple",
+            model="iPhone 17 Pro",
+            variant="tamanho: 256 GB; cor: Laranja cósmico",
+        )
+    )
+    candidate = identity_from_price_item(
+        _item(
+            store="visaovip",
+            title="Apple iPhone 17 Pro MG7L4LL/A A3256 256GB / eSIM - Cosmic Orange",
+            brand="Apple",
+            model="iPhone 17 Pro",
+            variant="color: Cosmic Orange; storage: 256GB",
+        )
+    )
+    assert normalize_variant_value("color", ref.variant_attrs["color"]) == (
+        normalize_variant_value("color", candidate.variant_attrs["color"])
+    )
+    assert normalize_variant_value("color", "Naranja cósmico") == (
+        normalize_variant_value("color", "Cosmic Orange")
+    )
+    assert candidate.variant_attrs["storage"] == "256gb"
+    assert candidate.mpn == "mg7l4lla"
+    assert candidate.model_numbers == frozenset({"a3256"})
+    score = MatchingEngine().score(ref, candidate)
+    assert score.decision == "auto_match"
+    assert any(reason.code == "brand_model_exact" for reason in score.reasons)
+    assert any("iphone 17 pro 256gb orange" in q for q in build_search_queries(ref))
+
+
+def test_iphone17_pro_max_stays_incompatible_after_color_normalization() -> None:
+    ref = identity_from_price_item(
+        _item(
+            title="Apple iPhone 17 Pro 256GB Laranja cósmico",
+            brand="Apple",
+            model="iPhone 17 Pro",
+            variant="color: Laranja cósmico; storage: 256 GB",
+        )
+    )
+    candidate = identity_from_price_item(
+        _item(
+            store="shoppingchina",
+            title="Celular Apple 17 Pro Max 256 Gb Orange Esim",
+            brand="Apple",
+            model="iPhone 17 Pro Max",
+            variant="color: Orange; storage: 256 GB",
+        )
+    )
+    score = MatchingEngine().score(ref, candidate)
+    assert score.decision == "reject"
+    assert any(
+        reason.code == "critical_conflict"
+        and "phone_mismatch" in (reason.detail or "")
+        for reason in score.reasons
+    )
+
+
+def test_iphone17_refurbished_listing_rejects_even_when_color_matches() -> None:
+    ref = identity_from_price_item(
+        _item(
+            title="Apple iPhone 17 Pro 256GB Laranja cósmico",
+            brand="Apple",
+            model="iPhone 17 Pro",
+            variant="color: Laranja cósmico; storage: 256GB",
+        )
+    )
+    candidate = identity_from_price_item(
+        _item(
+            store="bestbuy",
+            title=(
+                "Apple - Refurbished Excellent - iPhone 17 Pro 256GB 5G Fully "
+                "Unlocked Cosmic Orange"
+            ),
+            brand="Apple",
+            model="iPhone 17 Pro",
+            variant="color: Cosmic Orange; storage: 256GB",
+        )
+    )
+    score = MatchingEngine().score(ref, candidate)
+    assert score.decision == "reject"
+    assert any(reason.code == "condition_reject" for reason in score.reasons)
+
+
+def test_semantic_attribute_aliases_cover_spanish_and_carrier_lock() -> None:
+    ref = identity_from_price_item(
+        _item(
+            title="Apple iPhone 17 Pro 256GB Laranja cósmico Desbloqueado",
+            brand="Apple",
+            model="iPhone 17 Pro",
+            variant="color: Laranja cósmico; storage: 256GB",
+        )
+    )
+    candidate = identity_from_price_item(
+        _item(
+            store="international",
+            title="Apple iPhone 17 Pro 256GB Cosmic Orange Unlocked",
+            brand="Apple",
+            model="iPhone 17 Pro",
+            variant="color: Cosmic Orange; storage: 256GB",
+        )
+    )
+    assert ref.variant_attrs["network_lock"] == candidate.variant_attrs["network_lock"]
+    assert MatchingEngine().score(ref, candidate).decision == "auto_match"
+
+    locked = identity_from_price_item(
+        _item(
+            title="Apple iPhone 17 Pro 256GB Cosmic Orange Locked",
+            brand="Apple",
+            model="iPhone 17 Pro",
+            variant="color: Cosmic Orange; storage: 256GB",
+        )
+    )
+    assert MatchingEngine().score(ref, locked).decision == "reject"
+
+
+def test_explicit_identical_phone_model_number_is_strong_evidence() -> None:
+    ref = identity_from_price_item(
+        _item(
+            title="Apple iPhone 17 Pro A3256 256GB Cosmic Orange",
+            brand="Apple",
+            model="iPhone 17 Pro",
+            variant="color: Cosmic Orange; storage: 256GB",
+        )
+    )
+    candidate = identity_from_price_item(
+        _item(
+            store="visaovip",
+            title="Apple iPhone 17 Pro MG7L4LL/A A3256 256GB eSIM Cosmic Orange",
+            brand="Apple",
+            model="iPhone 17 Pro",
+            variant="color: Cosmic Orange; storage: 256GB",
+        )
+    )
+    score = MatchingEngine().score(ref, candidate)
+    assert score.decision == "auto_match"
+    assert any(reason.code == "model_number_exact" for reason in score.reasons)
+
+
+def test_identical_regional_manufacturer_part_numbers_are_strong_evidence() -> None:
+    ref = identity_from_price_item(
+        _item(
+            title="Apple iPhone 17 Pro MG7L4LL/A 256GB Cosmic Orange",
+            brand="Apple",
+            model="iPhone 17 Pro",
+            variant="color: Cosmic Orange; storage: 256GB",
+        )
+    )
+    candidate = identity_from_price_item(
+        _item(
+            store="visaovip",
+            title="Apple iPhone 17 Pro MG7L4LL/A A3256 256GB eSIM Cosmic Orange",
+            brand="Apple",
+            model="iPhone 17 Pro",
+            variant="color: Cosmic Orange; storage: 256GB",
+        )
+    )
+    score = MatchingEngine().score(ref, candidate)
+    assert score.decision == "auto_match"
+    assert any(reason.code == "mpn_exact" for reason in score.reasons)
+
+
+def test_unknown_translated_color_is_reviewed_instead_of_rejected() -> None:
+    score = MatchingEngine().score(
+        _identity(
+            brand="example",
+            model="device-x1",
+            title="Example Device X1 Coral",
+            variant_attrs={"color": "coral"},
+        ),
+        _identity(
+            brand="example",
+            model="device-x1",
+            title="Example Device X1 Coraline",
+            variant_attrs={"color": "coralino"},
+        ),
+    )
+    assert score.decision == "review"
+    assert any(reason.code == "variant_semantic_uncertain" for reason in score.reasons)
 
 
 def test_renewed_listing_rejects_against_new_reference() -> None:
