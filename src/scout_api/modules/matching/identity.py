@@ -268,6 +268,8 @@ _MODEL_FAMILY_MARKERS: tuple[str, ...] = (
 
 # Manufacturer part-number shapes frequently published in titles / model fields.
 _MPN_PATTERNS: tuple[re.Pattern[str], ...] = (
+    # AMD processor OPNs (boxed and tray are distinct packages of a known CPU).
+    re.compile(r"\b100[-\s]?(?:100000|000000)\d{3}[a-z]{0,3}\b"),
     # Generic regional manufacturer part number (e.g. MG7L4LL/A). The
     # slash+region suffix is required to avoid treating ordinary model tokens
     # such as A3256 as a part number.
@@ -544,7 +546,7 @@ def _cpu_signature(text: str | None) -> str | None:
     folded = fold_text(text or "")
     if not folded:
         return None
-    match = re.search(r"\bi([3579])-(\d{4,5}[a-z]*)\b", folded)
+    match = re.search(r"\bi([3579])\s*-?\s*(\d{4,5}[a-z0-9]{0,4})\b", folded)
     if match:
         return f"i{match.group(1)}-{match.group(2)}"
     match = re.search(r"\b(?:core\s*)?i([3579])\s*-?\s*(n\d{3}[a-z]*)\b", folded)
@@ -553,10 +555,46 @@ def _cpu_signature(text: str | None) -> str | None:
     match = re.search(r"\bcore\s*([3579])\s+(\d{3}[a-z]*)\b", folded)
     if match:
         return f"core{match.group(1)}-{match.group(2)}"
-    match = re.search(r"\bryzen\s*([3579])\s+(\d{4}[a-z]*)\b", folded)
+    match = re.search(
+        r"\bcore\s+ultra\s*([3579])\s*-?\s*(\d{3,5}[a-z]{0,3})\b",
+        folded,
+    )
     if match:
-        return f"ryzen{match.group(1)}-{match.group(2)}"
+        return f"coreultra{match.group(1)}-{match.group(2)}"
+    match = re.search(
+        r"\b(?:amd\s+)?(?:ryzen\s*([3579])|r([3579]))\s*[- ]*"
+        r"(\d{4,5}[a-z0-9]{0,4})\b",
+        folded,
+    )
+    if match:
+        tier = match.group(1) or match.group(2)
+        return f"ryzen{tier}-{match.group(3)}"
     return None
+
+
+def _cpu_socket(text: str | None) -> str | None:
+    folded = fold_text(text or "")
+    match = re.search(
+        r"\b(?:socket\s*)?(am\s*\d+|swrx\d+|sp\d+|lga\s*\d{3,4})\b", folded
+    )
+    if not match:
+        return None
+    socket = re.sub(r"\s+", "", match.group(1))
+    return socket
+
+
+def processor_socket(identity: ProductIdentity) -> str | None:
+    """Extract an explicitly listed socket from processor identity text."""
+    return _cpu_socket(_identity_blob(identity.model, identity.title))
+
+
+def processor_model_exact(
+    reference: ProductIdentity, candidate: ProductIdentity
+) -> bool:
+    """Whether both listings expose the same explicit processor SKU."""
+    left = _cpu_signature(_identity_blob(reference.model, reference.title))
+    right = _cpu_signature(_identity_blob(candidate.model, candidate.title))
+    return bool(left and right and left == right)
 
 
 def _model_has_family(model: str) -> bool:
@@ -1157,6 +1195,20 @@ def critical_identity_conflict(
     for name, left, right in checks:
         if left and right and left != right:
             return f"{name}_mismatch:{left}!={right}"
+
+    left_cpu_text = _identity_blob(reference.model, reference.title)
+    right_cpu_text = _identity_blob(candidate.model, candidate.title)
+    left_cpu = _cpu_signature(left_cpu_text)
+    right_cpu = _cpu_signature(right_cpu_text)
+    if left_cpu and right_cpu and left_cpu != right_cpu:
+        return f"processor_model_mismatch:{left_cpu}!={right_cpu}"
+    if (left_cpu or right_cpu) and (
+        reference.category == "cpu" or candidate.category == "cpu"
+    ):
+        left_socket = _cpu_socket(left_cpu_text)
+        right_socket = _cpu_socket(right_cpu_text)
+        if left_socket and right_socket and left_socket != right_socket:
+            return f"processor_socket_mismatch:{left_socket}!={right_socket}"
 
     ref_wifi = _wifi_presence(_identity_blob(reference.model, reference.title))
     cand_wifi = _wifi_presence(_identity_blob(candidate.model, candidate.title))
@@ -2237,6 +2289,20 @@ def build_search_queries(identity: ProductIdentity) -> list[str]:
             queries.append(text)
 
     add(identity.gtin)
+
+    # CPU catalogs often normalize the model field to a glued token (e.g.
+    # ``ryzen75800x3d``), while store search indexes natural model phrases.
+    # Keep query generation category-specific and retain the full SKU suffix.
+    cpu_model = _cpu_signature(_identity_blob(identity.model, identity.title))
+    if cpu_model and identity.category == "cpu":
+        cpu_phrase = re.sub(
+            r"^(ryzen|coreultra|core)([3579])[- ]", r"\1 \2 ", cpu_model
+        )
+        cpu_phrase = re.sub(r"^i([3579])-", r"Core i\1-", cpu_phrase)
+        cpu_phrase = re.sub(r"\s+", " ", cpu_phrase).strip()
+        if identity.brand:
+            add(f"{identity.brand} {cpu_phrase}")
+        add(cpu_phrase)
 
     # Collect manufacturer PN displays for later (after category-specific ladders).
     alias_displays: list[str] = []

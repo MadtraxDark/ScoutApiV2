@@ -90,6 +90,13 @@ Itens resolvidos **não** ficam no índice ativo.
 
 *(pendências ativas: 5)*
 
+Resolvida em 2026-09-24:
+
+- [resolved/PENDING-022-cpu-match-live-validation.md](resolved/PENDING-022-cpu-match-live-validation.md)
+  — queries legíveis de CPU e identidade semântica; Nissei (SKU 159342, pai
+  1705851) e Visão VIP (59017) descobertos, raspados, `auto_match` 0.98 e
+  listings persistidos no produto canônico; testes 121/121.
+
 Resolvida em 2026-09-23:
 
 - PENDING-018 Visão VIP Strategy A ID discovery — arquivo apagado; discovery

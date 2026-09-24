@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
+from typing import cast
+from urllib.parse import urlsplit, urlunsplit
 
 from scout_api.core.config import get_settings
 from scout_api.modules.crawler.core.exceptions import ParseError, RequestError
@@ -12,8 +14,10 @@ from scout_api.modules.crawler.core.store_capability_health import (
     CapabilityTrialToken,
     get_store_capability_circuit,
     is_store_search_trip_failure,
-    reset_store_capability_circuits_for_tests as _reset_circuits,  # noqa: F401
     store_capability_unavailable_error,
+)
+from scout_api.modules.crawler.core.store_capability_health import (
+    reset_store_capability_circuits_for_tests as _reset_circuits,  # noqa: F401
 )
 from scout_api.modules.crawler.services.amazon_http_first_fetcher import (
     is_amazon_store_url,
@@ -32,6 +36,7 @@ from scout_api.modules.matching.identity import (
     enrich_candidate_title,
     rank_candidates_for_query,
 )
+from scout_api.modules.matching.search_adapters.base import SearchRequest
 from scout_api.modules.matching.search_adapters.registry import (
     resolve_search_adapter,
     search_adapter_available,
@@ -39,6 +44,30 @@ from scout_api.modules.matching.search_adapters.registry import (
 from scout_api.modules.matching.search_candidate import SearchCandidate
 
 logger = logging.getLogger(__name__)
+
+
+def _log_search_candidates(
+    store_key: str, query: str, candidates: list[SearchCandidate]
+) -> None:
+    """Log bounded, non-query-string candidate details for live diagnostics."""
+    details = []
+    for candidate in candidates:
+        parts = urlsplit(candidate.url)
+        safe_url = urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
+        details.append(
+            (
+                candidate.product_id,
+                (candidate.title or "")[:200],
+                safe_url[:500],
+            )
+        )
+    logger.info(
+        "store_search_candidates store=%s query=%r count=%d candidates=%r",
+        store_key,
+        query,
+        len(candidates),
+        details,
+    )
 
 
 def _dedup_candidates_by_product_id(
@@ -78,7 +107,12 @@ class StoreSearchService:
         request = adapter.build_search_request(query)
         fetch_url = request.url
         logger.info(
-            "store_search_fetch",
+            "store_search_fetch store=%s query=%r method=%s prefer_browser=%s url=%s",
+            store_key,
+            query,
+            request.method,
+            request.prefer_browser,
+            fetch_url,
             extra={
                 "store": store_key,
                 "capability": "search",
@@ -162,7 +196,7 @@ class StoreSearchService:
         *,
         limit: int,
         fetch_url: str,
-        request: object,
+        request: SearchRequest,
         on_browser_nav_used: Callable[[], object] | None,
     ) -> list[SearchCandidate]:
         adapter = resolve_search_adapter(store_key)
@@ -178,9 +212,6 @@ class StoreSearchService:
             if settings.visaovip_search_action_enabled:
                 from scout_api.modules.matching.search_adapters.paraguay import (
                     visaovip_action_strategy as vv_action,
-                )
-                from scout_api.modules.matching.search_adapters.paraguay.visaovip_action_strategy import (
-                    StrategyResult,
                 )
 
                 action_id = vv_action.resolve_action_id(
@@ -204,7 +235,7 @@ class StoreSearchService:
                         )
 
                 if action_id:
-                    post_fn = None
+                    post_fn: Callable[..., tuple[int, str]] | None = None
                     browser_post = find_browser_post(self._fetcher)
                     if browser_post is not None:
 
@@ -212,11 +243,12 @@ class StoreSearchService:
                             post_url: str,
                             headers: dict[str, str],
                             data: bytes,
-                            *,
-                            _post=browser_post,
                         ) -> tuple[int, str]:
                             # Cloudflare clears bare httpx; reuse Camoufox session.
-                            return _post(post_url, headers=headers, data=data)
+                            return cast(
+                                tuple[int, str],
+                                browser_post(post_url, headers=headers, data=data),
+                            )
 
                     a_result, a_candidates = adapter.try_strategy_a(
                         query,
@@ -225,24 +257,35 @@ class StoreSearchService:
                         post_fn=post_fn,
                     )
                     logger.info(
-                        "visaovip_strategy_a_result",
+                        "visaovip_strategy_a_result store=%s query=%r "
+                        "result=%s candidates=%d",
+                        store_key,
+                        query,
+                        str(a_result),
+                        len(a_candidates or []),
                         extra={
                             "store": store_key,
                             "result": str(a_result),
                             "candidates": len(a_candidates or []),
                         },
                     )
-                    if a_result == StrategyResult.SUCCESS and a_candidates:
+                    if a_result == vv_action.StrategyResult.SUCCESS and a_candidates:
                         enriched_a = [enrich_candidate_title(c) for c in a_candidates]
                         ranked_a = rank_candidates_for_query(list(enriched_a), query)
-                        return _dedup_candidates_by_product_id(ranked_a, limit=limit)
-                    if a_result == StrategyResult.NO_RESULTS:
+                        selected_a = _dedup_candidates_by_product_id(
+                            ranked_a, limit=limit
+                        )
+                        _log_search_candidates(store_key, query, selected_a)
+                        return selected_a
+                    if a_result == vv_action.StrategyResult.NO_RESULTS:
                         logger.info(
-                            "visaovip_strategy_a_no_results",
+                            "visaovip_strategy_a_no_results store=%s query=%r",
+                            store_key,
+                            query,
                             extra={"store": store_key, "query": query},
                         )
                         return []
-                    if a_result == StrategyResult.UNAVAILABLE:
+                    if a_result == vv_action.StrategyResult.UNAVAILABLE:
                         vv_action.invalidate_cached_action_id(reason="unavailable")
                     logger.info(
                         "visaovip_strategy_a_fallback_to_b",
@@ -339,6 +382,7 @@ class StoreSearchService:
             selected.append(candidate)
             if len(selected) >= limit:
                 break
+        _log_search_candidates(store_key, query, selected)
         return selected
 
     @staticmethod

@@ -22,6 +22,30 @@ normalização usada por Search/Match.
 
 **Não over-inferir:** `Ryzen 7 7800X3D` não ganha `cores=8` sem fonte.
 
+### Identidade de processadores
+
+O Product Match extrai a assinatura completa do SKU em contexto de CPU para AMD
+Ryzen (incluindo `R7` abreviado), Intel Core i-series e Intel Core Ultra. A
+assinatura inclui todos os dígitos e sufixos (`5800X3D`, `14900K`, `14900KF`,
+`5600G`, `285K`); dois SKUs explicitamente diferentes são conflito crítico e
+não dependem da similaridade global do título. Assinaturas iguais sustentam
+match mesmo quando o título tem idioma, ordem e detalhes complementares
+diferentes.
+
+Socket (`AM4`, `AM5`, `LGA1700`, etc.) só gera conflito quando ambos os lados
+informam valores diferentes. Socket ausente permanece desconhecido. OPNs AMD
+de CPU (`100-100000651POF` boxed e `100-000000651` tray) são preservados como
+MPNs: igualdade é identificador forte, enquanto OPNs diferentes não anulam uma
+assinatura de processador igual, pois podem indicar só a embalagem. Clock,
+cache, cores, threads, gráficos integrados e TDP permanecem evidências
+complementares; sem parsers/valores confiáveis em ambos os lados não são
+inventados nem usados como conflito.
+
+Em Search, processadores geram cedo queries legíveis com marca/família/tier/SKU
+espaçados, preservando o sufixo discriminante, além das queries genéricas de
+MPN e título. Isso corrige modelos estruturados concatenados como
+`ryzen75800x3d` sem baixar thresholds gerais.
+
 ## Arquitetura
 
 ```text

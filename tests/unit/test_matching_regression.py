@@ -370,9 +370,7 @@ def test_monitor_missing_model_code_falls_back_to_regular_match() -> None:
 def test_monitor_missing_code_can_continue_with_matching_display_specs() -> None:
     reference = identity_from_price_item(
         _item(
-            title=(
-                "Monitor Gamer Gigabyte GS24F14 23.8 Pol Full HD IPS 144Hz 1ms"
-            ),
+            title=("Monitor Gamer Gigabyte GS24F14 23.8 Pol Full HD IPS 144Hz 1ms"),
             brand="Gigabyte",
             metadata={"category": "monitor"},
         )
@@ -730,8 +728,7 @@ def test_iphone17_pro_max_stays_incompatible_after_color_normalization() -> None
     score = MatchingEngine().score(ref, candidate)
     assert score.decision == "reject"
     assert any(
-        reason.code == "critical_conflict"
-        and "phone_mismatch" in (reason.detail or "")
+        reason.code == "critical_conflict" and "phone_mismatch" in (reason.detail or "")
         for reason in score.reasons
     )
 
@@ -1956,7 +1953,9 @@ def test_match_respects_scrape_budget_across_queries() -> None:
     search = MagicMock()
     search.is_search_supported.return_value = True
 
-    def _search(store_key: str, query: str, *, limit: int = 5, **_kwargs: object) -> list[SearchCandidate]:
+    def _search(
+        store_key: str, query: str, *, limit: int = 5, **_kwargs: object
+    ) -> list[SearchCandidate]:
         del store_key, query
         return [
             SearchCandidate(
@@ -2025,7 +2024,7 @@ def test_long_smartphone_title_does_not_drive_raw_serp_query() -> None:
     marketing noise (cameras, battery, AI slogans) stays out of the primary ladder.
     """
     title = (
-        'Celular Samsung Galaxy S25 Ultra 5G 256GB Galaxy AI Titânio Preto '
+        "Celular Samsung Galaxy S25 Ultra 5G 256GB Galaxy AI Titânio Preto "
         '6,9" 12GB RAM Câm. Quádrupla 200+50+10+50MP Bateria 5000mAh Dual Chip'
     )
     identity = identity_from_price_item(
@@ -2421,7 +2420,8 @@ def test_motherboard_unitless_ram_slots_are_not_variant_gate() -> None:
     score = MatchingEngine().score(ref, cand)
     assert score.decision == "auto_match"
     assert not any(
-        r.code == "variant_mismatch" and "ram" in (r.detail or "") for r in score.reasons
+        r.code == "variant_mismatch" and "ram" in (r.detail or "")
+        for r in score.reasons
     )
 
 
@@ -2439,6 +2439,180 @@ def test_cpu_x3d_suffix_rejects_base_sku() -> None:
         ),
     )
     assert score.decision == "reject"
+
+
+def test_cpu_exact_model_matches_title_with_complementary_specs() -> None:
+    reference = _identity(
+        brand="amd",
+        model="Ryzen 7 5800X3D",
+        title="Processador AMD Ryzen 7 5800X3D 3.4GHz 8-Core Cache 100MB AM4",
+        category="cpu",
+    )
+    candidates = (
+        _identity(
+            brand="amd",
+            model="AMD R7 5800X3D",
+            title=(
+                "CPU AMD R7 5800X3D 8 Core AM4 3.4GHz 100MB "
+                "10th Anniversary Edition Boxed"
+            ),
+            category="cpu",
+        ),
+        _identity(
+            brand="amd",
+            model="Ryzen 7 5800X3D",
+            title=(
+                "Processador AMD Ryzen 7 5800X3D AM4 8 Núcleos até 4.5 GHz "
+                "96 MB 3D V-Cache (Sem Cooler)"
+            ),
+            category="cpu",
+        ),
+        _identity(
+            brand="amd",
+            model="Ryzen 7 5800X3D",
+            title=(
+                "Processador AMD Ryzen 7 5800X3D 10th Anniversary Edition "
+                "Socket AM4 / 3.4GHz / 100MB"
+            ),
+            category="cpu",
+        ),
+    )
+    for candidate in candidates:
+        score = MatchingEngine().score(reference, candidate)
+        assert score.decision == "auto_match"
+        assert any(reason.code == "processor_model_exact" for reason in score.reasons)
+
+
+def test_cpu_model_and_family_conflicts_reject_exactly() -> None:
+    reference = _identity(
+        brand="amd",
+        model="Ryzen 7 5800X3D",
+        title="AMD Ryzen 7 5800X3D AM4",
+        category="cpu",
+    )
+    for model, title in (
+        ("Ryzen 7 5800X", "AMD Ryzen 7 5800X AM4"),
+        ("Ryzen 7 5700X3D", "AMD Ryzen 7 5700X3D AM4"),
+        ("Ryzen 7 7800X3D", "AMD Ryzen 7 7800X3D AM5"),
+        ("Ryzen 5 5600G", "AMD Ryzen 5 5600G AM4"),
+    ):
+        score = MatchingEngine().score(
+            reference,
+            _identity(brand="amd", model=model, title=title, category="cpu"),
+        )
+        assert score.decision == "reject"
+        assert any(reason.code == "critical_conflict" for reason in score.reasons)
+
+
+def test_intel_cpu_model_suffixes_are_preserved() -> None:
+    reference = _identity(
+        brand="intel",
+        model="Intel Core i9-14900K",
+        title="Intel Core i9-14900K LGA1700",
+        category="cpu",
+    )
+    exact = MatchingEngine().score(
+        reference,
+        _identity(
+            brand="intel",
+            model="Core i9 14900K",
+            title="CPU Intel i9-14900K LGA 1700",
+            category="cpu",
+        ),
+    )
+    suffix_conflict = MatchingEngine().score(
+        reference,
+        _identity(
+            brand="intel",
+            model="Core i9-14900KF",
+            title="CPU Intel Core i9-14900KF LGA1700",
+            category="cpu",
+        ),
+    )
+    assert exact.decision == "auto_match"
+    assert suffix_conflict.decision == "reject"
+
+
+def test_intel_core_ultra_285k_signature_matches_without_global_threshold() -> None:
+    score = MatchingEngine().score(
+        _identity(
+            brand="intel",
+            model="Core Ultra 9 285K",
+            title="Intel Core Ultra 9 285K LGA1851",
+            category="cpu",
+        ),
+        _identity(
+            brand="intel",
+            model="Intel Core Ultra 9 285K",
+            title="CPU Ultra 9 285K Socket LGA 1851",
+            category="cpu",
+        ),
+    )
+    assert score.decision == "auto_match"
+
+
+def test_cpu_missing_socket_is_unknown_but_explicit_socket_conflict_rejects() -> None:
+    reference = _identity(
+        brand="amd",
+        model="Ryzen 7 5800X3D",
+        title="AMD Ryzen 7 5800X3D AM4",
+        category="cpu",
+    )
+    absent = MatchingEngine().score(
+        reference,
+        _identity(
+            brand="amd",
+            model="Ryzen 7 5800X3D",
+            title="AMD Ryzen 7 5800X3D",
+            category="cpu",
+        ),
+    )
+    conflict = MatchingEngine().score(
+        reference,
+        _identity(
+            brand="amd",
+            model="Ryzen 7 5800X3D",
+            title="AMD Ryzen 7 5800X3D Socket AM5",
+            category="cpu",
+        ),
+    )
+    assert absent.decision == "auto_match"
+    assert conflict.decision == "reject"
+    assert any(
+        "processor_socket_mismatch" in (r.detail or "") for r in conflict.reasons
+    )
+
+
+def test_cpu_opn_boxed_and_tray_are_recognized_as_mpn_aliases() -> None:
+    reference = identity_from_price_item(
+        _item(
+            title="AMD Ryzen 7 5800X3D 100-100000651POF", metadata={"category": "cpu"}
+        )
+    )
+    candidate = identity_from_price_item(
+        _item(title="AMD Ryzen 7 5800X3D 100-000000651", metadata={"category": "cpu"})
+    )
+    assert "100100000651pof" in reference.mpn_aliases
+    assert "100000000651" in candidate.mpn_aliases
+    assert reference.mpn != candidate.mpn
+
+
+def test_cpu_queries_use_spaced_model_and_keep_suffix() -> None:
+    identity = identity_from_price_item(
+        _item(
+            product_id="a9c9041d-503a-4942-8b62-a483bd2f7c78",
+            title=(
+                "Processador AMD Ryzen 7 5800X3D, 3.4GHZ, 8-CORE, "
+                "Cache 100MB, AM4 - 100-100000651POF"
+            ),
+            brand="AMD",
+            model="Ryzen 7 5800X3D",
+            metadata={"category": "cpu"},
+        )
+    )
+    queries = build_search_queries(identity)
+    assert queries[:2] == ["amd ryzen 7 5800x3d", "ryzen 7 5800x3d"]
+    assert not any(query.endswith("5800x") for query in queries)
 
 
 def test_motherboard_parse_model_excludes_socket_marketing_tail() -> None:

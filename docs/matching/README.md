@@ -43,6 +43,12 @@ modelo estruturado alfanumérico (letras e números) também é preservado como
 chave de descoberta; a validação posterior continua sob responsabilidade do
 matcher e dos gates de variante.
 
+Para CPU, a escada começa também com consultas de modelo em forma legível (por
+exemplo, `amd ryzen 7 5800x3d` e `ryzen 7 5800x3d`) porque SERPs de lojas podem
+não indexar o modelo concatenado `ryzen75800x3d`. O SKU e seus sufixos são
+mantidos integralmente. As queries genéricas de OPN/título continuam como
+fallback dentro do mesmo budget.
+
 ## Budgets por loja (StoreAttemptBudget)
 
 Cada loja dentro de um `MatchRun` opera sob três budgets independentes
@@ -59,6 +65,23 @@ Regras:
 - Cache/dedup hits: `skip_cached()` — não consomem budget.
 - Budget esgotado: store encerra progressão; Run continua nas outras stores.
 - `stopped_reason` preserva o primeiro motivo de parada por loja (observabilidade de log).
+
+## Diagnóstico do Product Match
+
+Os logs da API e do `match-runner` imprimem os campos necessários no texto da
+mensagem, além dos extras estruturados:
+
+- `store_search_fetch`: loja, query, método, preferência por browser e URL SERP.
+- `store_search_candidates`: query, quantidade e candidatos limitados com ID,
+  título e URL sem query string.
+- `match_serp_title_reject`: query, título e motivo da rejeição antes do PDP.
+- `match_candidate_decision`: query, título/URL PDP, modelo, socket, MPN,
+  decisão, confiança e razões do matcher.
+- `match_store_summary`: queries usadas, tempos de busca/scrape, contagens,
+  resultado e motivo de parada por loja.
+
+Esse conjunto distingue ausência de descoberta, rejeição de título, falha de
+scraping e decisão do matcher sem registrar query strings das URLs de PDP.
 
 ## Concorrência de browser (BrowserScheduler)
 

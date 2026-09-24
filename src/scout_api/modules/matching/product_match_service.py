@@ -11,6 +11,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from decimal import Decimal
+from urllib.parse import urlsplit, urlunsplit
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -32,27 +33,13 @@ from scout_api.modules.crawler.models.product import (
     ProductPriceItem,
     product_offer_from_price_item,
 )
-from scout_api.modules.matching.search_candidate import SearchCandidate
 from scout_api.modules.crawler.services.product_scrape_service import (
     ProductScrapeService,
 )
 from scout_api.modules.crawler.stores import STORE_CONFIGS, store_display_name
+from scout_api.modules.matching.attempt_budget import StoreAttemptBudget
 from scout_api.modules.matching.eligibility import eligible_match_store_keys
 from scout_api.modules.matching.engine import MatchingEngine
-from scout_api.modules.matching.attempt_budget import StoreAttemptBudget
-from scout_api.modules.matching.match_deadlines import (
-    MonotonicDeadline,
-    nested_deadline,
-)
-from scout_api.modules.matching.match_hang_constants import (
-    FAILURE_CODE_RUN_WALL_TIMEOUT,
-    FAILURE_CODE_STORE_WALL_TIMEOUT,
-)
-from scout_api.modules.matching.match_progress import (
-    GLOBAL_MATCH_PROGRESS,
-    MatchProgressPhase,
-    MatchProgressTracker,
-)
 from scout_api.modules.matching.gtin_learning import (
     TrustedGtin,
     identity_with_gtin,
@@ -69,7 +56,21 @@ from scout_api.modules.matching.identity import (
     looks_like_bundle,
     normalize_brand,
     normalize_gtin,
+    processor_socket,
     serp_candidate_text,
+)
+from scout_api.modules.matching.match_deadlines import (
+    MonotonicDeadline,
+    nested_deadline,
+)
+from scout_api.modules.matching.match_hang_constants import (
+    FAILURE_CODE_RUN_WALL_TIMEOUT,
+    FAILURE_CODE_STORE_WALL_TIMEOUT,
+)
+from scout_api.modules.matching.match_progress import (
+    GLOBAL_MATCH_PROGRESS,
+    MatchProgressPhase,
+    MatchProgressTracker,
 )
 from scout_api.modules.matching.repository import MatchingRepository
 from scout_api.modules.matching.schemas import (
@@ -79,6 +80,7 @@ from scout_api.modules.matching.schemas import (
     MatchResponse,
     MatchStoreError,
 )
+from scout_api.modules.matching.search_candidate import SearchCandidate
 from scout_api.modules.matching.store_search_order import (
     order_stores_for_match,
     split_stores_for_match_waves,
@@ -634,7 +636,8 @@ class ProductMatchService:
                     # help.
                     if (
                         exc.code == "SEARCH_UNSUPPORTED"
-                        or exc.code in {"UPSTREAM_WAF_BLOCKED", "SEARCH_INCOMPLETE_RESPONSE"}
+                        or exc.code
+                        in {"UPSTREAM_WAF_BLOCKED", "SEARCH_INCOMPLETE_RESPONSE"}
                         or is_browser_infrastructure_error(exc.code)
                     ):
                         break
@@ -706,8 +709,13 @@ class ProductMatchService:
                     )
                     if reject is not None:
                         title_rejects += 1
-                        logger.debug(
-                            "match_serp_title_reject",
+                        logger.info(
+                            "match_serp_title_reject store=%s query=%r "
+                            "reason=%s title=%r",
+                            store_key,
+                            query,
+                            reject,
+                            (candidate.title or "")[:120],
                             extra={
                                 "store": store_key,
                                 "reason": reject,
@@ -779,8 +787,34 @@ class ProductMatchService:
                                 break
                         continue
 
-                    score = self._engine.score(
-                        local_identity, identity_from_price_item(product)
+                    candidate_identity = identity_from_price_item(product)
+                    score = self._engine.score(local_identity, candidate_identity)
+                    candidate_url_parts = urlsplit(
+                        (product.url or product.canonical_url).strip()
+                    )
+                    candidate_log_url = urlunsplit(
+                        (
+                            candidate_url_parts.scheme,
+                            candidate_url_parts.netloc,
+                            candidate_url_parts.path,
+                            "",
+                            "",
+                        )
+                    )[:500]
+                    logger.info(
+                        "match_candidate_decision store=%s query=%r title=%r url=%s "
+                        "model=%r socket=%r mpn=%r decision=%s confidence=%s "
+                        "reasons=%r",
+                        store_key,
+                        query,
+                        (product.title or "")[:200],
+                        candidate_log_url,
+                        candidate_identity.model,
+                        processor_socket(candidate_identity),
+                        candidate_identity.mpn_display or candidate_identity.mpn,
+                        score.decision,
+                        score.confidence,
+                        [f"{r.code}:{r.detail}" for r in score.reasons[:8]],
                     )
                     if len(candidate_logs) < 40:
                         candidate_logs.append(
@@ -881,6 +915,22 @@ class ProductMatchService:
             with state_lock:
                 store_stage_ms[store_key] = store_timing
             logger.info("match_store_timing", extra=store_timing)
+            logger.info(
+                "match_store_summary store=%s elapsed_ms=%.1f search_ms=%.1f "
+                "scrape_ms=%.1f queries=%r candidates_seen=%d title_rejects=%d "
+                "scrapes=%d matched=%s queries_skipped=%d stopped_reason=%s",
+                store_key,
+                store_timing["elapsed_ms"],
+                store_timing["search_ms"],
+                store_timing["scrape_ms"],
+                executed_queries,
+                candidates_seen,
+                title_rejects,
+                scrapes_done,
+                store_matched,
+                queries_skipped,
+                budget.stopped_reason,
+            )
             observe(
                 "product_match_store",
                 store_elapsed_ms,
@@ -1302,9 +1352,7 @@ class ProductMatchService:
                 )
 
         allow_reparent = canonical_product_id is not None
-        identity_only_reference = bool(
-            (reference.metadata or {}).get("identity_only")
-        )
+        identity_only_reference = bool((reference.metadata or {}).get("identity_only"))
         if not identity_only_reference:
             ref_listing = repo.upsert_listing(
                 canonical=canonical,

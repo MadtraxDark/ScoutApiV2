@@ -18,6 +18,8 @@ from scout_api.modules.matching.identity import (
     looks_like_bundle,
     models_compatible,
     motherboard_soft_model_title_exempt,
+    processor_model_exact,
+    processor_socket,
     token_set_ratio,
     variant_comparison_uncertain,
     variants_equal,
@@ -153,6 +155,21 @@ class MatchingEngine:
 
             critical = critical_identity_conflict(reference, candidate)
             if critical:
+                if critical.startswith("processor_"):
+                    logger.info(
+                        "product_match_processor_conflict",
+                        extra={
+                            "source_cpu_model": reference.model,
+                            "candidate_cpu_model": candidate.model,
+                            "source_socket": processor_socket(reference) or "not_found",
+                            "candidate_socket": processor_socket(candidate)
+                            or "not_found",
+                            "source_mpn": reference.mpn or "not_found",
+                            "candidate_mpn": candidate.mpn or "not_found",
+                            "conflict": critical,
+                            "decision": "reject",
+                        },
+                    )
                 reasons.append(
                     MatchReason(
                         code="critical_conflict",
@@ -391,6 +408,54 @@ class MatchingEngine:
                 reasons=tuple(reasons),
             )
 
+        cpu_model_exact = bool(
+            reference.category == candidate.category == "cpu"
+            and processor_model_exact(reference, candidate)
+        )
+        if cpu_model_exact:
+            logger.info(
+                "product_match_processor_model_exact",
+                extra={
+                    "source_cpu_model": reference.model,
+                    "candidate_cpu_model": candidate.model,
+                    "source_socket": processor_socket(reference) or "not_found",
+                    "candidate_socket": processor_socket(candidate) or "not_found",
+                    "source_mpn": reference.mpn or "not_found",
+                    "candidate_mpn": candidate.mpn or "not_found",
+                    "socket_conflict": False,
+                    "decision": "auto_match",
+                },
+            )
+            reasons.append(
+                MatchReason(
+                    code="processor_model_exact",
+                    detail=f"{reference.model or 'title'}~{candidate.model or 'title'}",
+                    score=1.0,
+                )
+            )
+            if (
+                reference.brand
+                and candidate.brand
+                and not _brand_compatible(reference, candidate)
+            ):
+                reasons.append(
+                    MatchReason(
+                        code="processor_brand_conflict",
+                        detail=f"{reference.brand}!={candidate.brand}",
+                        score=0.0,
+                    )
+                )
+                return MatchScore(
+                    decision="review",
+                    confidence=Decimal("0.8500"),
+                    reasons=tuple(reasons),
+                )
+            return MatchScore(
+                decision="auto_match",
+                confidence=Decimal("0.9800"),
+                reasons=tuple(reasons),
+            )
+
         confidence = Decimal("0.0000")
         has_strong_id = False
         monitor_spec_support = False
@@ -459,6 +524,7 @@ class MatchingEngine:
                 console_soft_model_title_exempt(reference, candidate)
                 or gpu_soft_model_title_exempt(reference, candidate)
                 or motherboard_soft_model_title_exempt(reference, candidate)
+                or cpu_model_exact
             ):
                 model_soft_ok = False
 
