@@ -3,6 +3,10 @@
 ## Markets / country
 
 - `store=visaovip`, `country=PY`, `currency=USD`
+- The registry declares `PY + USD` as this integration's supported market pair;
+  `GET /stores` exposes the pair for the admin UI. It is not inferred from
+  Paraguay's official currency. Other integrations default to their registered
+  `country` + `currency` pair unless they declare additional supported pairs.
 - Domains: `visaovip.com`, `www.visaovip.com`
 - Ciudad del Este storefront; prices advertised as `U$` (USD)
 - UI locales: `pt-BR` (default) and `es`

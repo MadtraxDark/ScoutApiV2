@@ -495,6 +495,9 @@ class StoreInfo(BaseModel):
     )
     country: str
     currency: str
+    supported_country_currency_pairs: list[tuple[str, str]] = Field(
+        description="Pares país/moeda declarados pela integração cadastrada."
+    )
     domains: list[str]
     implemented: bool
     supports_search: bool

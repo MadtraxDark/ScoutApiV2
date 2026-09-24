@@ -278,7 +278,9 @@ where a value came from (`product-state`, `json-ld`, `buybox-price`, …).
 
 ## Adding a store
 
-1. `StoreConfig` in `stores.py` (domains, country, currency, proxy policy).
+1. `StoreConfig` in `stores.py` (domains, default country/currency, supported
+   country/currency pairs, proxy policy). `GET /stores` exposes these pairs to
+   clients; never infer them from a country's official currency.
 2. Spider under `spiders/<region>/` with `extract_offer` / `extract_details` /
    optional `extract_images`.
 3. Fixtures + unit tests under `tests/fixtures/<store>/` and `tests/unit/`.

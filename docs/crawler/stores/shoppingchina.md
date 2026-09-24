@@ -2,6 +2,9 @@
 
 ## Markets / country
 
+- Registry markets: `PY + PYG` (`.com.py`) and `PY + BRL` (`.com.br`); primary
+  currency follows the requested host locale.
+
 - `store=shoppingchina`, `country=PY` (always Paraguay storefront identity)
 - Domains: `shoppingchina.com.py`, `shoppingchina.com.br`
 - Dual TLD, **one** spider / one country code

@@ -27,6 +27,13 @@ class StoreConfig:
     # User-facing label (never the catalog slug). Catalog dict key stays snake_case.
     display_name: str = ""
 
+    # Valid markets belong to the integration. Empty uses its configured default.
+    supported_country_currency_pairs: tuple[tuple[str, str], ...] = ()
+
+    @property
+    def market_pairs(self) -> tuple[tuple[str, str], ...]:
+        return self.supported_country_currency_pairs or ((self.country, self.currency),)
+
     @property
     def default_include_images(self) -> bool:
         """True when gallery extraction is cheap enough to opt-in by default."""
@@ -155,6 +162,7 @@ STORE_CONFIGS = {
         ("shoppingchina.com.py", "shoppingchina.com.br"),
         True,
         display_name="Shopping China",
+        supported_country_currency_pairs=(("PY", "PYG"), ("PY", "BRL")),
     ),
     "visaovip": StoreConfig(
         "visaovip",
@@ -163,6 +171,7 @@ STORE_CONFIGS = {
         ("visaovip.com",),
         True,
         display_name="Visão VIP",
+        supported_country_currency_pairs=(("PY", "USD"),),
     ),
 }
 

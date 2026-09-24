@@ -5,6 +5,7 @@ import pytest
 from PIL import Image
 from pydantic import ValidationError
 
+from scout_api.modules.crawler.stores import STORE_CONFIGS
 from scout_api.modules.images.optimizer import AvifOptimizer
 from scout_api.modules.matching.router import _store_logo_url
 from scout_api.modules.matching.schemas import StoreMetadataUpdateRequest
@@ -145,5 +146,18 @@ def test_accepts_avif_without_reconverting_and_preserves_transparency() -> None:
 def test_update_request_rejects_structural_fields() -> None:
     with pytest.raises(ValidationError):
         StoreMetadataUpdateRequest(
-            display_name="KaBuM Nova", domains=["arbitrary.example"]
+            display_name="KaBuM Nova",
+            domains=["arbitrary.example"],
+            country="PY",
+            currency="EUR",
         )
+
+
+def test_store_market_pairs_are_declared_per_integration() -> None:
+    assert STORE_CONFIGS["visaovip"].market_pairs == (("PY", "USD"),)
+    assert ("PY", "EUR") not in STORE_CONFIGS["visaovip"].market_pairs
+    assert STORE_CONFIGS["nissei"].market_pairs == (("PY", "PYG"),)
+    assert STORE_CONFIGS["shoppingchina"].market_pairs == (
+        ("PY", "PYG"),
+        ("PY", "BRL"),
+    )

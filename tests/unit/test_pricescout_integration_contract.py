@@ -89,7 +89,19 @@ def test_stores_lists_registry(auth_settings: str) -> None:
     kabum = next(item for item in body["stores"] if item["key"] == "kabum")
     assert kabum["implemented"] is True
     assert kabum["country"] == "BR"
+    assert kabum["supported_country_currency_pairs"] == [["BR", "BRL"]]
     assert "kabum.com.br" in kabum["domains"]
+    visaovip = next(item for item in body["stores"] if item["key"] == "visaovip")
+    assert visaovip["country"] == "PY"
+    assert visaovip["currency"] == "USD"
+    assert visaovip["supported_country_currency_pairs"] == [["PY", "USD"]]
+    shoppingchina = next(
+        item for item in body["stores"] if item["key"] == "shoppingchina"
+    )
+    assert shoppingchina["supported_country_currency_pairs"] == [
+        ["PY", "PYG"],
+        ["PY", "BRL"],
+    ]
 
 
 def test_store_metadata_update_requires_admin(auth_settings: str) -> None:

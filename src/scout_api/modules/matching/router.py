@@ -329,6 +329,7 @@ def _stores_response(session: Session | None) -> StoreListResponse:
             ),
             country=config.country,
             currency=config.currency,
+            supported_country_currency_pairs=list(config.market_pairs),
             domains=list(config.domains),
             implemented=config.implemented,
             supports_search=key in search_keys,
