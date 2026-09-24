@@ -1,0 +1,45 @@
+﻿panels approx 4
+panel titles: ['R$ 1.270,58', 'Caracter├¡sticas gerais', 'Especifica├º├Áes T├®cnicas', 'OFF']
+espec chunk len 40000
+strong pairs 1
+   Avalia├º├úo Geral = 
+lis 0
+dt/dd 0
+tr 0
+pix ctx:  <small>├á vista com 15% de desconto no pix</small>
+pix ctx: n>R$ 1.289,98</span> ├á vista com 15% de desconto no <hasBol>boleto ou</hasBol> pix</div>
+pix ctx:  <p>├á vista com 15% de desconto no boleto ou pix</p>
+pix ctx:  $('#label-val-prod').text('15% de desconto ├á vista no boleto ou pix');
+terabyte img urls 47
+  https://img.terabyteshop.com.br/terabyte-logo.svg
+  https://img.terabyteshop.com.br/m-dep/login.svg
+  https://img.terabyteshop.com.br/m-dep/conta.svg
+  https://img.terabyteshop.com.br/m-dep/favoritos.svg
+  https://img.terabyteshop.com.br/m-dep/atendimento.svg
+  https://img.terabyteshop.com.br/produto/g/placa-mae-gigabyte-b650m-aorus-elite-chipset-b650-amd-am5-atx-ddr5_163885.png
+  https://img.terabyteshop.com.br/produto/g/placa-mae-gigabyte-b650m-aorus-elite-chipset-b650-amd-am5-atx-ddr5_163880.png
+  https://img.terabyteshop.com.br/produto/g/placa-mae-gigabyte-b650m-aorus-elite-chipset-b650-amd-am5-atx-ddr5_163881.png
+  https://img.terabyteshop.com.br/produto/g/placa-mae-gigabyte-b650m-aorus-elite-chipset-b650-amd-am5-atx-ddr5_163882.png
+  https://img.terabyteshop.com.br/produto/g/placa-mae-gigabyte-b650m-aorus-elite-chipset-b650-amd-am5-atx-ddr5_163883.png
+  https://img.terabyteshop.com.br/produto/g/placa-mae-gigabyte-b650m-aorus-elite-chipset-b650-amd-am5-atx-ddr5_163884.png
+  https://img.terabyteshop.com.br/selos/black-november-terabyte.jpg
+  https://img.terabyteshop.com.br/cc-visa.png
+  https://img.terabyteshop.com.br/cc-master.png
+  https://img.terabyteshop.com.br/cc-amex.png
+  https://img.terabyteshop.com.br/cc-diners.png
+  https://img.terabyteshop.com.br/cc-hipercard.png
+  https://img.terabyteshop.com.br/cc-elo.png
+  https://img.terabyteshop.com.br/produto/p/placa-mae-gigabyte-b650m-aorus-elite-chipset-b650-amd-am5-atx-ddr5_163885.png
+  https://img.terabyteshop.com.br/produto/p/cooler-para-processador-montech-nx400-white-120mm-intel-amd-branco_239477.jpg
+  https://img.terabyteshop.com.br/archive/3010916578/HTML B650M AORUS ELITE-01.png
+  https://img.terabyteshop.com.br/archive/695180036/HTML  B650 AORUS ELITE AX-02.png
+  https://img.terabyteshop.com.br/archive/4286240872/HTML B650M AORUS ELITE AX-02.png
+  https://img.terabyteshop.com.br/archive/280417139/HTML B650M AORUS ELITE AX-03.png
+  https://img.terabyteshop.com.br/rating/s-tars/rating-4_0.png
+var\s+productId\s*=\s*(\d+) found False
+product_id['\"]?\s*[:=]\s*['\"]?(\d+) found False
+['\"]id['\"]\s*:\s*22809 found False
+window\.__NUXT__ found False
+__NEXT_DATA__ found False
+self\.__next_f found False
+wrote espec_chunk.html

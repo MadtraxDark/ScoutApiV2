@@ -1,0 +1,51 @@
+﻿SPECS MARKUP AROUND Marca:
+'Marca:</strong><br />Gigabyte</p><p><strong>Modelo:</strong><br />B650M Aorus Elite</p><p><strong>CPU:</strong><br />AMD Socket AM5, suporte para: Processadores AMD Ryzen&nbsp;S&eacute;rie 7000<br />(Consulte a &quot;Lista de suporte de CPU&quot; para obter mais informa&ccedil;&otilde;es.)</p><p><strong>Chipset:</strong><br />AMD B650</p><p><strong>Mem&oacute;ria:</strong><br />4 x soquetes DIMM DDR5 que suportam at&eacute; 128 GB (capacidade de DIMM &uacute;nico de 32 GB) de mem&oacute;ria do sistema<br />Suporte para m&oacute;dulos de mem&oacute;ria DDR5 6600(OC) / 6400(OC) / 6200(OC) / 6000(OC) / 5600(OC) / 5200 / 4800 / 4400 MT/s<br />Arquitetura de mem&oacute;ria de canal duplo<br />Suporte para m&oacute;dulos de mem&oacute;ria DIMM 1Rx8/2Rx8/1Rx16 sem buffer n&atilde;o ECC<br />Suporte para m&oacute;dulos de mem&oacute;ria AMD EXtended Profiles for Overclocking (AMD EXPO&trade;) e '
+---
+count[valVista]=4
+count[valParc]=7
+count[parcelamento]=3
+count[box-preco]=0
+count[p-price]=0
+count[price-box]=5
+count[vista]=14
+count[juros]=33
+price-ish ids: ['ClinkParc', 'EnvEmailProd', 'ModalEnvProdEmail', 'ModalLinkParceiro', 'Parc', 'avaliar-produto-wrap', 'detalheparcelamento', 'f_nome_produto', 'f_produto', 'formProdutoModal', 'frm-avaliar-produto', 'frmparceiroshare', 'idproduto', 'img-preco-topo', 'jrParc', 'label-val-prod', 'nParc', 'parcAcordion', 'topopreco', 'valParc', 'valVista', 'verparcelamento']
+price-ish classes sample: ['ModalLinkParceiro', 'Parc', 'blocParcela', 'col-sm-5 col-md-3 col-lg-4 titPrecoTopo hidden-xs', 'desparc', 'info-prod info-price', 'laranja nParc', 'nParc', 'nopadding prec_parc', 'preco-linha', 'precode', 'precotopo info-prod hidden', 'price-badge', 'product-item__new-price', 'product-item__old-price', 'product-item__price-box', 'val-parc', 'val-prod valVista', 'valParc']
+money ctx:  Chipset B650, AMD AM5, mATX, DDR5</h2> <p> <span>R$ 1.199,99</span> <small>├á vista com 15% de desconto no pix</small> </p> </di
+money ctx:  <p id="valVista" class="val-prod valVista">R$ 1.199,99</p> <span class="price-badge">30% OFF</span> 
+money ctx:  de <span id="Parc" class="Parc">R$ 117,65</span> <span id="jrParc" class="inf_juros">sem juros 
+money ctx: s</div><ul><li><strong class="laranja">1</strong>x de <span>R$ 1.270,58</span><small> <small>c/desconto de 10%</small>*</small></li><li><strong class="
+money ctx: small></li><li><strong class="laranja">2</strong>x de <span>R$ 656,46</span><small> <small>c/desconto de 7%</small>*</small></li><li><strong class="l
+money ctx: small></li><li><strong class="laranja">3</strong>x de <span>R$ 437,64</span><small> <small>c/desconto de 7%</small>*</small></li><li><strong class="l
+money ctx: small></li><li><strong class="laranja">4</strong>x de <span>R$ 352,94</span><small> s/juros*</small></li><li><strong class="laranja">5</strong>x de <
+money ctx: small></li><li><strong class="laranja">5</strong>x de <span>R$ 282,35</span><small> s/juros*</small></li><li><strong class="laranja">6</strong>x de <
+money ctx: small></li><li><strong class="laranja">6</strong>x de <span>R$ 235,29</span><small> s/juros*</small></li><li><strong class="laranja">7</strong>x de <
+money ctx: small></li><li><strong class="laranja">7</strong>x de <span>R$ 201,68</span><small> s/juros*</small></li><li><strong class="laranja">8</strong>x de <
+money ctx: small></li><li><strong class="laranja">8</strong>x de <span>R$ 176,47</span><small> s/juros*</small></li><li><strong class="laranja">9</strong>x de <
+money ctx: small></li><li><strong class="laranja">9</strong>x de <span>R$ 156,86</span><small> s/juros*</small></li><li><strong class="laranja">10</strong>x de 
+money ctx: mall></li><li><strong class="laranja">10</strong>x de <span>R$ 141,18</span><small> s/juros*</small></li><li><strong class="laranja">11</strong>x de 
+money ctx: mall></li><li><strong class="laranja">11</strong>x de <span>R$ 128,34</span><small> s/juros*</small></li><li><strong class="laranja">12</strong>x de 
+money ctx: mall></li><li><strong class="laranja">12</strong>x de <span>R$ 117,65</span><small> s/juros*</small></li><li><strong class="laranja">13</strong>x de 
+money ctx: mall></li><li><strong class="laranja">13</strong>x de <span>R$ 119,46</span><small> c/juros*</small></li><li><strong class="laranja">14</strong>x de 
+money ctx: mall></li><li><strong class="laranja">14</strong>x de <span>R$ 110,92</span><small> c/juros*</small></li><li><strong class="laranja">15</strong>x de 
+money ctx: mall></li><li><strong class="laranja">15</strong>x de <span>R$ 103,53</span><small> c/juros*</small></li><li><strong class="laranja">16</strong>x de 
+money ctx: mall></li><li><strong class="laranja">16</strong>x de <span>R$ 97,06</span><small> c/juros*</small></li><li><strong class="laranja">17</strong>x de 
+money ctx: mall></li><li><strong class="laranja">17</strong>x de <span>R$ 91,35</span><small> c/juros*</small></li><li><strong class="laranja">18</strong>x de 
+money ctx: mall></li><li><strong class="laranja">18</strong>x de <span>R$ 86,27</span><small> c/juros*</small></li></ul><div><small><strong class="laranja"><i>
+money ctx: v class="infVlrCj"> <span class="laranja">Por:</span> <span>R$ 1.289,98</span> ├á vista com 15% de desconto no <hasBol>boleto ou</hasBol> pix</div> 
+money ctx: iv class="product-item__new-price"> <span>R$ 1.449,99</span> <small> ├á vista </small> </div> 
+money ctx: <span>12x</span><small> de </small ><span>R$ 142,16</span><small> sem juros</small> </div> 
+money ctx: iv class="product-item__new-price"> <span>R$ 799,99</span> <small> ├á vista </small> </div> 
+money ctx: <span>12x</span><small> de </small ><span>R$ 78,43</span><small> sem juros</small> </div> 
+money ctx: iv class="product-item__new-price"> <span>R$ 1.499,99</span> <small> ├á vista </small> </div> 
+money ctx: <span>12x</span><small> de </small ><span>R$ 147,06</span><small> sem juros</small> </div> 
+money ctx: iv class="product-item__new-price"> <span>R$ 1.539,99</span> <small> ├á vista </small> </div> 
+money ctx: <span>12x</span><small> de </small ><span>R$ 150,98</span><small> sem juros</small> </div> 
+money ctx: iv class="product-item__new-price"> <span>R$ 1.049,99</span> <small> ├á vista </small> </div> 
+money ctx: <span>12x</span><small> de </small ><span>R$ 102,94</span><small> sem juros</small> </div> 
+money ctx: "> <p class="precode">De: <del>R$ 1.722,90</del> por:</p> <p id="valVista" class="val-prod va
+money ctx:  <p id="valVista" class="val-prod valVista">R$ 000,00</p> <div class="clear"></div> <p>├á vista com 15% d
+money ctx: l-parc"> <span id="valParc" class="valParc">R$ 1.411,75</span> <span id="nParc" class="laranja nParc">12x</span> de 
+money ctx: >12x</span> de <span id="Parc" class="Parc">R$ 117,65</span> <span id="jrParc" class="inf_juros">sem juros no cart├úo<
+money ctx:  $('.val-prod').text('R$ 1.199,99'); $('#label-val-prod').text('15% de desconto ├á vista no boleto ou 
+money ctx: ├á vista no boleto ou pix'); $('.valParc').text('R$ 1.411,75'); $('.nParc').text('12x'); $('.Parc').text('R$ 117,65'

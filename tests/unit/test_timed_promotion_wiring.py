@@ -133,19 +133,25 @@ def test_terabyte_live_html_offer_and_promotion() -> None:
             "<script>$('#ctd41251').countdown('2026/09/28 10:00:59');</script>"
         )
         url = "https://www.terabyteshop.com.br/produto/41251/monitor"
+        expect_card = Decimal("549.99")
+        expect_pix = None
     else:
         html = TERABYTE_HTML.read_text(encoding="utf-8")
         url = (
             "https://www.terabyteshop.com.br/produto/41251/"
             "monitor-gamer-gigabyte-gs24f14-238-pol-full-hd-ips-144hz-1ms-104srgb-hdmidp"
         )
+        # Live fixture: JSON-LD/à vista ≠ cartão (#valParc).
+        expect_card = Decimal("647.05")
+        expect_pix = Decimal("549.99")
     obs = extract_terabyte_countdown(html, product_id="41251")
     assert obs is not None
     promo = terabyte_promotion_from_html(html, product_id="41251")
     assert promo is not None
     offer = TerabyteShopSpider().extract_offer(_text_response(url, html))
     assert offer.product_id == "41251"
-    assert offer.price == Decimal("549.99")
+    assert offer.price == expect_card
+    assert offer.pix_price == expect_pix
     assert "promotion" in offer.metadata
     assert offer.metadata["promotion"]["expires_at"]
 

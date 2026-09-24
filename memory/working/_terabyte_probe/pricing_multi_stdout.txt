@@ -1,0 +1,152 @@
+﻿[
+  {
+    "category": "motherboard",
+    "product_id": "22809",
+    "url": "https://www.terabyteshop.com.br/produto/22809/placa-mae-gigabyte-b650m-aorus-elite-chipset-b650-amd-am5-atx-ddr5",
+    "ms": 291.1,
+    "price_card": "1411.75",
+    "pix_price": "1199.99",
+    "original_price": "1722.90",
+    "installments": "12x 117.65",
+    "discount_pct": "18.06",
+    "pix_lt_card": true,
+    "original_gt_card": true,
+    "sources": {
+      "price": "dom-valParc",
+      "pix_price": "dom-valVista-pix",
+      "card_price": "dom-valParc",
+      "original_price": "dom-precode-del",
+      "installment": "dom-nParc-Parc",
+      "availability": "json-ld",
+      "product_id": "url",
+      "promotion": "terabyte.jquery.countdown"
+    },
+    "pricing_meta": {
+      "card_price": "1411.75",
+      "pix_price": "1199.99",
+      "pix_savings": "211.76"
+    },
+    "promotion": true,
+    "availability": "available"
+  },
+  {
+    "category": "cpu",
+    "product_id": "20782",
+    "url": "https://www.terabyteshop.com.br/produto/20782/processador-amd-ryzen-5-5500-36ghz-42ghz-turbo-6-cores-12-threads-cooler-wraith-stealth-am4-100-100000457box",
+    "ms": 2369.8,
+    "price_card": "658.81",
+    "pix_price": "559.99",
+    "original_price": "890.90",
+    "installments": "12x 54.90",
+    "discount_pct": "26.05",
+    "pix_lt_card": true,
+    "original_gt_card": true,
+    "sources": {
+      "price": "dom-valParc",
+      "pix_price": "dom-valVista-pix",
+      "card_price": "dom-valParc",
+      "original_price": "dom-precode-del",
+      "installment": "dom-nParc-Parc",
+      "availability": "json-ld",
+      "product_id": "url",
+      "promotion": "terabyte.jquery.countdown"
+    },
+    "pricing_meta": {
+      "card_price": "658.81",
+      "pix_price": "559.99",
+      "pix_savings": "98.82"
+    },
+    "promotion": true,
+    "availability": "available"
+  },
+  {
+    "category": "gpu",
+    "product_id": "40448",
+    "url": "https://www.terabyteshop.com.br/produto/40448/placa-de-video-gamer-ninja-nvidia-geforce-gtx-1660-super-ronin-6gb-gddr6-192bit-gn-pv-nvgtx1660s6d6",
+    "ms": 2421.7,
+    "price_card": "1470.58",
+    "pix_price": "1249.99",
+    "original_price": "14749.90",
+    "installments": "12x 122.55",
+    "discount_pct": "90.03",
+    "pix_lt_card": true,
+    "original_gt_card": true,
+    "sources": {
+      "price": "dom-valParc",
+      "pix_price": "dom-valVista-pix",
+      "card_price": "dom-valParc",
+      "original_price": "dom-de-por",
+      "installment": "dom-nParc-Parc",
+      "availability": "json-ld",
+      "product_id": "url",
+      "promotion": "terabyte.jquery.countdown"
+    },
+    "pricing_meta": {
+      "card_price": "1470.58",
+      "pix_price": "1249.99",
+      "pix_savings": "220.59"
+    },
+    "promotion": true,
+    "availability": "available"
+  },
+  {
+    "category": "ram",
+    "product_id": "23362",
+    "url": "https://www.terabyteshop.com.br/produto/23362/memoria-para-notebook-ddr5-kingston-fury-impact-16gb-2x8gb-4800mhz-cl38-black-kf548s38ibk2-16",
+    "ms": 2804.5,
+    "price_card": "2352.82",
+    "pix_price": "1999.90",
+    "original_price": "3599.90",
+    "installments": "12x 196.07",
+    "discount_pct": "34.64",
+    "pix_lt_card": true,
+    "original_gt_card": true,
+    "sources": {
+      "price": "dom-valParc",
+      "pix_price": "dom-valVista-pix",
+      "card_price": "dom-valParc",
+      "original_price": "dom-precode-del",
+      "installment": "dom-nParc-Parc",
+      "availability": "json-ld",
+      "product_id": "url",
+      "promotion": "terabyte.jquery.countdown"
+    },
+    "pricing_meta": {
+      "card_price": "2352.82",
+      "pix_price": "1999.90",
+      "pix_savings": "352.92"
+    },
+    "promotion": true,
+    "availability": "available"
+  },
+  {
+    "category": "ssd",
+    "product_id": "42990",
+    "url": "https://www.terabyteshop.com.br/produto/42990/ssd-sandisk-optimus-gx-pro-850x-2tb-nvme-pcie-40-m2-2280-leitura-7300mbs-e-gravacao-6600mbs-sdsp81200tan-000e0",
+    "ms": 2223.3,
+    "price_card": "7058.71",
+    "pix_price": "5999.90",
+    "original_price": "10039.90",
+    "installments": "12x 588.23",
+    "discount_pct": "29.69",
+    "pix_lt_card": true,
+    "original_gt_card": true,
+    "sources": {
+      "price": "dom-valParc",
+      "pix_price": "dom-valVista-pix",
+      "card_price": "dom-valParc",
+      "original_price": "dom-precode-del",
+      "installment": "dom-nParc-Parc",
+      "availability": "json-ld",
+      "product_id": "url",
+      "promotion": "terabyte.jquery.countdown"
+    },
+    "pricing_meta": {
+      "card_price": "7058.71",
+      "pix_price": "5999.90",
+      "pix_savings": "1058.81"
+    },
+    "promotion": true,
+    "availability": "available"
+  }
+]

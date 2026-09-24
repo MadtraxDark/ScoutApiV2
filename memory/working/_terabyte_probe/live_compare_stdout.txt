@@ -1,0 +1,151 @@
+﻿docker : profile_lock_redis_no_gateway
+No C:\Users\Thyago\AppData\Local\Temp\ps-script-10907ff5-2058-4a36-b88e-2e723db6b3aa.ps1:86 caractere:108
++ ... compare.py; docker compose exec -T api python /tmp/_probe_terabyte_li ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (profile_lock_redis_no_gateway:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+profile_lock_redis_no_gateway
+profile_lock_disabled
+camoufox_launch_failed
+camoufox_fetch_failed
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/scout_api/modules/crawler/services/html_fetcher.py", line 1321, in 
+_fetch_locked
+    browser, reused = self._acquire_browser(url)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/scout_api/modules/crawler/services/html_fetcher.py", line 1188, in 
+_acquire_browser
+    browser = timed.__enter__()
+              ^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/scout_api/modules/crawler/services/html_fetcher.py", line 2233, in 
+__enter__
+    browser = self._inner.__enter__()
+              ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/camoufox/sync_api.py", line 39, in __enter__
+    self.browser = NewBrowser(self._playwright, **self.launch_options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/camoufox/sync_api.py", line 120, in NewBrowser
+    context = playwright.firefox.launch_persistent_context(**from_options)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/playwright/sync_api/_generated.py", line 17003, in 
+launch_persistent_context
+    self._sync(
+  File "/usr/local/lib/python3.12/site-packages/playwright/_impl/_sync_base.py", line 115, in _sync
+    return task.result()
+           ^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/playwright/_impl/_browser_type.py", line 165, in 
+launch_persistent_context
+    result = await self._channel.send_return_as_dict(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 103, in send_return_as_dict
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/playwright/_impl/_connection.py", line 632, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.Error: BrowserType.launch_persistent_context: Failed to launch the browser process.
+Browser logs:
+
+ÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔò
+ÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔ
+òÉÔòÉÔòÉÔòÉÔòù
+Ôòæ Firefox is unable to launch if the $HOME folder isn't owned by the current user. Ôòæ
+Ôòæ Workaround: Set the HOME=/root environment variable when running Playwright.     Ôòæ
+ÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔò
+ÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔ
+òÉÔòÉÔòÉÔòÉÔòØ
+Call log:
+  - <launching> /home/app/.cache/camoufox/browsers/official/152.0.4-beta.30-5720d45b/camoufox-bin -no-remote 
+-wait-for-browser -foreground -profile /home/app/.cache/scout-api/camoufox-profiles/direct/locale_pt_br -juggler-pipe 
+about:blank
+  - <launched> pid=1363
+  - [pid=1363][err] [1363] Sandbox: CanCreateUserNamespace() clone() failure: EPERM
+  - [pid=1363][err] Running Camoufox as root in a regular user's session is not supported.  ($HOME is /home/app which 
+is owned by app.)
+  - [pid=1363] <process did exit: exitCode=1, signal=null>
+  - [pid=1363] starting temporary directories cleanup
+  - [pid=1363] <gracefully close start>
+  - [pid=1363] <kill>
+  - [pid=1363] <skipped force kill spawnedProcess.killed=false processClosed=true>
+  - [pid=1363] finished temporary directories cleanup
+  - [pid=1363] <gracefully close end>
+
+{
+  "http_ms": 276.2,
+  "http": {
+    "label": "curl_cffi",
+    "status": 200,
+    "final_url": "https://www.terabyteshop.com.br/produto/22809/placa-mae-gigabyte-b650m-aorus-elite-chipset-b650-amd-am5-atx-ddr5",
+    "bytes": 199798,
+    "title": "Placa-M├úe Gigabyte B650M Aorus Elite B650 AM5 DDR5 | Terabyte",
+    "challenge": false,
+    "fetch_metrics": {
+      "fetch_strategy": "curl-cffi-direct",
+      "browser_used": false,
+      "proxy_used": false
+    },
+    "has_jsonld_product": true,
+    "has_price": true,
+    "has_h1": true,
+    "parser_ok": true,
+    "offer": {
+      "store": "terabyteshop",
+      "country": "BR",
+      "product_id": "22809",
+      "sku": "Gigabyte",
+      "seller": "TerabyteShop",
+      "url": "https://www.terabyteshop.com.br/produto/22809/placa-mae-gigabyte-b650m-aorus-elite-chipset-b650-amd-am5-atx-ddr5",
+      "canonical_url": "https://www.terabyteshop.com.br/produto/22809/placa-mae-gigabyte-b650m-aorus-elite-chipset-b650-amd-am5-atx-ddr5",
+      "currency": "BRL",
+      "price": "1199.99",
+      "original_price": null,
+      "discount_percentage": null,
+      "pix_price": null,
+      "installment_price": null,
+      "installment_count": null,
+      "availability": "available",
+      "available": true,
+      "scraped_at": "2026-09-24T17:39:44.082736Z",
+      "metadata": {
+        "source": {
+          "price": "json-ld-or-dom",
+          "availability": "json-ld",
+          "promotion": "terabyte.jquery.countdown"
+        },
+        "promotion": {
+          "type": "campaign_countdown",
+          "expires_at": "2026-09-28T13:00:59Z",
+          "source": "terabyte.jquery.countdown",
+          "timezone": "America/Sao_Paulo",
+          "product_id": "22809",
+          "raw": "2026/09/28 10:00:59"
+        }
+      }
+    },
+    "details": {
+      "product_id": "22809",
+      "sku": "Gigabyte",
+      "gtin": null,
+      "title": "Placa-M├úe Gigabyte B650M Aorus Elite B650 AM5 DDR5 | Terabyte",
+      "brand": "Gigabyte",
+      "model": "B650M Aorus Elite B650",
+      "variant": null,
+      "description": null,
+      "specifications": {},
+      "images": [],
+      "image_candidates": [],
+      "metadata": {
+        "source": {
+          "title": "json-ld-or-dom"
+        }
+      }
+    },
+    "images_count": 1,
+    "images_sample": [
+      "https://img.terabyteshop.com.br/produto/p/placa-mae-gigabyte-b650m-aorus-elite-chipset-b650-amd-am5-atx-ddr5_163885.png"
+    ]
+  },
+  "browser_ms": 1296.9,
+  "browser_error": "RequestError: Falha ao iniciar o browser (Camoufox/Playwright): BrowserType.launch_persistent_context: Failed to launch the browser process.\nBrowser logs:\n\nÔòöÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòù\nÔòæ Firefox is unable to launch if the $HOME folder isn't owned by the current user. Ôòæ\nÔòæ Workaround: Set the HOME=/root environment variable when running Playwright.     Ôòæ\nÔòÜÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòØ\nCall log:\n  - <launching> /home/app/.cache/camoufox/browsers/official/152.0.4-beta.30-5720d45b/camoufox-bin -no-remote -wait-for-browser -foreground -profile /home/app/.cache/scout-api/camoufox-profiles/direct/locale_pt_br -juggler-pipe about:blank\n  - <launched> pid=1363\n  - [pid=1363][err] [1363] Sandbox: CanCreateUserNamespace() clone() failure: EPERM\n  - [pid=1363][err] Running Camoufox as root in a regular user's session is not supported.  ($HOME is /home/app which is owned by app.)\n  - [pid=1363] <process did exit: exitCode=1, signal=null>\n  - [pid=1363] starting temporary directories cleanup\n  - [pid=1363] <gracefully close start>\n  - [pid=1363] <kill>\n  - [pid=1363] <skipped force kill spawnedProcess.killed=false processClosed=true>\n  - [pid=1363] finished temporary directories cleanup\n  - [pid=1363] <gracefully close end>\n",
+  "browser_code": "BROWSER_LAUNCH_ERROR"
+}

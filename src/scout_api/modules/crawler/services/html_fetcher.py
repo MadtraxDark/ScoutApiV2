@@ -2473,4 +2473,10 @@ def build_html_fetcher(
     # KaBuM: urllib HTTP for Next.js SERP/PDP (__NEXT_DATA__) → Camoufox fallback.
     from .kabum_http_first_fetcher import KabumHttpFirstHtmlFetcher
 
-    return KabumHttpFirstHtmlFetcher(http=http, browser=pichau_first)
+    kabum_first = KabumHttpFirstHtmlFetcher(http=http, browser=pichau_first)
+
+    # TerabyteShop: curl_cffi SSR (JSON-LD + accordion) → Camoufox fallback.
+    from .terabyteshop_http_first_fetcher import TerabyteShopHttpFirstHtmlFetcher
+
+    terabyte_http = CurlCffiHtmlFetcher(timeout=float(urllib_timeout))
+    return TerabyteShopHttpFirstHtmlFetcher(http=terabyte_http, browser=kabum_first)

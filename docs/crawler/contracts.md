@@ -207,12 +207,12 @@ Auth wall bypass: ADR 0018 + `.cursor/rules/auth-wall-resolution.mdc`.
 
 | Field | Use |
 |---|---|
-| `price` | Current Buy Box / primary offer total (not installment, not coupon amount) |
-| `original_price` | Struck / list price when strictly greater than `price` |
+| `price` | Primary commercial total for the selected offer (not installment coupon amount). On BR dual-price storefronts this is often the **card** total; store playbooks define the mapping. |
+| `original_price` | Struck / list / “De” **reference** when the store marks it as such. Validity is **semantic** (source in the main product price box), not “largest number on the page”. Do **not** discard solely because `original_price < price` when `price` is a payment-method total (e.g. card) while the struck value sits between Pix and card. Prefer comparing promotional discount against the sale total (often Pix/à vista) in store metadata — never invent payment-method savings into `discount_percentage`. |
 | `pix_price` | Explicit Pix total when the store exposes it (BR); never invent |
 | `installment_price` / `installment_count` | Explicit installment schedule; never treat as `price` |
 | `currency` | Marketplace currency of the scraped page |
-| `metadata.pricing` | Conditions (coupon, Prime badge, subscribe, pix_available, …) |
+| `metadata.pricing` | Conditions (coupon, Prime badge, subscribe, pix_available, consistency_warnings, …) |
 
 ## Availability
 

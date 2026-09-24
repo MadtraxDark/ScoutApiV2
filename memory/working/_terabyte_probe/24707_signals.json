@@ -1,0 +1,125 @@
+{
+  "signals": {
+    "#valVista text": "R$ 409,99",
+    "p.valVista text": "R$ 409,99",
+    "#valVista html": "<p id=\"valVista\" class=\"val-prod valVista\">R$ 409,99</p>",
+    "#valParc text": "R$ 482,34",
+    "span.valParc text": "R$ 482,34",
+    "#valParc html": "<span id=\"valParc\" class=\"valParc\"></span>",
+    "#Parc text": "R$ 40,20",
+    "#nParc text": "x",
+    "#Parc html": "<span id=\"Parc\" class=\"Parc\"></span>",
+    "#nParc html": "<span id=\"nParc\" class=\"nParc\">x</span>",
+    "p.precode del": "R$ 431,90",
+    ".precode del": "R$ 431,90",
+    "#topopreco del": null,
+    ".info-price del": "R$ 431,90",
+    "p.precode html": "<p class=\"precode\">De: <del>R$ 431,90</del> por:</p>",
+    "De R$ in price box": [
+      "431,90",
+      "40,20",
+      "434,11",
+      "224,29",
+      "149,53",
+      "120,59",
+      "96,47",
+      "80,39",
+      "68,91",
+      "60,29",
+      "53,59",
+      "48,23",
+      "43,85",
+      "40,20",
+      "40,81",
+      "37,90",
+      "35,37",
+      "33,16",
+      "31,21",
+      "29,48",
+      "431,90",
+      "431,90"
+    ],
+    "window around valVista": "fo-prod info-price\"> <div> <div class=\"pull-left\"> <p class=\"precode\">De: <del>R$ 431,90</del> por:</p> <div class=\"preco-linha\"> <p id=\"valVista\" class=\"val-prod valVista\">R$ 409,99</p> <span class=\"price-badge\">5% OFF</span> </div> <div class=\"clear\"></div> <p> à vista com 15% de desconto no boleto ou pix </p>",
+    "window around valParc": "<p id=\"label-val-prod\"></p> </li> <li class=\"col-xs-5 col-sm-3 col-md-3 col-lg-2\"> <div class=\"pull-left iconsBar\"> <i class=\"fa fa-credit-card\"></i> </div> <p class=\"val-parc\"><span id=\"valParc\" class=\"valParc\"></span> <span id=\"nParc\" class=\"nParc\">x</span> de <span id=\"Parc\" class=\"Parc\"></span> <span id=\"jrParc\" class=\"inf_juros_tp\" style=\"display: block;\">s/juros no cartão</span></p> </li> <li class=\"col-xs-2 col-sm-1 col-md-2 col-lg-1\"> <button id=\"comprar-topo\" ty",
+    "window around topopreco": "ca\" style=\"display: none;\"> <i class=\"bi bi-x-circle-fill\"></i> </button> <button class=\"search-submit\" aria-label=\"botão buscar\"><i class=\"searchicon fa fa-search\" aria-hidden=\"true\"></i></button> </form> </div> <div id=\"topopreco\"> <div class=\"precotopo info-prod hidden\"> <ul> <li class=\"col-md-1 col-lg-1 hidden-xs hidden-sm\"> <img loading=\"lazy\" id=\"img-preco-topo\" src=\"\" alt=\"Preço topo\" width=\"50\" height=\"50\"> </li> <li class=\"col-sm-5 col-md-3 col-lg-4 titPrecoTopo hidden-xs\"> </li> <li",
+    "json-ld Product.offers": [
+      {
+        "price": "409.99",
+        "priceCurrency": "BRL",
+        "availability": "http://schema.org/InStock",
+        "@type": "Offer"
+      }
+    ],
+    "jquery .text assigns (price-related)": [
+      {
+        "sel": ".val-prod",
+        "val": "R$ 409,99"
+      },
+      {
+        "sel": ".valParc",
+        "val": "R$ 482,34"
+      },
+      {
+        "sel": ".nParc",
+        "val": "12x"
+      },
+      {
+        "sel": ".Parc",
+        "val": "R$ 40,20"
+      }
+    ],
+    "jquery broad snippets": [
+      {
+        "kind": "valParc",
+        "snippet": "$('.valParc').text('R$ 482,34')"
+      },
+      {
+        "kind": "val-prod",
+        "snippet": "$('.val-prod').text('R$ 409,99')"
+      },
+      {
+        "kind": "Parc",
+        "snippet": "$('.Parc').text('R$ 40,20')"
+      },
+      {
+        "kind": "nParc",
+        "snippet": "$('.nParc').text('12x')"
+      }
+    ],
+    "label markers": [
+      "#topopreco contains 'cartão'",
+      "#topopreco contains 'de '",
+      ".info-price contains 'pix'",
+      ".info-price contains 'à vista'",
+      ".info-price contains 'boleto'",
+      ".info-price contains 'cartão'",
+      ".info-price contains 'parcel'",
+      ".info-price contains 'de '"
+    ]
+  },
+  "spider": {
+    "price": "482.34",
+    "pix_price": "409.99",
+    "original_price": null,
+    "installment_count": 12,
+    "installment_price": "40.20",
+    "discount_percentage": null,
+    "available": true,
+    "availability": "available",
+    "metadata.source": {
+      "price": "dom-valParc",
+      "pix_price": "dom-valVista-pix",
+      "card_price": "dom-valParc",
+      "original_price": "absent",
+      "installment": "dom-nParc-Parc",
+      "availability": "json-ld",
+      "product_id": "url",
+      "promotion": "terabyte.jquery.countdown"
+    },
+    "metadata.pricing": {
+      "card_price": "482.34",
+      "pix_price": "409.99",
+      "pix_savings": "72.35"
+    }
+  }
+}

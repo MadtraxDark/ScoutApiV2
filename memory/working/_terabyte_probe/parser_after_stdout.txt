@@ -1,0 +1,62 @@
+﻿{
+  "offer": {
+    "store": "terabyteshop",
+    "country": "BR",
+    "product_id": "22809",
+    "sku": "22809",
+    "seller": "TerabyteShop",
+    "url": "https://www.terabyteshop.com.br/produto/22809/placa-mae-gigabyte-b650m-aorus-elite-chipset-b650-amd-am5-atx-ddr5?gclid=x",
+    "canonical_url": "https://www.terabyteshop.com.br/produto/22809/placa-mae-gigabyte-b650m-aorus-elite-chipset-b650-amd-am5-atx-ddr5",
+    "currency": "BRL",
+    "price": "1199.99",
+    "original_price": "1722.90",
+    "discount_percentage": "30.35",
+    "pix_price": "1199.99",
+    "installment_price": "117.65",
+    "installment_count": 12,
+    "availability": "available",
+    "available": true,
+    "scraped_at": "2026-09-24T17:42:58.592086Z",
+    "metadata": {
+      "source": {
+        "price": "json-ld",
+        "pix_price": "dom-valVista-pix",
+        "original_price": "dom-precode-del",
+        "installment": "dom-nParc-Parc",
+        "availability": "json-ld",
+        "product_id": "url",
+        "promotion": "terabyte.jquery.countdown"
+      },
+      "product_data_source": "json-ld",
+      "promotion": {
+        "type": "campaign_countdown",
+        "expires_at": "2026-09-28T13:00:59Z",
+        "source": "terabyte.jquery.countdown",
+        "timezone": "America/Sao_Paulo",
+        "product_id": "22809",
+        "raw": "2026/09/28 10:00:59"
+      }
+    }
+  },
+  "details": {
+    "product_id": "22809",
+    "sku": "22809",
+    "gtin": "4719331849818",
+    "title": "Placa-MÒe Gigabyte B650M Aorus Elite B650 AM5 DDR5",
+    "brand": "Gigabyte",
+    "model": "B650M Aorus Elite B650",
+    "variant": "storage: 128 GB; ram: 128 GB",
+    "description": null,
+    "specifications": {
+      "Marca": "Gigabyte",
+      "Modelo": "B650M Aorus Elite",
+      "CPU": "AMD Socket AM5, suporte para: Processadores AMD RyzenáSÚrie 7000\n(Consulte a \"Lista de suporte de CPU\" para obter mais informaþ§es.)",
+      "Chipset": "AMD B650",
+      "Mem¾ria": "4 x soquetes DIMM DDR5 que suportam atÚ 128 GB (capacidade de DIMM ·nico de 32 GB) de mem¾ria do sistema\nSuporte para m¾dulos de mem¾ria DDR5 6600(OC) / 6400(OC) / 6200(OC) / 6000(OC) / 5600(OC) / 5200 / 4800 / 4400 MT/s\nArquitetura de mem¾ria de canal duplo\nSuporte para m¾dulos de mem¾ria DIMM 1Rx8/2Rx8/1Rx16 sem buffer nÒo ECC\nSuporte para m¾dulos de mem¾ria AMD EXtended Profiles for Overclocking (AMD EXPOÖ) e Extreme Memory Profile (XMP)\n(Consulte \"Lista de suporte de mem¾ria\" para obter mais informaþ§es.)",
+      "┴udio": "Codec de ßudio Realtek\n┴udio de alta definiþÒo\n2/4/5.1/7.1 canais\n* VocÛ pode alterar a funcionalidade de um conector de ßudio usando o software de ßudio. Para configurar o ßudio de 7.1 canais, acesse o software de ßudio para configuraþ§es de ßudio.\nSuporte para saÝda S/PDIF",
+      "LAN": "Chip de LAN Realtek « 2,5 GbE (2,5 Gbps/1 Gbps/100 Mbps)",
+      "USB": "CPU\n1 x porta USB Type-C « no painel traseiro, com suporte a USB 3.2 Gen 2\n2 x portas USB 3.2 Gen 2 Tipo A (vermelhas) no painel traseiro\nCPU + Hub USB 2.0\n4 x portas USB 2.0/1.1 no painel traseiro\nChipset\n1 x porta USB Type-C « com suporte a USB 3.2 Gen 2x2, disponÝvel atravÚs do conector USB interno\n3 x portas USB 3.2 Gen 1 (1 porta no painel traseiro, 2 portas disponÝveis atravÚs do conector USB interno)\n4 x portas USB 2.0/1.1 disponÝveis atravÚs dos conectores USB internos\nChipset + Hub USB 3.2 Gen 1\n4 x portas USB 3.2 Gen 1 no painel traseiro",
+      "Conectores de E/S Internos": "1 x conector de alimentaþÒo principal ATX de 24 pinos\n1 x conector de alimentaþÒo ATX 12V de 8 pinos\n1 x cabeþalho do ventilador da CPU\n1 x cabeþalho do ventilador da CPU de refrigeraþÒo a ßgua\n3 x cabeþalhos de ventilador do sistema\n1 x ventilador do sistema / cabeþalho da bomba de resfriamento de ßgua\n2 x cabeþalhos de fita de LED endereþßveis\n2 x cabeþalhos de tiras de LED RGB\n1 x faixa de LED do cooler da CPU/cabeþalho da faixa de LED RGB\n2 x M.2 Soquete 3 conectores\n4 x conectores SATA 6Gb/s\n1 x cabeþalho do painel frontal\n1 x cabeþalho de ßudio do painel frontal\n1 x conector USB Type-C « , com suporte a USB 3.2 Gen 2x2\n1 x conector USB 3.2 Gen 1\n2 x conectores USB 2.0/1.1\n1 x cabeþalho de porta serial\n1 x conector de placa adicional THB_U4\n1 x cabeþalho Trusted Platform Module (apenas para o m¾dulo GC-TPM2.0 SPI/GC-TPM2.0 SPI 2.0) A\nfunþÒo TPM Ú opcional devido a diferentes polÝticas regionais\n1 x botÒo de reset\n1 x jumper de reinicializaþÒo\n1 x jumper CMOS claro",
+      "Conectores do painel traseiro": "1 x botÒo Q-Flash Plus\n1 x DisplayPort\n1 x porta HDMI\n1 x porta USB Type-C « , com suporte a USB 3.2 Gen 2\n2 x portas USB 3.2 Gen 2 Tipo A (vermelho)\n5 x portas USB 3.2 Gen 1\n4 x portas USB 2.0/1.1\n1 x porta RJ-45\n1 x conector de saÝda S/PDIF ¾ptico\n2 x tomadas de ßudio",
+      "Controlador de E/S": "Chip controlador de E/S iTE",
+      "Monitoramento H/W": "DetecþÒo de tensÒo\nDetecþÒo de temperatura\nDetecþÒo de velocidade do ventilador\nDetecþÒo de vazÒo de resfriamento de ßgua\nAvis
