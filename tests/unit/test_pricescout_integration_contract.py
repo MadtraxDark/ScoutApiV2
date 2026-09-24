@@ -23,6 +23,7 @@ def auth_settings(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.delenv("SUPABASE_URL", raising=False)
     monkeypatch.setenv("SUPABASE_URL", "")
     monkeypatch.setenv("ENVIRONMENT", "development")
+    monkeypatch.setenv("DATABASE_URL", "")
     monkeypatch.setenv("RATE_LIMIT_ENABLED", "false")
     monkeypatch.setenv("CORS_ALLOWED_ORIGINS", "http://localhost:3000")
     get_settings.cache_clear()
@@ -80,9 +81,7 @@ def test_stores_requires_auth(auth_settings: str) -> None:
 def test_stores_lists_registry(auth_settings: str) -> None:
     client = TestClient(app)
     token = _mint(auth_settings)
-    response = client.get(
-        "/stores", headers={"Authorization": f"Bearer {token}"}
-    )
+    response = client.get("/stores", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 200
     body = response.json()
     assert "stores" in body
@@ -91,6 +90,58 @@ def test_stores_lists_registry(auth_settings: str) -> None:
     assert kabum["implemented"] is True
     assert kabum["country"] == "BR"
     assert "kabum.com.br" in kabum["domains"]
+
+
+def test_store_metadata_update_requires_admin(auth_settings: str) -> None:
+    client = TestClient(app)
+    token = _mint(auth_settings)
+    response = client.patch(
+        "/admin/stores/kabum",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"display_name": "Nome"},
+    )
+    assert response.status_code == 403
+
+
+def test_store_metadata_update_allows_dev_bypass_only(
+    auth_settings: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("AUTH_REQUIRED", "false")
+    get_settings.cache_clear()
+    client = TestClient(app)
+
+    bypass_response = client.patch(
+        "/admin/stores/kabum", json={"display_name": "Nome local"}
+    )
+    assert bypass_response.status_code == 503  # Passou auth; DB está desativado.
+
+    user_token = _mint(auth_settings)
+    user_response = client.patch(
+        "/admin/stores/kabum",
+        headers={"Authorization": f"Bearer {user_token}"},
+        json={"display_name": "Nome local"},
+    )
+    assert user_response.status_code == 403
+
+
+def test_store_logo_upload_allows_only_admin_or_dev_bypass(
+    auth_settings: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("AUTH_REQUIRED", "false")
+    get_settings.cache_clear()
+    client = TestClient(app)
+    files = {"file": ("logo.png", b"png", "image/png")}
+
+    bypass_response = client.post("/admin/stores/kabum/logo", files=files)
+    assert bypass_response.status_code == 503  # Passou auth; DB está desativado.
+
+    user_token = _mint(auth_settings)
+    user_response = client.post(
+        "/admin/stores/kabum/logo",
+        headers={"Authorization": f"Bearer {user_token}"},
+        files=files,
+    )
+    assert user_response.status_code == 403
 
 
 def test_products_list_requires_auth(auth_settings: str) -> None:
@@ -107,6 +158,8 @@ def test_openapi_includes_pricescout_routes(auth_settings: str) -> None:
     assert "patch" in paths["/products/{product_id}"]
     assert "delete" in paths["/products/{product_id}"]
     assert "/stores" in paths
+    assert "/admin/stores/{store_key}" in paths
+    assert "patch" in paths["/admin/stores/{store_key}"]
     assert "/match/stream" not in paths
     assert "/products/{product_id}/match-runs" in paths
     assert "/match-runs/{run_id}" in paths
@@ -117,13 +170,8 @@ def test_openapi_includes_pricescout_routes(auth_settings: str) -> None:
     assert "post" in paths["/products/{product_id}/images"]
     assert "patch" in paths["/products/{product_id}/images"]
     assert "delete" in paths["/products/{product_id}/images/{image_id}"]
-    assert (
-        "/products/{product_id}/images/{image_id}/content" in paths
-    )
-    assert (
-        "/products/{product_id}/images/{image_id}/retry-optimization"
-        in paths
-    )
+    assert "/products/{product_id}/images/{image_id}/content" in paths
+    assert "/products/{product_id}/images/{image_id}/retry-optimization" in paths
     # Register accepts approved images after preview review.
     register_body = paths["/products"]["post"]["requestBody"]
     schema_ref = register_body["content"]["application/json"]["schema"]
@@ -142,8 +190,6 @@ def test_images_gallery_requires_auth(auth_settings: str) -> None:
     product_id = "00000000-0000-0000-0000-000000000001"
     assert client.get(f"/products/{product_id}/images").status_code == 401
     assert (
-        client.get(
-            f"/products/{product_id}/images/{product_id}/content"
-        ).status_code
+        client.get(f"/products/{product_id}/images/{product_id}/content").status_code
         == 401
     )

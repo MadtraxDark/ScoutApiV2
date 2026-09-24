@@ -61,6 +61,31 @@ class CanonicalProduct(Base):
     )
 
 
+class StoreMetadata(Base):
+    """Panel-managed presentation metadata for a statically registered store."""
+
+    __tablename__ = "store_metadata"
+
+    store_key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    display_name: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    logo_svg: Mapped[str | None] = mapped_column(Text, nullable=True)
+    logo_mime_type: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    logo_original_file_id: Mapped[str | None] = mapped_column(
+        String(128), nullable=True
+    )
+    logo_optimized_file_id: Mapped[str | None] = mapped_column(
+        String(128), nullable=True
+    )
+    logo_processing_status: Mapped[str] = mapped_column(
+        String(24), nullable=False, default="ready"
+    )
+    logo_version: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    logo_processing_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
+    )
+
+
 class ProductIdentifier(Base):
     __tablename__ = "product_identifiers"
     __table_args__ = (

@@ -24,12 +24,12 @@ from scout_api.modules.images.claim import (
 )
 from scout_api.modules.images.drive_client import (
     DriveStorage,
-    GoogleDriveClient,
-    InMemoryDriveStorage,
+    get_drive_storage,
 )
 from scout_api.modules.images.models import ProductImage
 from scout_api.modules.images.pipeline import ImagePipeline
 from scout_api.modules.images.repository import ProductImageRepository
+from scout_api.modules.matching.store_logo_worker import process_store_logo_jobs
 
 logger = logging.getLogger(__name__)
 
@@ -45,9 +45,7 @@ def _handle_stop(_signum: int, _frame: object) -> None:
 
 
 def _build_drive(settings: Settings) -> DriveStorage:
-    if settings.google_drive_refresh_token:
-        return GoogleDriveClient(settings)
-    return InMemoryDriveStorage()
+    return get_drive_storage(settings)
 
 
 def process_claimed_image(
@@ -128,12 +126,14 @@ def sweep_once(
     started = time.perf_counter()
     claimed = claim_due_optimizations(session, worker_id=worker_id, settings=cfg)
     session.commit()
+    logo_processed = process_store_logo_jobs(session, drive=storage, settings=cfg)
 
     processed = 0
     if not claimed:
         return {
             "claimed": 0,
-            "processed": 0,
+            "processed": logo_processed,
+            "store_logos_processed": logo_processed,
             "duration_ms": int((time.perf_counter() - started) * 1000),
         }
 
@@ -166,7 +166,8 @@ def sweep_once(
 
     return {
         "claimed": len(claimed),
-        "processed": processed,
+        "processed": processed + logo_processed,
+        "store_logos_processed": logo_processed,
         "duration_ms": int((time.perf_counter() - started) * 1000),
     }
 
@@ -256,7 +257,7 @@ class ImageOptimizationScheduler:
         while not self._stop.is_set():
             try:
                 summary = self.sweep_once()
-                if summary["claimed"]:
+                if summary["claimed"] or summary.get("store_logos_processed"):
                     logger.info(
                         "image_optimization_sweep_done",
                         extra=summary,

@@ -71,9 +71,7 @@ class GoogleDriveClient:
     def root_folder_id(self) -> str:
         folder_id = (self._settings.google_drive_root_folder_id or "").strip()
         if not folder_id:
-            raise DriveNotConfiguredError(
-                "GOOGLE_DRIVE_ROOT_FOLDER_ID não configurado"
-            )
+            raise DriveNotConfiguredError("GOOGLE_DRIVE_ROOT_FOLDER_ID não configurado")
         return folder_id
 
     def is_configured(self) -> bool:
@@ -158,12 +156,7 @@ class GoogleDriveClient:
                 "mimeType": FOLDER_MIME,
                 "parents": [parent_id],
             }
-            created = (
-                self._drive()
-                .files()
-                .create(body=meta, fields="id")
-                .execute()
-            )
+            created = self._drive().files().create(body=meta, fields="id").execute()
             return str(created["id"])
         except (HttpError, OSError) as exc:
             raise DriveClientError(f"Falha ao garantir pasta Drive: {exc}") from exc
@@ -176,9 +169,7 @@ class GoogleDriveClient:
         data: bytes,
         mime_type: str,
     ) -> str:
-        media = MediaIoBaseUpload(
-            io.BytesIO(data), mimetype=mime_type, resumable=False
-        )
+        media = MediaIoBaseUpload(io.BytesIO(data), mimetype=mime_type, resumable=False)
         body = {"name": name, "parents": [parent_id]}
         try:
             created = (
@@ -260,3 +251,15 @@ class InMemoryDriveStorage:
 
     def delete_file(self, file_id: str) -> None:
         self.files.pop(file_id, None)
+
+
+_development_drive_storage = InMemoryDriveStorage()
+
+
+def get_drive_storage(settings: Settings | None = None) -> DriveStorage:
+    """Resolve the configured Drive backend or shared process-local dev storage."""
+    cfg = settings or get_settings()
+    drive = GoogleDriveClient(cfg)
+    if drive.is_configured():
+        return drive
+    return _development_drive_storage

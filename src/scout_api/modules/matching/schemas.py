@@ -11,8 +11,8 @@ from pydantic import BaseModel, Field
 
 from scout_api.core.http_url import AbsoluteHttpUrl
 from scout_api.modules.crawler.models.product import ProductOffer, ProductPriceItem
-from scout_api.modules.matching.search_candidate import SearchCandidate
 from scout_api.modules.images.schemas import ApprovedImageInput, ProductImageView
+from scout_api.modules.matching.search_candidate import SearchCandidate
 
 MatchDecision = Literal["auto_match", "review", "reject"]
 ListingStatus = Literal["active", "removed", "review"]
@@ -509,8 +509,7 @@ class StoreInfo(BaseModel):
     match_disabled_reason: str | None = Field(
         default=None,
         description=(
-            "Motivo legível quando match_enabled=false "
-            "(ex.: login instability)."
+            "Motivo legível quando match_enabled=false (ex.: login instability)."
         ),
     )
     image_fetch_cost: Literal["low", "high", "unsupported"] = Field(
@@ -527,6 +526,23 @@ class StoreInfo(BaseModel):
             "(true quando supports_images e image_fetch_cost=low)."
         ),
     )
+    logo_svg: str | None = None
+    logo_url: str | None = None
+    logo_mime_type: str | None = None
+    logo_processing_status: Literal["ready", "pending", "processing", "failed"] = (
+        "ready"
+    )
+
+
+class StoreMetadataUpdateRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    display_name: str = Field(min_length=1, max_length=160)
+    logo_svg: str | None = Field(default=None, max_length=2_097_152)
+
+
+class StoreMetadataUpdateResponse(BaseModel):
+    store: StoreInfo
 
 
 class StoreListResponse(BaseModel):

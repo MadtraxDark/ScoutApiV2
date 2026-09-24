@@ -32,6 +32,7 @@ Política de quando criar/atualizar docs:
 | [0036](0036-persistent-product-match-runs.md) | Product Match persistente + polling (sem SSE) | Accepted |
 | [0037](0037-camoufox-launch-health-match-fail-fast.md) | Camoufox launch health + Match fail-fast de infra | Accepted |
 | [0038](0038-pdp-search-capability-split.md) | Separar Store Search de Product Page Scraping | Accepted |
+| [0041](0041-store-admin-metadata.md) | Metadados administrativos de lojas registradas | Accepted |
 
 ## Índice — crawler
 
@@ -61,6 +62,8 @@ Política de quando criar/atualizar docs:
 | [0038](0038-pdp-search-capability-split.md) | Separar Store Search de Product Page Scraping | Accepted |
 | [0039](0039-bounded-browser-scheduler-capacity-c1.md) | BrowserScheduler + bounded queue + ProfileLock + claim_trial — capacity C1 | Accepted |
 | [0040](0040-matching-multilingual-attributes.md) | Canonicalização multilíngue de atributos no Product Match | Accepted |
+| [0041](0041-store-admin-metadata.md) | Metadados administrativos de lojas registradas | Accepted |
+| [0042](0042-store-logo-media-processing.md) | Upload e otimização assíncrona de logos | Accepted |
 
 ## Quando criar ADR
 

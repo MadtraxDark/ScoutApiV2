@@ -143,6 +143,10 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    # The image worker has no HTTP server; the Dockerfile's /health check is
+    # only valid for the API and otherwise reports a false unhealthy state.
+    healthcheck:
+      disable: true
     restart: unless-stopped
   monitor:
     build:

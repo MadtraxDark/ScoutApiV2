@@ -14,8 +14,7 @@ from scout_api.modules.crawler.core.exceptions import RequestError
 from scout_api.modules.images.drive_client import (
     DriveClientError,
     DriveStorage,
-    GoogleDriveClient,
-    InMemoryDriveStorage,
+    get_drive_storage,
 )
 from scout_api.modules.images.models import ProductImage
 from scout_api.modules.images.pipeline import ImagePipeline
@@ -105,11 +104,9 @@ class ProductImageService:
         self._settings = settings or get_settings()
         if drive is not None:
             self._drive = drive
-        elif self._settings.google_drive_refresh_token:
-            self._drive = GoogleDriveClient(self._settings)
         else:
-            # Dev/test without Drive credentials: in-memory (non-persistent).
-            self._drive = InMemoryDriveStorage()
+            # Dev/test without Drive credentials uses process-local storage.
+            self._drive = get_drive_storage(self._settings)
         self._repo = ProductImageRepository(session)
         self._pipeline = ImagePipeline(
             session,

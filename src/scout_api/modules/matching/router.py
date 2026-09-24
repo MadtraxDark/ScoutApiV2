@@ -2,29 +2,41 @@
 
 from __future__ import annotations
 
+import logging
+import uuid as uuid_module
 from collections.abc import Generator
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    Path,
+    Query,
+    Response,
+    UploadFile,
+    status,
+)
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from scout_api.core.config import get_settings
+from scout_api.core.config import Settings, get_settings
 from scout_api.core.database import get_db_session
 from scout_api.core.db_errors import classify_database_error
 from scout_api.modules.auth.deps import (
+    DEV_BYPASS_USER_ID,
     enforce_rate_limit,
     require_authenticated_user,
+    require_media_permission,
     require_permission,
 )
-from scout_api.modules.auth.schemas import AuthenticatedPrincipal
+from scout_api.modules.auth.schemas import AuthenticatedPrincipal, UserRole
 from scout_api.modules.crawler.core.exceptions import ParseError, RequestError
 from scout_api.modules.crawler.schemas import CrawlErrorResponse
-from scout_api.modules.matching.search_adapters.registry import (
-    registered_search_store_keys,
-)
 from scout_api.modules.crawler.stores import STORE_CONFIGS
+from scout_api.modules.images.drive_client import get_drive_storage
 from scout_api.modules.matching.match_run_serializers import (
     match_run_to_detail,
     match_run_to_status,
@@ -34,6 +46,7 @@ from scout_api.modules.matching.match_run_service import (
     MatchRunService,
     NotificationService,
 )
+from scout_api.modules.matching.models import StoreMetadata
 from scout_api.modules.matching.offer_refresh_service import OfferRefreshService
 from scout_api.modules.matching.product_match_service import ProductMatchService
 from scout_api.modules.matching.product_registration_service import (
@@ -57,7 +70,19 @@ from scout_api.modules.matching.schemas import (
     ProductView,
     StoreInfo,
     StoreListResponse,
+    StoreMetadataUpdateRequest,
+    StoreMetadataUpdateResponse,
     UnreadCountResponse,
+)
+from scout_api.modules.matching.search_adapters.registry import (
+    registered_search_store_keys,
+)
+from scout_api.modules.matching.store_metadata_repository import StoreMetadataRepository
+from scout_api.modules.matching.store_metadata_service import (
+    InvalidStoreLogoError,
+    StoreMetadataService,
+    StoreNotFoundError,
+    validate_store_logo_upload,
 )
 
 # Rate scopes are per-route (not router-wide) so:
@@ -68,6 +93,29 @@ _RL_POLL = Depends(enforce_rate_limit("poll"))
 _RL_CRAWLER = Depends(enforce_rate_limit("crawler"))
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+
+
+def require_store_admin(
+    principal: Annotated[AuthenticatedPrincipal, Depends(require_authenticated_user)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> AuthenticatedPrincipal:
+    if principal.role == UserRole.ADMIN:
+        return principal
+    if (
+        not settings.auth_required
+        and settings.environment.lower() != "production"
+        and principal.id == DEV_BYPASS_USER_ID
+    ):
+        return principal
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail={
+            "code": "FORBIDDEN",
+            "message": "Acesso administrativo necessário",
+            "retryable": False,
+        },
+    )
 
 
 def _optional_db_session() -> Generator[Session | None, None, None]:
@@ -249,12 +297,36 @@ def list_stores(
     _principal: Annotated[
         AuthenticatedPrincipal, Depends(require_permission("products:read"))
     ],
+    session: Annotated[Session | None, Depends(_optional_db_session)],
 ) -> StoreListResponse:
+    return _stores_response(session)
+
+
+def _store_logo_url(key: str, metadata: StoreMetadata | None) -> str | None:
+    if metadata is None or not (metadata.logo_mime_type or metadata.logo_svg):
+        return None
+    revision = metadata.logo_version or str(
+        int(metadata.updated_at.timestamp() * 1_000_000)
+    )
+    variant = "avif" if metadata.logo_optimized_file_id else "original"
+    return f"/stores/{key}/logo?v={revision}-{variant}"
+
+
+def _stores_response(session: Session | None) -> StoreListResponse:
+    metadata = (
+        StoreMetadataService(StoreMetadataRepository(session)).list_metadata()
+        if session
+        else {}
+    )
     search_keys = set(registered_search_store_keys())
     stores = [
         StoreInfo(
             key=key,
-            display_name=config.label,
+            display_name=(
+                metadata[key].display_name
+                if key in metadata and metadata[key].display_name
+                else config.label
+            ),
             country=config.country,
             currency=config.currency,
             domains=list(config.domains),
@@ -265,10 +337,202 @@ def list_stores(
             match_disabled_reason=config.match_disabled_reason,
             image_fetch_cost=config.image_fetch_cost,
             default_include_images=config.default_include_images,
+            logo_svg=metadata[key].logo_svg if key in metadata else None,
+            logo_url=_store_logo_url(key, metadata.get(key)),
+            logo_mime_type=metadata[key].logo_mime_type if key in metadata else None,
+            logo_processing_status=metadata[key].logo_processing_status
+            if key in metadata
+            else "ready",
         )
         for key, config in STORE_CONFIGS.items()
     ]
     return StoreListResponse(stores=stores)
+
+
+@router.patch(
+    "/admin/stores/{store_key}",
+    response_model=StoreMetadataUpdateResponse,
+    dependencies=[Depends(require_store_admin), _RL_DEFAULT],
+    summary="Atualizar metadados de uma loja registrada",
+)
+def update_store_metadata(
+    store_key: str,
+    payload: StoreMetadataUpdateRequest,
+    session: Annotated[Session | None, Depends(_optional_db_session)],
+    _principal: Annotated[AuthenticatedPrincipal, Depends(require_store_admin)],
+) -> StoreMetadataUpdateResponse:
+    if session is None:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "code": "DATABASE_UNAVAILABLE",
+                "message": "Banco de dados indisponível",
+                "retryable": False,
+            },
+        )
+    service = StoreMetadataService(StoreMetadataRepository(session))
+    try:
+        service.update(store_key, payload.display_name, payload.logo_svg)
+    except StoreNotFoundError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "code": "STORE_NOT_FOUND",
+                "message": "Loja não encontrada",
+                "retryable": False,
+            },
+        ) from exc
+    except (InvalidStoreLogoError, ValueError) as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "INVALID_STORE_METADATA",
+                "message": str(exc),
+                "retryable": False,
+            },
+        ) from exc
+    stores = _stores_response(session).stores
+    return StoreMetadataUpdateResponse(
+        store=next(store for store in stores if store.key == store_key)
+    )
+
+
+@router.post(
+    "/admin/stores/{store_key}/logo",
+    response_model=StoreMetadataUpdateResponse,
+    dependencies=[Depends(require_store_admin), _RL_DEFAULT],
+    summary="Enviar logo para uma loja registrada",
+)
+async def upload_store_logo(
+    store_key: str,
+    file: Annotated[UploadFile, File()],
+    session: Annotated[Session | None, Depends(_optional_db_session)],
+    _principal: Annotated[AuthenticatedPrincipal, Depends(require_store_admin)],
+) -> StoreMetadataUpdateResponse:
+    if session is None:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "code": "DATABASE_UNAVAILABLE",
+                "message": "Banco de dados indisponível",
+                "retryable": False,
+            },
+        )
+    if store_key not in STORE_CONFIGS:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "code": "STORE_NOT_FOUND",
+                "message": "Loja não encontrada",
+                "retryable": False,
+            },
+        )
+    data = await file.read(2 * 1024 * 1024 + 1)
+    try:
+        upload = validate_store_logo_upload(
+            data, file.filename or "", file.content_type or ""
+        )
+        version = str(uuid_module.uuid4())
+        file_id = ""
+        if not upload.is_svg:
+            settings = get_settings()
+            drive = get_drive_storage(settings)
+            folder = drive.ensure_folder("store-logos", parent_id=drive.root_folder_id)
+            file_id = drive.upload_bytes(
+                name=f"{store_key}-{version}",
+                parent_id=folder,
+                data=data,
+                mime_type=upload.mime_type,
+            )
+        service = StoreMetadataService(StoreMetadataRepository(session))
+        current = service.repository.get(store_key)
+        obsolete_ids = (
+            [current.logo_original_file_id, current.logo_optimized_file_id]
+            if current is not None
+            else []
+        )
+        if current is None:
+            service.update(store_key, STORE_CONFIGS[store_key].label, None)
+        service.repository.save_logo_upload(
+            store_key,
+            mime_type=upload.mime_type,
+            original_file_id=file_id,
+            version=version,
+            status="pending"
+            if upload.mime_type not in {"image/svg+xml", "image/avif"}
+            else "ready",
+            svg_text=data.decode("utf-8") if upload.is_svg else None,
+        )
+        if obsolete_ids:
+            cleanup = get_drive_storage(get_settings())
+            for obsolete_id in obsolete_ids:
+                if obsolete_id and obsolete_id != file_id:
+                    try:
+                        cleanup.delete_file(obsolete_id)
+                    except Exception:  # noqa: BLE001
+                        logger.exception("store_logo_obsolete_file_cleanup_failed")
+    except InvalidStoreLogoError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "INVALID_STORE_LOGO",
+                "message": str(exc),
+                "retryable": False,
+            },
+        ) from exc
+    return StoreMetadataUpdateResponse(
+        store=next(
+            store
+            for store in _stores_response(session).stores
+            if store.key == store_key
+        )
+    )
+
+
+@router.get(
+    "/stores/{store_key}/logo",
+    include_in_schema=False,
+    dependencies=[_RL_DEFAULT],
+)
+def get_store_logo(
+    store_key: str,
+    session: Annotated[Session | None, Depends(_optional_db_session)],
+    _principal: Annotated[
+        AuthenticatedPrincipal, Depends(require_media_permission("products:read"))
+    ],
+) -> Response:
+    row = session.get(StoreMetadata, store_key) if session is not None else None
+    if row is None:
+        raise HTTPException(status_code=404, detail="Logo não encontrada")
+    if row.logo_svg:
+        data = row.logo_svg.encode("utf-8")
+        content_type = "image/svg+xml"
+        version = row.logo_version or str(row.updated_at.timestamp())
+    else:
+        file_id = row.logo_optimized_file_id or row.logo_original_file_id
+        if not file_id:
+            raise HTTPException(status_code=404, detail="Logo não encontrada")
+        try:
+            data = get_drive_storage(get_settings()).download_bytes(file_id)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=503, detail="Logo temporariamente indisponível"
+            ) from exc
+        content_type = (
+            "image/avif"
+            if row.logo_optimized_file_id
+            else (row.logo_mime_type or "application/octet-stream")
+        )
+        version = row.logo_version or str(row.updated_at.timestamp())
+    return Response(
+        content=data,
+        media_type=content_type,
+        headers={
+            "ETag": f'"{version}-{content_type.split("/")[-1]}"',
+            "Cache-Control": "private, max-age=300",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 @router.get(
@@ -326,9 +590,7 @@ def search_products(
         Query(description="Categoria do perfil (gpu, ram, smartphone, …)."),
     ] = None,
     vram: Annotated[str | None, Query(description="Filtro de VRAM (GPU).")] = None,
-    memory_type: Annotated[
-        str | None, Query(description="DDR5 / GDDR7 / …")
-    ] = None,
+    memory_type: Annotated[str | None, Query(description="DDR5 / GDDR7 / …")] = None,
     capacity: Annotated[
         str | None, Query(description="Capacidade (RAM/SSD/storage).")
     ] = None,
@@ -442,7 +704,10 @@ def get_product(
     status_code=status.HTTP_200_OK,
     dependencies=[Depends(require_permission("products:write")), _RL_DEFAULT],
     summary="Atualizar produto",
-    description="Atualiza campos editáveis do produto canônico (title, brand, model, variant, attributes).",
+    description=(
+        "Atualiza campos editáveis do produto canônico "
+        "(title, brand, model, variant, attributes)."
+    ),
 )
 def update_product(
     product_id: Annotated[UUID, Path(description="Identificador do produto canônico.")],
@@ -626,9 +891,7 @@ def match_product(
 )
 def start_match_run(
     product_id: Annotated[UUID, Path(description="ID do produto canônico.")],
-    principal: Annotated[
-        AuthenticatedPrincipal, Depends(require_authenticated_user)
-    ],
+    principal: Annotated[AuthenticatedPrincipal, Depends(require_authenticated_user)],
     service: Annotated[MatchRunService, Depends(get_match_run_service)],
 ) -> MatchRunStatusView:
     try:
@@ -674,9 +937,7 @@ def start_match_run(
 )
 def get_active_match_run(
     product_id: Annotated[UUID, Path(description="ID do produto canônico.")],
-    principal: Annotated[
-        AuthenticatedPrincipal, Depends(require_authenticated_user)
-    ],
+    principal: Annotated[AuthenticatedPrincipal, Depends(require_authenticated_user)],
     service: Annotated[MatchRunService, Depends(get_match_run_service)],
     response: Response,
 ) -> MatchRunStatusView | Response:
@@ -707,9 +968,7 @@ def get_active_match_run(
 )
 def list_match_runs(
     product_id: Annotated[UUID, Path(description="ID do produto canônico.")],
-    principal: Annotated[
-        AuthenticatedPrincipal, Depends(require_authenticated_user)
-    ],
+    principal: Annotated[AuthenticatedPrincipal, Depends(require_authenticated_user)],
     service: Annotated[MatchRunService, Depends(get_match_run_service)],
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
     offset: Annotated[int, Query(ge=0)] = 0,
@@ -740,9 +999,7 @@ def list_match_runs(
 )
 def get_match_run_status(
     run_id: Annotated[UUID, Path(description="ID da Match Run.")],
-    principal: Annotated[
-        AuthenticatedPrincipal, Depends(require_authenticated_user)
-    ],
+    principal: Annotated[AuthenticatedPrincipal, Depends(require_authenticated_user)],
     service: Annotated[MatchRunService, Depends(get_match_run_service)],
 ) -> MatchRunStatusView:
     try:
@@ -769,9 +1026,7 @@ def get_match_run_status(
 )
 def get_match_run_details(
     run_id: Annotated[UUID, Path(description="ID da Match Run.")],
-    principal: Annotated[
-        AuthenticatedPrincipal, Depends(require_authenticated_user)
-    ],
+    principal: Annotated[AuthenticatedPrincipal, Depends(require_authenticated_user)],
     service: Annotated[MatchRunService, Depends(get_match_run_service)],
 ) -> MatchRunDetailView:
     try:
@@ -797,9 +1052,7 @@ def get_match_run_details(
     description="Central persistente de notificações do usuário autenticado.",
 )
 def list_notifications(
-    principal: Annotated[
-        AuthenticatedPrincipal, Depends(require_authenticated_user)
-    ],
+    principal: Annotated[AuthenticatedPrincipal, Depends(require_authenticated_user)],
     service: Annotated[NotificationService, Depends(get_notification_service)],
     limit: Annotated[int, Query(ge=1, le=100)] = 30,
     offset: Annotated[int, Query(ge=0)] = 0,
@@ -823,9 +1076,7 @@ def list_notifications(
     summary="Contagem de não lidas",
 )
 def notifications_unread_count(
-    principal: Annotated[
-        AuthenticatedPrincipal, Depends(require_authenticated_user)
-    ],
+    principal: Annotated[AuthenticatedPrincipal, Depends(require_authenticated_user)],
     service: Annotated[NotificationService, Depends(get_notification_service)],
 ) -> UnreadCountResponse:
     return UnreadCountResponse(unread_count=service.unread_count(principal.id))
@@ -840,9 +1091,7 @@ def notifications_unread_count(
 )
 def mark_notification_read(
     notification_id: Annotated[UUID, Path()],
-    principal: Annotated[
-        AuthenticatedPrincipal, Depends(require_authenticated_user)
-    ],
+    principal: Annotated[AuthenticatedPrincipal, Depends(require_authenticated_user)],
     service: Annotated[NotificationService, Depends(get_notification_service)],
 ) -> NotificationView:
     try:
@@ -867,9 +1116,7 @@ def mark_notification_read(
     summary="Marcar todas as notificações como lidas",
 )
 def mark_all_notifications_read(
-    principal: Annotated[
-        AuthenticatedPrincipal, Depends(require_authenticated_user)
-    ],
+    principal: Annotated[AuthenticatedPrincipal, Depends(require_authenticated_user)],
     service: Annotated[NotificationService, Depends(get_notification_service)],
 ) -> UnreadCountResponse:
     service.mark_all_read(principal.id)
